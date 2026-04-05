@@ -67,7 +67,7 @@ private:
         glm::vec2 pos = { static_cast<float>(x), static_cast<float>(y) };
         if (s_firstMouse) { s_mousePos = pos; s_firstMouse = false; }
         s_mouseDelta = pos - s_mousePos;
-        s_mousePos   = pos;
+        s_mousePos = pos;
     }
     static void onScroll(GLFWwindow*, double, double y) {
         s_scrollDelta += static_cast<float>(y);
