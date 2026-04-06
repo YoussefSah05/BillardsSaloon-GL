@@ -38,7 +38,7 @@ add_executable(BilliardsSaloon
     src/app/application.cpp
     src/platform/window.cpp
     src/platform/timer.cpp
-    external/glad/src/glad.c
+    external/glad/src/gl.c
 )
 
 target_include_directories(BilliardsSaloon PRIVATE
