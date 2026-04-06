@@ -1,70 +1,64 @@
-cmake_minimum_required(VERSION 3.20)
-project(BilliardsSaloon VERSION 0.1.0 LANGUAGES CXX C)
+cmake_minimum_required(VERSION 3.28)
 
+project(BilliardsSaloon
+    VERSION 0.1.0
+    DESCRIPTION "A 3D billiards game built from scratch in C++ and OpenGL"
+    LANGUAGES C CXX
+)
+
+set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-# External dependency: GLFW
-find_package(glfw3 REQUIRED)
+option(BS_BUILD_WARNINGS "Enable strict compiler warnings" ON)
 
-# FetchContent for GLM and nlohmann/json
 include(FetchContent)
 
-FetchContent_Declare(glm
+# GLFW
+FetchContent_Declare(
+    glfw
+    GIT_REPOSITORY https://github.com/glfw/glfw.git
+    GIT_TAG 3.4
+)
+FetchContent_MakeAvailable(glfw)
+
+# GLM
+FetchContent_Declare(
+    glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git
-    GIT_TAG        1.0.1
-    GIT_SHALLOW    TRUE
+    GIT_TAG 1.0.1
 )
+FetchContent_MakeAvailable(glm)
 
-FetchContent_Declare(json
-    GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG        v3.11.3
-    GIT_SHALLOW    TRUE
+find_package(OpenGL REQUIRED)
+
+add_executable(BilliardsSaloon
+    src/app/main.cpp
+    src/app/application.cpp
+    src/platform/window.cpp
+    src/platform/timer.cpp
+    external/glad/src/glad.c
 )
-
-FetchContent_MakeAvailable(glm json)
-
-# GLAD (bundled in third_party)
-add_library(glad STATIC third_party/glad/src/glad.c)
-target_include_directories(glad PUBLIC third_party/glad/include)
-
-# Collect all C++ sources (with automatic re‑scan on file changes)
-file(GLOB_RECURSE BS_SOURCES CONFIGURE_DEPENDS 
-src/*.cpp
-src/**/*.cpp
-)
-
-add_executable(BilliardsSaloon ${BS_SOURCES})
 
 target_include_directories(BilliardsSaloon PRIVATE
     src
-    third_party/glad/include
+    external/glad/include
 )
 
 target_link_libraries(BilliardsSaloon PRIVATE
-    glad
     glfw
+    OpenGL::GL
     glm::glm
-    nlohmann_json::nlohmann_json
 )
 
-# macOS specific OpenGL and deprecation silence
-if(APPLE)
-    find_package(OpenGL REQUIRED)
-    target_link_libraries(BilliardsSaloon PRIVATE OpenGL::GL)
-    target_compile_definitions(BilliardsSaloon PRIVATE GL_SILENCE_DEPRECATION)
+if(MSVC)
+    target_compile_options(BilliardsSaloon PRIVATE /W4 /permissive- /EHsc)
+else()
+    target_compile_options(BilliardsSaloon PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
 endif()
 
-# Symlink assets into build directory (post‑build, ensures it exists at runtime)
-add_custom_command(TARGET BilliardsSaloon POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E create_symlink
-        ${CMAKE_SOURCE_DIR}/assets
-        ${CMAKE_BINARY_DIR}/assets
-    COMMENT "Symlinking assets/ into build directory"
+target_compile_definitions(BilliardsSaloon PRIVATE
+    GLFW_INCLUDE_NONE
+    $<$<CONFIG:Debug>:BS_DEBUG=1>
 )
-
-# Symlink compile_commands.json to project root (configure‑time, for IDE support)
-# Remove any existing symlink/file first to avoid errors
-file(REMOVE ${CMAKE_SOURCE_DIR}/compile_commands.json)
-file(CREATE_LINK ${CMAKE_BINARY_DIR}/compile_commands.json ${CMAKE_SOURCE_DIR}/compile_commands.json SYMBOLIC)
