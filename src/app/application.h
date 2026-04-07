@@ -4,8 +4,11 @@
 #include "ecs/registry.h"
 #include "platform/timer.h"
 #include "platform/window.h"
+#include "render/mesh.h"
+#include "render/shader.h"
 
 #include <cstdint>
+#include <memory>
 
 namespace BilliardsSaloon
 {
@@ -27,7 +30,11 @@ namespace BilliardsSaloon
         Timer m_timer;
 
         Registry m_registry;
-        Entity m_demoBall;
+        Entity m_demoCube;
+        Entity m_cameraEntity;
+
+        std::unique_ptr<Shader> m_basicShader;
+        std::unique_ptr<Mesh> m_cubeMesh;
 
         double m_accumulator {0.0};
         double m_simulationTime {0.0};

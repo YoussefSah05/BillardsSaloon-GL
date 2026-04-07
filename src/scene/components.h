@@ -31,10 +31,18 @@ namespace BilliardsSaloon
         }
     };
 
-    struct SpinComponent 
+    struct SpinComponent
     {
-        glm::vec3 axis {0.0f, 1.0f, 0.0f}; // Normal vector 
+        glm::vec3 axis {0.0f, 1.0f, 0.0f};
         float radiansPerSecond {1.0f};
+    };
+
+    struct MeshRenderComponent
+    {
+    };
+
+    struct CameraTagComponent
+    {
     };
 
     struct InterpolatedTransform
@@ -65,11 +73,6 @@ namespace BilliardsSaloon
         const glm::mat4 scaleMatrix = glm::scale(glm::mat4(1.0f), scale);
 
         return translation * rotationMatrix * scaleMatrix;
-    }
-
-    [[nodiscard]] inline glm::mat4 composeMatrix(const TransformComponent& transform)
-    {
-        return composeMatrix(transform.position, transform.rotation, transform.scale);
     }
 
     [[nodiscard]] inline glm::mat4 composeInterpolatedMatrix(

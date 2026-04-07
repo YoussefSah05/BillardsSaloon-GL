@@ -1,5 +1,6 @@
 #include "app/application.h"
 
+#include "render/camera.h"
 #include "scene/components.h"
 
 #include <glad/gl.h>
@@ -13,14 +14,51 @@ namespace BilliardsSaloon
     Application::Application()
         : m_window(WindowDesc{})
     {
-        m_demoBall = m_registry.createEntity();
+        m_basicShader = std::make_unique<Shader>(
+            "../assets/shaders/basic.vert",
+            "../assets/shaders/basic.frag"
+        );
 
-        m_registry.emplace<NameComponent>(m_demoBall, NameComponent{"Demo Ball"});
-        m_registry.emplace<TransformComponent>(m_demoBall, TransformComponent{});
-        m_registry.emplace<SpinComponent>(m_demoBall, SpinComponent{
-            .axis = glm::vec3(0.0f, 1.0f, 0.0f),
-            .radiansPerSecond = 1.35f
+        m_cubeMesh = Mesh::createCube();
+
+        m_demoCube = m_registry.createEntity();
+        m_registry.emplace<NameComponent>(m_demoCube, NameComponent{"Demo Cube"});
+
+        {
+            TransformComponent transform;
+            transform.position = glm::vec3(0.0f, 0.0f, 0.0f);
+            transform.previousPosition = transform.position;
+            transform.scale = glm::vec3(1.0f);
+            transform.previousScale = transform.scale;
+            transform.rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+            transform.previousRotation = transform.rotation;
+
+            m_registry.emplace<TransformComponent>(m_demoCube, transform);
+        }
+
+        m_registry.emplace<SpinComponent>(m_demoCube, SpinComponent{
+            .axis = glm::vec3(0.3f, 1.0f, 0.2f),
+            .radiansPerSecond = 1.2f
         });
+        m_registry.emplace<MeshRenderComponent>(m_demoCube, MeshRenderComponent{});
+
+        m_cameraEntity = m_registry.createEntity();
+        m_registry.emplace<NameComponent>(m_cameraEntity, NameComponent{"Main Camera"});
+
+        {
+            TransformComponent cameraTransform;
+            cameraTransform.position = glm::vec3(0.0f, 1.5f, 4.0f);
+            cameraTransform.previousPosition = cameraTransform.position;
+            cameraTransform.rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+            cameraTransform.previousRotation = cameraTransform.rotation;
+            cameraTransform.scale = glm::vec3(1.0f);
+            cameraTransform.previousScale = cameraTransform.scale;
+
+            m_registry.emplace<TransformComponent>(m_cameraEntity, cameraTransform);
+        }
+
+        m_registry.emplace<CameraComponent>(m_cameraEntity, CameraComponent{});
+        m_registry.emplace<CameraTagComponent>(m_cameraEntity, CameraTagComponent{});
     }
 
     int Application::run()
@@ -96,23 +134,53 @@ namespace BilliardsSaloon
     {
         glViewport(0, 0, m_window.width(), m_window.height());
 
-        float visualPhase = 0.0f;
+        glClearColor(0.08f, 0.06f, 0.04f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        if (const TransformComponent* transform = m_registry.tryGet<TransformComponent>(m_demoBall))
+        const TransformComponent* cameraTransform = m_registry.tryGet<TransformComponent>(m_cameraEntity);
+        const CameraComponent* camera = m_registry.tryGet<CameraComponent>(m_cameraEntity);
+
+        if ((cameraTransform == nullptr) || (camera == nullptr))
         {
-            const InterpolatedTransform interpolated =
-                interpolateTransform(*transform, static_cast<float>(alpha));
-
-            const glm::vec3 rightVector = interpolated.rotation * glm::vec3(1.0f, 0.0f, 0.0f);
-
-            visualPhase = 0.5f * (rightVector.x + 1.0f);
+            return;
         }
 
-        const float red   = 0.08f + 0.03f * visualPhase;
-        const float green = 0.06f + 0.08f * visualPhase;
-        const float blue  = 0.04f + 0.02f * visualPhase;
+        const InterpolatedTransform interpolatedCamera =
+            interpolateTransform(*cameraTransform, static_cast<float>(alpha));
 
-        glClearColor(red, green, blue, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        const glm::vec3 cameraForward =
+            interpolatedCamera.rotation * glm::vec3(0.0f, 0.0f, -1.0f);
+        const glm::vec3 cameraUp =
+            interpolatedCamera.rotation * glm::vec3(0.0f, 1.0f, 0.0f);
+
+        const glm::mat4 view = Camera::viewMatrix(
+            interpolatedCamera.position,
+            cameraForward,
+            cameraUp
+        );
+
+        const glm::mat4 projection = Camera::projectionMatrix(
+            camera->verticalFieldOfViewRadians,
+            m_window.aspectRatio(),
+            camera->nearPlane,
+            camera->farPlane
+        );
+
+        m_basicShader->bind();
+        m_basicShader->setMat4("uView", view);
+        m_basicShader->setMat4("uProjection", projection);
+        m_basicShader->setVec3("uLightDirection", glm::normalize(glm::vec3(-0.6f, -1.0f, -0.4f)));
+        m_basicShader->setVec3("uAlbedo", glm::vec3(0.82f, 0.74f, 0.62f));
+
+        m_registry.view<TransformComponent, MeshRenderComponent>().each(
+            [&](Entity, TransformComponent& transform, MeshRenderComponent&)
+            {
+                const glm::mat4 model =
+                    composeInterpolatedMatrix(transform, static_cast<float>(alpha));
+
+                m_basicShader->setMat4("uModel", model);
+                m_cubeMesh->draw();
+            }
+        );
     }
 }
