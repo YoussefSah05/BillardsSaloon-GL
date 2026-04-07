@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cmath>
 #include <string>
+#include <vector>
 
 namespace BilliardsSaloon
 {
@@ -34,21 +35,118 @@ namespace BilliardsSaloon
         {
             return glm::normalize(glm::vec3(std::sin(angleRadians), 0.0f, -std::cos(angleRadians)));
         }
+
+        std::vector<glm::vec3> buildTriangleRackPositions(
+            std::size_t ballCount,
+            float ballRadius,
+            const glm::vec3& apexPosition,
+            float spacingScale)
+        {
+            std::vector<glm::vec3> positions;
+            positions.reserve(ballCount);
+
+            const float diameter = 2.0f * ballRadius;
+            const float rowSpacing = std::sqrt(3.0f) * ballRadius * spacingScale;
+
+            std::size_t placed = 0;
+            for (int row = 0; placed < ballCount; ++row)
+            {
+                const int rowCount = row + 1;
+                const float z = apexPosition.z - static_cast<float>(row) * rowSpacing;
+
+                for (int col = 0; (col < rowCount) && (placed < ballCount); ++col)
+                {
+                    const float x =
+                        apexPosition.x +
+                        (static_cast<float>(col) - 0.5f * static_cast<float>(row)) * diameter * spacingScale;
+
+                    positions.push_back(glm::vec3(x, apexPosition.y, z));
+                    ++placed;
+                }
+            }
+
+            return positions;
+        }
+
+        std::vector<glm::vec3> buildDiamondRackPositions(
+            std::size_t ballCount,
+            float ballRadius,
+            const glm::vec3& apexPosition,
+            float spacingScale)
+        {
+            std::vector<glm::vec3> positions;
+            positions.reserve(ballCount);
+
+            const float diameter = 2.0f * ballRadius;
+            const float rowSpacing = std::sqrt(3.0f) * ballRadius * spacingScale;
+
+            const int rowCounts[5] = {1, 2, 3, 2, 1};
+
+            std::size_t placed = 0;
+            for (int row = 0; (row < 5) && (placed < ballCount); ++row)
+            {
+                const int rowCount = rowCounts[row];
+                const float z = apexPosition.z - static_cast<float>(row) * rowSpacing;
+
+                for (int col = 0; (col < rowCount) && (placed < ballCount); ++col)
+                {
+                    const float x =
+                        apexPosition.x +
+                        (static_cast<float>(col) - 0.5f * static_cast<float>(rowCount - 1)) * diameter * spacingScale;
+
+                    positions.push_back(glm::vec3(x, apexPosition.y, z));
+                    ++placed;
+                }
+            }
+
+            return positions;
+        }
+
+        std::vector<glm::vec3> buildRackPositions(const GameVariantDefinition& variant)
+        {
+            switch (variant.rack.pattern)
+            {
+                case RackPattern::Triangle:
+                    return buildTriangleRackPositions(
+                        variant.objectBalls.size(),
+                        variant.table.ballRadius,
+                        variant.rack.apexPosition,
+                        variant.rack.spacingScale
+                    );
+
+                case RackPattern::Diamond:
+                    return buildDiamondRackPositions(
+                        variant.objectBalls.size(),
+                        variant.table.ballRadius,
+                        variant.rack.apexPosition,
+                        variant.rack.spacingScale
+                    );
+            }
+
+            return {};
+        }
     }
 
     Application::Application()
         : m_window(WindowDesc{})
     {
+        m_variant = &eightBallVariant();
+
+        m_matchState.discipline = m_variant->discipline;
+        m_matchState.flowPhase = MatchFlowPhase::BreakShot;
+        m_matchState.activePlayerIndex = 0;
+        m_matchState.shotInProgress = false;
+        m_matchState.foulCommittedThisTurn = false;
+        m_matchState.ballInHand = false;
+
         m_basicShader = std::make_unique<Shader>(
             "assets/shaders/basic.vert",
             "assets/shaders/basic.frag"
         );
 
         m_cubeMesh = Mesh::createCube();
-        m_planeMesh = Mesh::createPlane(2.84f, 1.42f);
-
-        constexpr float BALL_RADIUS = 0.028575f;
-        m_sphereMesh = Mesh::createUVSphere(BALL_RADIUS, 32U, 16U);
+        m_planeMesh = Mesh::createPlane(m_variant->table.clothWidth, m_variant->table.clothDepth);
+        m_sphereMesh = Mesh::createUVSphere(m_variant->table.ballRadius, 32U, 16U);
 
         {
             TransformComponent tableTransform;
@@ -61,7 +159,7 @@ namespace BilliardsSaloon
 
             const Entity table = createSceneEntity(
                 m_registry,
-                "Table Surface",
+                m_variant->displayName + " Table",
                 tableTransform,
                 StaticMeshComponent{MeshPrimitive::Plane},
                 MaterialComponent{
@@ -72,8 +170,8 @@ namespace BilliardsSaloon
             );
 
             m_registry.emplace<TableBoundsComponent>(table, TableBoundsComponent{
-                .halfWidth = 1.42f,
-                .halfDepth = 0.71f,
+                .halfWidth = 0.5f * m_variant->table.clothWidth,
+                .halfDepth = 0.5f * m_variant->table.clothDepth,
                 .railRestitution = 0.92f,
                 .ballRestitution = 0.96f,
                 .rollingFrictionCoefficient = 0.020f,
@@ -83,7 +181,7 @@ namespace BilliardsSaloon
 
         {
             TransformComponent cueBallTransform;
-            cueBallTransform.position = glm::vec3(0.0f, BALL_RADIUS, 0.42f);
+            cueBallTransform.position = glm::vec3(0.0f, m_variant->table.ballRadius, 0.42f);
             cueBallTransform.previousPosition = cueBallTransform.position;
             cueBallTransform.rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
             cueBallTransform.previousRotation = cueBallTransform.rotation;
@@ -92,82 +190,63 @@ namespace BilliardsSaloon
 
             const Entity cueBall = createSceneEntity(
                 m_registry,
-                "Cue Ball",
+                m_variant->cueBall.name,
                 cueBallTransform,
                 StaticMeshComponent{MeshPrimitive::Sphere},
                 MaterialComponent{
-                    .albedo = glm::vec3(0.93f, 0.93f, 0.91f),
-                    .specularStrength = 0.95f,
-                    .shininess = 128.0f
+                    .albedo = m_variant->cueBall.albedo,
+                    .specularStrength = m_variant->cueBall.specularStrength,
+                    .shininess = m_variant->cueBall.shininess
                 }
             );
 
             m_registry.emplace<BallComponent>(cueBall, BallComponent{
-                .radius = BALL_RADIUS,
-                .massKg = 0.17f,
+                .radius = m_variant->table.ballRadius,
+                .massKg = m_variant->table.ballMassKg,
                 .linearVelocity = glm::vec3(0.0f),
                 .angularVelocity = glm::vec3(0.0f),
+                .number = m_variant->cueBall.number,
+                .ruleTag = m_variant->cueBall.ruleTag,
+                .pocketed = false,
                 .isCueBall = true
             });
         }
 
+        const std::vector<glm::vec3> rackPositions = buildRackPositions(*m_variant);
+
+        for (std::size_t i = 0; i < m_variant->objectBalls.size(); ++i)
         {
-            TransformComponent eightBallTransform;
-            eightBallTransform.position = glm::vec3(0.0f, BALL_RADIUS, -0.16f);
-            eightBallTransform.previousPosition = eightBallTransform.position;
-            eightBallTransform.rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-            eightBallTransform.previousRotation = eightBallTransform.rotation;
-            eightBallTransform.scale = glm::vec3(1.0f);
-            eightBallTransform.previousScale = eightBallTransform.scale;
+            const BallSpawnDefinition& definition = m_variant->objectBalls[i];
+
+            TransformComponent transform;
+            transform.position = rackPositions[i];
+            transform.previousPosition = transform.position;
+            transform.rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+            transform.previousRotation = transform.rotation;
+            transform.scale = glm::vec3(1.0f);
+            transform.previousScale = transform.scale;
 
             const Entity ball = createSceneEntity(
                 m_registry,
-                "Eight Ball",
-                eightBallTransform,
+                definition.name,
+                transform,
                 StaticMeshComponent{MeshPrimitive::Sphere},
                 MaterialComponent{
-                    .albedo = glm::vec3(0.05f, 0.05f, 0.06f),
-                    .specularStrength = 0.90f,
-                    .shininess = 128.0f
+                    .albedo = definition.albedo,
+                    .specularStrength = definition.specularStrength,
+                    .shininess = definition.shininess
                 }
             );
 
             m_registry.emplace<BallComponent>(ball, BallComponent{
-                .radius = BALL_RADIUS,
-                .massKg = 0.17f,
+                .radius = m_variant->table.ballRadius,
+                .massKg = m_variant->table.ballMassKg,
                 .linearVelocity = glm::vec3(0.0f),
                 .angularVelocity = glm::vec3(0.0f),
-                .isCueBall = false
-            });
-        }
-
-        {
-            TransformComponent redBallTransform;
-            redBallTransform.position = glm::vec3(0.06f, BALL_RADIUS, -0.23f);
-            redBallTransform.previousPosition = redBallTransform.position;
-            redBallTransform.rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-            redBallTransform.previousRotation = redBallTransform.rotation;
-            redBallTransform.scale = glm::vec3(1.0f);
-            redBallTransform.previousScale = redBallTransform.scale;
-
-            const Entity ball = createSceneEntity(
-                m_registry,
-                "Red Ball",
-                redBallTransform,
-                StaticMeshComponent{MeshPrimitive::Sphere},
-                MaterialComponent{
-                    .albedo = glm::vec3(0.73f, 0.10f, 0.08f),
-                    .specularStrength = 0.92f,
-                    .shininess = 128.0f
-                }
-            );
-
-            m_registry.emplace<BallComponent>(ball, BallComponent{
-                .radius = BALL_RADIUS,
-                .massKg = 0.17f,
-                .linearVelocity = glm::vec3(0.0f),
-                .angularVelocity = glm::vec3(0.0f),
-                .isCueBall = false
+                .number = definition.number,
+                .ruleTag = definition.ruleTag,
+                .pocketed = false,
+                .isCueBall = definition.isCueBall
             });
         }
 
@@ -239,6 +318,7 @@ namespace BilliardsSaloon
             resetCueBall();
             m_shotState.phase = ShotPhase::Aiming;
             m_shotState.charge01 = 0.0f;
+            m_matchState.shotInProgress = false;
         }
 
         if (m_shotState.phase == ShotPhase::BallsInMotion)
@@ -277,6 +357,7 @@ namespace BilliardsSaloon
                 fireCurrentShot();
                 m_shotState.phase = ShotPhase::BallsInMotion;
                 m_shotState.charge01 = 0.0f;
+                m_matchState.shotInProgress = true;
             }
         }
 
@@ -323,6 +404,7 @@ namespace BilliardsSaloon
 
         ball->linearVelocity = glm::vec3(0.0f);
         ball->angularVelocity = glm::vec3(0.0f);
+        ball->pocketed = false;
     }
 
     void Application::fireCurrentShot()
@@ -358,6 +440,12 @@ namespace BilliardsSaloon
         if ((m_shotState.phase == ShotPhase::BallsInMotion) && !Physics::anyBallInMotion(m_registry))
         {
             m_shotState.phase = ShotPhase::Aiming;
+            m_matchState.shotInProgress = false;
+
+            if (m_matchState.flowPhase == MatchFlowPhase::BreakShot)
+            {
+                m_matchState.flowPhase = MatchFlowPhase::TableOpen;
+            }
         }
     }
 

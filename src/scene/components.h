@@ -56,6 +56,17 @@ namespace BilliardsSaloon
         float shininess {32.0f};
     };
 
+    enum class BallRuleTag
+    {
+        Cue,
+        Solid,
+        Stripe,
+        Eight,
+        Numbered,
+        Red,
+        Color
+    };
+
     struct BallComponent
     {
         float radius {0.028575f};
@@ -64,6 +75,9 @@ namespace BilliardsSaloon
         glm::vec3 linearVelocity {0.0f, 0.0f, 0.0f};
         glm::vec3 angularVelocity {0.0f, 0.0f, 0.0f};
 
+        int number {0};
+        BallRuleTag ruleTag {BallRuleTag::Numbered};
+        bool pocketed {false};
         bool isCueBall {false};
     };
 

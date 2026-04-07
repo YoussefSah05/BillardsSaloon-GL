@@ -38,6 +38,8 @@ add_executable(BilliardsSaloon
     src/render/mesh.cpp
     src/render/camera.cpp
     src/gameplay/shot_state.cpp
+    src/gameplay/game_variant.cpp
+    src/gameplay/match_state.cpp
     src/physics/billiards_physics.cpp
     external/glad/src/gl.c
 )

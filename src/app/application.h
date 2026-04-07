@@ -2,6 +2,8 @@
 
 #include "ecs/entity.h"
 #include "ecs/registry.h"
+#include "gameplay/game_variant.h"
+#include "gameplay/match_state.h"
 #include "gameplay/shot_state.h"
 #include "platform/timer.h"
 #include "platform/window.h"
@@ -42,6 +44,8 @@ namespace BilliardsSaloon
         std::unique_ptr<Mesh> m_planeMesh;
         std::unique_ptr<Mesh> m_sphereMesh;
 
+        const GameVariantDefinition* m_variant {nullptr};
+        MatchState m_matchState {};
         ShotState m_shotState {};
         bool m_spaceWasDownLastFrame {false};
 
