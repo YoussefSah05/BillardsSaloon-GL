@@ -11,11 +11,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-option(BS_BUILD_WARNINGS "Enable strict compiler warnings" ON)
-
 include(FetchContent)
 
-# GLFW
 FetchContent_Declare(
     glfw
     GIT_REPOSITORY https://github.com/glfw/glfw.git
@@ -23,7 +20,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glfw)
 
-# GLM
 FetchContent_Declare(
     glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git
@@ -38,6 +34,9 @@ add_executable(BilliardsSaloon
     src/app/application.cpp
     src/platform/window.cpp
     src/platform/timer.cpp
+    src/render/shader.cpp
+    src/render/mesh.cpp
+    src/render/camera.cpp
     external/glad/src/gl.c
 )
 
