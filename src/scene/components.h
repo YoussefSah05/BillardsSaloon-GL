@@ -71,9 +71,12 @@ namespace BilliardsSaloon
     {
         float halfWidth {1.42f};
         float halfDepth {0.71f};
+
         float railRestitution {0.92f};
-        float linearDampingPerSecond {0.985f};
-        float stopSpeedThreshold {0.03f};
+        float ballRestitution {0.96f};
+
+        float rollingFrictionCoefficient {0.020f};
+        float stopSpeedThreshold {0.02f};
     };
 
     struct CameraTagComponent

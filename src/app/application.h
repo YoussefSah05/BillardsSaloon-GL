@@ -25,8 +25,6 @@ namespace BilliardsSaloon
         void render(double alpha);
 
         Entity findCueBall() const;
-        Entity findTable() const;
-        bool anyBallInMotion() const;
         void resetCueBall();
         void fireCurrentShot();
 

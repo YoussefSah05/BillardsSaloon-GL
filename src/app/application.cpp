@@ -1,5 +1,6 @@
 #include "app/application.h"
 
+#include "physics/billiards_physics.h"
 #include "render/camera.h"
 #include "scene/components.h"
 
@@ -8,6 +9,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <string>
 
 namespace BilliardsSaloon
 {
@@ -73,8 +75,9 @@ namespace BilliardsSaloon
                 .halfWidth = 1.42f,
                 .halfDepth = 0.71f,
                 .railRestitution = 0.92f,
-                .linearDampingPerSecond = 0.985f,
-                .stopSpeedThreshold = 0.03f
+                .ballRestitution = 0.96f,
+                .rollingFrictionCoefficient = 0.020f,
+                .stopSpeedThreshold = 0.02f
             });
         }
 
@@ -240,19 +243,20 @@ namespace BilliardsSaloon
 
         if (m_shotState.phase == ShotPhase::BallsInMotion)
         {
+            m_spaceWasDownLastFrame = glfwGetKey(handle, GLFW_KEY_SPACE) == GLFW_PRESS;
             return;
         }
 
-        constexpr float AIM_SPEED = 1.8f * static_cast<float>(FIXED_TIME_STEP) * 120.0f;
+        constexpr float AIM_SPEED = 1.8f;
 
         if (glfwGetKey(handle, GLFW_KEY_A) == GLFW_PRESS)
         {
-            m_shotState.aimAngleRadians += AIM_SPEED * static_cast<float>(FIXED_TIME_STEP);
+            m_shotState.aimAngleRadians += static_cast<float>(FIXED_TIME_STEP) * AIM_SPEED;
         }
 
         if (glfwGetKey(handle, GLFW_KEY_D) == GLFW_PRESS)
         {
-            m_shotState.aimAngleRadians -= AIM_SPEED * static_cast<float>(FIXED_TIME_STEP);
+            m_shotState.aimAngleRadians -= static_cast<float>(FIXED_TIME_STEP) * AIM_SPEED;
         }
 
         const bool spaceDown = glfwGetKey(handle, GLFW_KEY_SPACE) == GLFW_PRESS;
@@ -294,37 +298,6 @@ namespace BilliardsSaloon
         );
 
         return found;
-    }
-
-    Entity Application::findTable() const
-    {
-        Entity found {};
-
-        const_cast<Registry&>(m_registry).view<TableBoundsComponent>().each(
-            [&](Entity entity, TableBoundsComponent&)
-            {
-                found = entity;
-            }
-        );
-
-        return found;
-    }
-
-    bool Application::anyBallInMotion() const
-    {
-        bool moving = false;
-
-        const_cast<Registry&>(m_registry).view<BallComponent>().each(
-            [&](Entity, BallComponent& ball)
-            {
-                if (glm::length(ball.linearVelocity) > 0.001f)
-                {
-                    moving = true;
-                }
-            }
-        );
-
-        return moving;
     }
 
     void Application::resetCueBall()
@@ -380,76 +353,9 @@ namespace BilliardsSaloon
 
     void Application::updateFixed(double deltaTimeSeconds)
     {
-        const Entity tableEntity = findTable();
-        TableBoundsComponent* tableBounds = tableEntity.isValid()
-            ? m_registry.tryGet<TableBoundsComponent>(tableEntity)
-            : nullptr;
+        Physics::stepBilliardsWorld(m_registry, deltaTimeSeconds);
 
-        m_registry.view<TransformComponent, BallComponent>().each(
-            [&](Entity, TransformComponent& transform, BallComponent& ball)
-            {
-                transform.syncPrevious();
-
-                transform.position += ball.linearVelocity * static_cast<float>(deltaTimeSeconds);
-
-                if (glm::length(ball.linearVelocity) > 0.0f)
-                {
-                    const float damping =
-                        std::pow(tableBounds != nullptr ? tableBounds->linearDampingPerSecond : 0.985f,
-                                 static_cast<float>(deltaTimeSeconds) * 120.0f);
-
-                    ball.linearVelocity *= damping;
-                }
-
-                if (tableBounds != nullptr)
-                {
-                    const float maxX = tableBounds->halfWidth - ball.radius;
-                    const float maxZ = tableBounds->halfDepth - ball.radius;
-
-                    if (transform.position.x < -maxX)
-                    {
-                        transform.position.x = -maxX;
-                        ball.linearVelocity.x = -ball.linearVelocity.x * tableBounds->railRestitution;
-                    }
-                    else if (transform.position.x > maxX)
-                    {
-                        transform.position.x = maxX;
-                        ball.linearVelocity.x = -ball.linearVelocity.x * tableBounds->railRestitution;
-                    }
-
-                    if (transform.position.z < -maxZ)
-                    {
-                        transform.position.z = -maxZ;
-                        ball.linearVelocity.z = -ball.linearVelocity.z * tableBounds->railRestitution;
-                    }
-                    else if (transform.position.z > maxZ)
-                    {
-                        transform.position.z = maxZ;
-                        ball.linearVelocity.z = -ball.linearVelocity.z * tableBounds->railRestitution;
-                    }
-
-                    if (glm::length(ball.linearVelocity) < tableBounds->stopSpeedThreshold)
-                    {
-                        ball.linearVelocity = glm::vec3(0.0f);
-                    }
-                }
-
-                const float speed = glm::length(ball.linearVelocity);
-                if (speed > 0.0001f)
-                {
-                    const glm::vec3 direction = glm::normalize(ball.linearVelocity);
-
-                    const glm::vec3 rollAxis = glm::normalize(glm::cross(direction, glm::vec3(0.0f, 1.0f, 0.0f)));
-                    const float angularSpeed = speed / ball.radius;
-                    const float deltaAngle = angularSpeed * static_cast<float>(deltaTimeSeconds);
-
-                    const glm::quat deltaRotation = glm::angleAxis(deltaAngle, rollAxis);
-                    transform.rotation = glm::normalize(deltaRotation * transform.rotation);
-                }
-            }
-        );
-
-        if ((m_shotState.phase == ShotPhase::BallsInMotion) && !anyBallInMotion())
+        if ((m_shotState.phase == ShotPhase::BallsInMotion) && !Physics::anyBallInMotion(m_registry))
         {
             m_shotState.phase = ShotPhase::Aiming;
         }
