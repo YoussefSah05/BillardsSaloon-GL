@@ -4,6 +4,7 @@
 #include "ecs/registry.h"
 #include "gameplay/game_variant.h"
 #include "gameplay/match_state.h"
+#include "gameplay/shot_result.h"
 #include "gameplay/shot_state.h"
 #include "platform/timer.h"
 #include "platform/window.h"
@@ -47,6 +48,7 @@ namespace BilliardsSaloon
         const GameVariantDefinition* m_variant {nullptr};
         MatchState m_matchState {};
         ShotState m_shotState {};
+        ShotResult m_currentShotResult {};
         bool m_spaceWasDownLastFrame {false};
 
         double m_accumulator {0.0};

@@ -40,6 +40,8 @@ add_executable(BilliardsSaloon
     src/gameplay/shot_state.cpp
     src/gameplay/game_variant.cpp
     src/gameplay/match_state.cpp
+    src/gameplay/shot_result.cpp
+    src/gameplay/turn_rules.cpp
     src/physics/billiards_physics.cpp
     external/glad/src/gl.c
 )

@@ -26,9 +26,11 @@ namespace BilliardsSaloon
 
     struct MatchState
     {
-        GameDiscipline discipline {GameDiscipline::EightBall}; // For now we only support 8-ball, but this will determine the ruleset and win conditions.
+        GameDiscipline discipline {GameDiscipline::EightBall};
         MatchFlowPhase flowPhase {MatchFlowPhase::BreakShot};
         int activePlayerIndex {0};
+        int winnerPlayerIndex {-1};
+
         bool shotInProgress {false};
         bool foulCommittedThisTurn {false};
         bool ballInHand {false};

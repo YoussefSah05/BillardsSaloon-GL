@@ -64,8 +64,99 @@ namespace BilliardsSaloon
             {
                 for (BallRef& ref : balls)
                 {
+                    if (ref.ball->pocketed)
+                    {
+                        continue;
+                    }
+
                     ref.transform->syncPrevious();
                     ref.transform->position += ref.ball->linearVelocity * dt;
+                }
+            }
+
+            void captureBallIntoPocket(
+                BallRef& ref,
+                const glm::vec2& pocketCenter,
+                ShotResult& shotResult)
+            {
+                ref.ball->pocketed = true;
+                ref.ball->linearVelocity = glm::vec3(0.0f);
+                ref.ball->angularVelocity = glm::vec3(0.0f);
+
+                ref.transform->previousPosition = ref.transform->position;
+                ref.transform->position = glm::vec3(pocketCenter.x, -0.20f, pocketCenter.y);
+
+                shotResult.pocketedBalls.push_back(PocketedBallRecord{
+                    .number = ref.ball->number,
+                    .ruleTag = ref.ball->ruleTag,
+                    .isCueBall = ref.ball->isCueBall
+                });
+
+                if (ref.ball->isCueBall)
+                {
+                    shotResult.cueBallPocketed = true;
+                }
+            }
+
+            void resolvePocketCaptures(
+                std::vector<BallRef>& balls,
+                const TableBoundsComponent* tableBounds,
+                ShotResult& shotResult)
+            {
+                if (tableBounds == nullptr)
+                {
+                    return;
+                }
+
+                const glm::vec2 cornerPockets[4] = {
+                    {-tableBounds->halfWidth, -tableBounds->halfDepth},
+                    { tableBounds->halfWidth, -tableBounds->halfDepth},
+                    {-tableBounds->halfWidth,  tableBounds->halfDepth},
+                    { tableBounds->halfWidth,  tableBounds->halfDepth}
+                };
+
+                const glm::vec2 sidePockets[2] = {
+                    {0.0f, -tableBounds->halfDepth},
+                    {0.0f,  tableBounds->halfDepth}
+                };
+
+                for (BallRef& ref : balls)
+                {
+                    if (ref.ball->pocketed)
+                    {
+                        continue;
+                    }
+
+                    const glm::vec2 positionXZ(
+                        ref.transform->position.x,
+                        ref.transform->position.z
+                    );
+
+                    bool captured = false;
+
+                    for (const glm::vec2& pocket : cornerPockets)
+                    {
+                        if (glm::length(positionXZ - pocket) <= tableBounds->cornerPocketRadius)
+                        {
+                            captureBallIntoPocket(ref, pocket, shotResult);
+                            captured = true;
+                            break;
+                        }
+                    }
+
+                    if (captured)
+                    {
+                        continue;
+                    }
+
+                    for (const glm::vec2& pocket : sidePockets)
+                    {
+                        if (glm::length(positionXZ - pocket) <= tableBounds->sidePocketRadius)
+                        {
+                            captureBallIntoPocket(ref, pocket, shotResult);
+                            break;
+                        }
+                    }
                 }
             }
 
@@ -86,6 +177,11 @@ namespace BilliardsSaloon
 
                 for (BallRef& ref : balls)
                 {
+                    if (ref.ball->pocketed)
+                    {
+                        continue;
+                    }
+
                     glm::vec3 planarVelocity = ref.ball->linearVelocity;
                     planarVelocity.y = 0.0f;
 
@@ -126,7 +222,12 @@ namespace BilliardsSaloon
 
                 for (BallRef& ref : balls)
                 {
-                    const float maxX = tableBounds->halfWidth - ref.ball->radius;// collision plane is at tableBounds->halfWidth, but center of ball can't go there, it must stay one radius away
+                    if (ref.ball->pocketed)
+                    {
+                        continue;
+                    }
+
+                    const float maxX = tableBounds->halfWidth - ref.ball->radius;
                     const float maxZ = tableBounds->halfDepth - ref.ball->radius;
 
                     if (ref.transform->position.x < -maxX)
@@ -155,7 +256,8 @@ namespace BilliardsSaloon
 
             void resolveBallBallCollisions(
                 std::vector<BallRef>& balls,
-                const TableBoundsComponent* tableBounds)
+                const TableBoundsComponent* tableBounds,
+                ShotResult& shotResult)
             {
                 const float restitution = (tableBounds != nullptr)
                     ? tableBounds->ballRestitution
@@ -167,6 +269,11 @@ namespace BilliardsSaloon
                     {
                         BallRef& a = balls[i];
                         BallRef& b = balls[j];
+
+                        if (a.ball->pocketed || b.ball->pocketed)
+                        {
+                            continue;
+                        }
 
                         glm::vec3 delta = b.transform->position - a.transform->position;
                         delta.y = 0.0f;
@@ -186,6 +293,20 @@ namespace BilliardsSaloon
                         if (distance > 1.0e-6f)
                         {
                             normal = delta / distance;
+                        }
+
+                        if (shotResult.firstObjectBallNumber < 0)
+                        {
+                            if (a.ball->isCueBall && !b.ball->isCueBall)
+                            {
+                                shotResult.firstObjectBallNumber = b.ball->number;
+                                shotResult.firstObjectBallTag = b.ball->ruleTag;
+                            }
+                            else if (b.ball->isCueBall && !a.ball->isCueBall)
+                            {
+                                shotResult.firstObjectBallNumber = a.ball->number;
+                                shotResult.firstObjectBallTag = a.ball->ruleTag;
+                            }
                         }
 
                         const float penetration = combinedRadius - distance;
@@ -234,6 +355,11 @@ namespace BilliardsSaloon
             {
                 for (BallRef& ref : balls)
                 {
+                    if (ref.ball->pocketed)
+                    {
+                        continue;
+                    }
+
                     glm::vec3 planarVelocity = ref.ball->linearVelocity;
                     planarVelocity.y = 0.0f;
 
@@ -257,7 +383,10 @@ namespace BilliardsSaloon
             }
         }
 
-        void stepBilliardsWorld(Registry& registry, double deltaTimeSeconds)
+        void stepBilliardsWorld(
+            Registry& registry,
+            double deltaTimeSeconds,
+            ShotResult& shotResult)
         {
             const float dt = static_cast<float>(deltaTimeSeconds);
 
@@ -270,13 +399,14 @@ namespace BilliardsSaloon
             }
 
             integratePositions(balls, dt);
+            resolvePocketCaptures(balls, tableBounds, shotResult);
             resolveRailCollisions(balls, tableBounds);
 
-            // A few solver passes help when multiple collisions happen in one step.
             constexpr int SOLVER_ITERATIONS = 4;
             for (int iteration = 0; iteration < SOLVER_ITERATIONS; ++iteration)
             {
-                resolveBallBallCollisions(balls, tableBounds);
+                resolveBallBallCollisions(balls, tableBounds, shotResult);
+                resolvePocketCaptures(balls, tableBounds, shotResult);
                 resolveRailCollisions(balls, tableBounds);
             }
 
@@ -291,6 +421,11 @@ namespace BilliardsSaloon
             registry.view<BallComponent>().each(
                 [&](Entity, BallComponent& ball)
                 {
+                    if (ball.pocketed)
+                    {
+                        return;
+                    }
+
                     glm::vec3 planarVelocity = ball.linearVelocity;
                     planarVelocity.y = 0.0f;
 

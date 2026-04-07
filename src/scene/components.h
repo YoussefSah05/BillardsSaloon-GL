@@ -91,6 +91,9 @@ namespace BilliardsSaloon
 
         float rollingFrictionCoefficient {0.020f};
         float stopSpeedThreshold {0.02f};
+
+        float cornerPocketRadius {0.090f};
+        float sidePocketRadius {0.080f};
     };
 
     struct CameraTagComponent

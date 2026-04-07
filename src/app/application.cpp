@@ -1,5 +1,6 @@
 #include "app/application.h"
 
+#include "gameplay/turn_rules.h"
 #include "physics/billiards_physics.h"
 #include "render/camera.h"
 #include "scene/components.h"
@@ -135,13 +136,14 @@ namespace BilliardsSaloon
         m_matchState.discipline = m_variant->discipline;
         m_matchState.flowPhase = MatchFlowPhase::BreakShot;
         m_matchState.activePlayerIndex = 0;
+        m_matchState.winnerPlayerIndex = -1;
         m_matchState.shotInProgress = false;
         m_matchState.foulCommittedThisTurn = false;
         m_matchState.ballInHand = false;
 
         m_basicShader = std::make_unique<Shader>(
-            "assets/shaders/basic.vert",
-            "assets/shaders/basic.frag"
+            "../assets/shaders/basic.vert",
+            "../assets/shaders/basic.frag"
         );
 
         m_cubeMesh = Mesh::createCube();
@@ -175,7 +177,9 @@ namespace BilliardsSaloon
                 .railRestitution = 0.92f,
                 .ballRestitution = 0.96f,
                 .rollingFrictionCoefficient = 0.020f,
-                .stopSpeedThreshold = 0.02f
+                .stopSpeedThreshold = 0.02f,
+                .cornerPocketRadius = 0.090f,
+                .sidePocketRadius = 0.080f
             });
         }
 
@@ -313,12 +317,18 @@ namespace BilliardsSaloon
             m_window.requestClose();
         }
 
+        if (m_matchState.flowPhase == MatchFlowPhase::FrameOver)
+        {
+            return;
+        }
+
         if (glfwGetKey(handle, GLFW_KEY_R) == GLFW_PRESS)
         {
             resetCueBall();
             m_shotState.phase = ShotPhase::Aiming;
             m_shotState.charge01 = 0.0f;
             m_matchState.shotInProgress = false;
+            m_currentShotResult.clear();
         }
 
         if (m_shotState.phase == ShotPhase::BallsInMotion)
@@ -421,6 +431,9 @@ namespace BilliardsSaloon
             return;
         }
 
+        m_currentShotResult.clear();
+        m_currentShotResult.shotActive = true;
+
         const glm::vec3 aimDirection = aimDirectionFromAngle(m_shotState.aimAngleRadians);
 
         constexpr float MIN_SHOT_SPEED = 0.4f;
@@ -435,17 +448,23 @@ namespace BilliardsSaloon
 
     void Application::updateFixed(double deltaTimeSeconds)
     {
-        Physics::stepBilliardsWorld(m_registry, deltaTimeSeconds);
+        Physics::stepBilliardsWorld(m_registry, deltaTimeSeconds, m_currentShotResult);
 
         if ((m_shotState.phase == ShotPhase::BallsInMotion) && !Physics::anyBallInMotion(m_registry))
         {
-            m_shotState.phase = ShotPhase::Aiming;
-            m_matchState.shotInProgress = false;
+            Rules::resolveShot(*m_variant, m_matchState, m_registry, m_currentShotResult);
 
-            if (m_matchState.flowPhase == MatchFlowPhase::BreakShot)
+            if ((m_matchState.flowPhase != MatchFlowPhase::FrameOver) && m_matchState.ballInHand)
             {
-                m_matchState.flowPhase = MatchFlowPhase::TableOpen;
+                resetCueBall();
             }
+
+            if (m_matchState.flowPhase != MatchFlowPhase::FrameOver)
+            {
+                m_shotState.phase = ShotPhase::Aiming;
+            }
+
+            m_currentShotResult.clear();
         }
     }
 
@@ -453,7 +472,15 @@ namespace BilliardsSaloon
     {
         glViewport(0, 0, m_window.width(), m_window.height());
 
-        glClearColor(0.05f, 0.035f, 0.025f, 1.0f);
+        if (m_matchState.flowPhase == MatchFlowPhase::FrameOver)
+        {
+            glClearColor(0.02f, 0.02f, 0.025f, 1.0f);
+        }
+        else
+        {
+            glClearColor(0.05f, 0.035f, 0.025f, 1.0f);
+        }
+
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         const TransformComponent* cameraTransform = m_registry.tryGet<TransformComponent>(m_cameraEntity);
@@ -510,11 +537,17 @@ namespace BilliardsSaloon
 
         const Entity cueBall = findCueBall();
         glm::vec3 cueBallPosition(0.0f);
+        bool cueBallVisible = false;
 
         if (cueBall.isValid())
         {
             if (const TransformComponent* cueBallTransform = m_registry.tryGet<TransformComponent>(cueBall))
             {
+                if (const BallComponent* cueBallBall = m_registry.tryGet<BallComponent>(cueBall))
+                {
+                    cueBallVisible = !cueBallBall->pocketed;
+                }
+
                 cueBallPosition =
                     interpolateTransform(*cueBallTransform, static_cast<float>(alpha)).position;
             }
@@ -523,6 +556,14 @@ namespace BilliardsSaloon
         m_registry.view<TransformComponent, StaticMeshComponent, MaterialComponent>().each(
             [&](Entity entity, TransformComponent& transform, StaticMeshComponent& meshComponent, MaterialComponent& material)
             {
+                if (const BallComponent* ball = m_registry.tryGet<BallComponent>(entity))
+                {
+                    if (ball->pocketed)
+                    {
+                        return;
+                    }
+                }
+
                 const glm::mat4 model =
                     composeInterpolatedMatrix(transform, static_cast<float>(alpha));
 
@@ -552,7 +593,9 @@ namespace BilliardsSaloon
                 m_basicShader->setFloat("uMaterialShininess", material.shininess);
 
                 const bool highlightCueBall =
-                    (entity == cueBall) && (m_shotState.phase != ShotPhase::BallsInMotion);
+                    (entity == cueBall) &&
+                    (m_shotState.phase != ShotPhase::BallsInMotion) &&
+                    (m_matchState.flowPhase != MatchFlowPhase::FrameOver);
 
                 m_basicShader->setInt("uUseEmission", highlightCueBall ? 1 : 0);
 
@@ -570,7 +613,10 @@ namespace BilliardsSaloon
             }
         );
 
-        if ((m_shotState.phase != ShotPhase::BallsInMotion) && cueBall.isValid())
+        if ((m_shotState.phase != ShotPhase::BallsInMotion) &&
+            cueBall.isValid() &&
+            cueBallVisible &&
+            (m_matchState.flowPhase != MatchFlowPhase::FrameOver))
         {
             const glm::vec3 aimDirection = aimDirectionFromAngle(m_shotState.aimAngleRadians);
 
