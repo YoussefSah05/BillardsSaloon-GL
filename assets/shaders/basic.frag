@@ -15,6 +15,9 @@ uniform vec3 uMaterialAlbedo;
 uniform float uMaterialSpecularStrength;
 uniform float uMaterialShininess;
 
+uniform int uUseEmission;
+uniform vec3 uEmissionColor;
+
 out vec4 FragColor;
 
 vec3 evaluateDirectionalLight(vec3 N, vec3 V)
@@ -69,6 +72,11 @@ void main()
         ambient +
         evaluateDirectionalLight(N, V) +
         evaluatePointLight(N, V);
+
+    if (uUseEmission != 0)
+    {
+        lighting += uEmissionColor;
+    }
 
     FragColor = vec4(lighting, 1.0);
 }

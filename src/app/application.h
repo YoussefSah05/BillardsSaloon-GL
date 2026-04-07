@@ -2,6 +2,7 @@
 
 #include "ecs/entity.h"
 #include "ecs/registry.h"
+#include "gameplay/shot_state.h"
 #include "platform/timer.h"
 #include "platform/window.h"
 #include "render/mesh.h"
@@ -23,6 +24,12 @@ namespace BilliardsSaloon
         void updateFixed(double deltaTimeSeconds);
         void render(double alpha);
 
+        Entity findCueBall() const;
+        Entity findTable() const;
+        bool anyBallInMotion() const;
+        void resetCueBall();
+        void fireCurrentShot();
+
         static constexpr double FIXED_TIME_STEP = 1.0 / 120.0;
         static constexpr double MAX_FRAME_TIME = 0.25;
 
@@ -36,6 +43,9 @@ namespace BilliardsSaloon
         std::unique_ptr<Mesh> m_cubeMesh;
         std::unique_ptr<Mesh> m_planeMesh;
         std::unique_ptr<Mesh> m_sphereMesh;
+
+        ShotState m_shotState {};
+        bool m_spaceWasDownLastFrame {false};
 
         double m_accumulator {0.0};
         double m_simulationTime {0.0};

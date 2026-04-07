@@ -27,16 +27,19 @@ namespace BilliardsSaloon
             registry.emplace<MaterialComponent>(entity, material);
             return entity;
         }
+
+        glm::vec3 aimDirectionFromAngle(float angleRadians)
+        {
+            return glm::normalize(glm::vec3(std::sin(angleRadians), 0.0f, -std::cos(angleRadians)));
+        }
     }
 
     Application::Application()
         : m_window(WindowDesc{})
     {
-        // Keep the shader paths consistent with whatever currently works in your setup.
-        // If you are still launching from the build folder, ../assets/... is fine for now.
         m_basicShader = std::make_unique<Shader>(
-            "../assets/shaders/basic.vert",
-            "../assets/shaders/basic.frag"
+            "assets/shaders/basic.vert",
+            "assets/shaders/basic.frag"
         );
 
         m_cubeMesh = Mesh::createCube();
@@ -54,7 +57,7 @@ namespace BilliardsSaloon
             tableTransform.scale = glm::vec3(1.0f);
             tableTransform.previousScale = tableTransform.scale;
 
-            createSceneEntity(
+            const Entity table = createSceneEntity(
                 m_registry,
                 "Table Surface",
                 tableTransform,
@@ -65,6 +68,14 @@ namespace BilliardsSaloon
                     .shininess = 8.0f
                 }
             );
+
+            m_registry.emplace<TableBoundsComponent>(table, TableBoundsComponent{
+                .halfWidth = 1.42f,
+                .halfDepth = 0.71f,
+                .railRestitution = 0.92f,
+                .linearDampingPerSecond = 0.985f,
+                .stopSpeedThreshold = 0.03f
+            });
         }
 
         {
@@ -88,9 +99,12 @@ namespace BilliardsSaloon
                 }
             );
 
-            m_registry.emplace<SpinComponent>(cueBall, SpinComponent{
-                .axis = glm::vec3(0.3f, 1.0f, 0.2f),
-                .radiansPerSecond = 0.9f
+            m_registry.emplace<BallComponent>(cueBall, BallComponent{
+                .radius = BALL_RADIUS,
+                .massKg = 0.17f,
+                .linearVelocity = glm::vec3(0.0f),
+                .angularVelocity = glm::vec3(0.0f),
+                .isCueBall = true
             });
         }
 
@@ -103,7 +117,7 @@ namespace BilliardsSaloon
             eightBallTransform.scale = glm::vec3(1.0f);
             eightBallTransform.previousScale = eightBallTransform.scale;
 
-            createSceneEntity(
+            const Entity ball = createSceneEntity(
                 m_registry,
                 "Eight Ball",
                 eightBallTransform,
@@ -114,6 +128,14 @@ namespace BilliardsSaloon
                     .shininess = 128.0f
                 }
             );
+
+            m_registry.emplace<BallComponent>(ball, BallComponent{
+                .radius = BALL_RADIUS,
+                .massKg = 0.17f,
+                .linearVelocity = glm::vec3(0.0f),
+                .angularVelocity = glm::vec3(0.0f),
+                .isCueBall = false
+            });
         }
 
         {
@@ -125,7 +147,7 @@ namespace BilliardsSaloon
             redBallTransform.scale = glm::vec3(1.0f);
             redBallTransform.previousScale = redBallTransform.scale;
 
-            createSceneEntity(
+            const Entity ball = createSceneEntity(
                 m_registry,
                 "Red Ball",
                 redBallTransform,
@@ -136,6 +158,14 @@ namespace BilliardsSaloon
                     .shininess = 128.0f
                 }
             );
+
+            m_registry.emplace<BallComponent>(ball, BallComponent{
+                .radius = BALL_RADIUS,
+                .massKg = 0.17f,
+                .linearVelocity = glm::vec3(0.0f),
+                .angularVelocity = glm::vec3(0.0f),
+                .isCueBall = false
+            });
         }
 
         m_cameraEntity = m_registry.createEntity();
@@ -200,34 +230,229 @@ namespace BilliardsSaloon
         {
             m_window.requestClose();
         }
+
+        if (glfwGetKey(handle, GLFW_KEY_R) == GLFW_PRESS)
+        {
+            resetCueBall();
+            m_shotState.phase = ShotPhase::Aiming;
+            m_shotState.charge01 = 0.0f;
+        }
+
+        if (m_shotState.phase == ShotPhase::BallsInMotion)
+        {
+            return;
+        }
+
+        constexpr float AIM_SPEED = 1.8f * static_cast<float>(FIXED_TIME_STEP) * 120.0f;
+
+        if (glfwGetKey(handle, GLFW_KEY_A) == GLFW_PRESS)
+        {
+            m_shotState.aimAngleRadians += AIM_SPEED * static_cast<float>(FIXED_TIME_STEP);
+        }
+
+        if (glfwGetKey(handle, GLFW_KEY_D) == GLFW_PRESS)
+        {
+            m_shotState.aimAngleRadians -= AIM_SPEED * static_cast<float>(FIXED_TIME_STEP);
+        }
+
+        const bool spaceDown = glfwGetKey(handle, GLFW_KEY_SPACE) == GLFW_PRESS;
+
+        if ((m_shotState.phase == ShotPhase::Aiming) && spaceDown)
+        {
+            m_shotState.phase = ShotPhase::Charging;
+        }
+
+        if (m_shotState.phase == ShotPhase::Charging)
+        {
+            if (spaceDown)
+            {
+                m_shotState.charge01 = std::min(m_shotState.charge01 + 0.015f, 1.0f);
+            }
+            else if (m_spaceWasDownLastFrame)
+            {
+                fireCurrentShot();
+                m_shotState.phase = ShotPhase::BallsInMotion;
+                m_shotState.charge01 = 0.0f;
+            }
+        }
+
+        m_spaceWasDownLastFrame = spaceDown;
+    }
+
+    Entity Application::findCueBall() const
+    {
+        Entity found {};
+
+        const_cast<Registry&>(m_registry).view<BallComponent>().each(
+            [&](Entity entity, BallComponent& ball)
+            {
+                if (ball.isCueBall)
+                {
+                    found = entity;
+                }
+            }
+        );
+
+        return found;
+    }
+
+    Entity Application::findTable() const
+    {
+        Entity found {};
+
+        const_cast<Registry&>(m_registry).view<TableBoundsComponent>().each(
+            [&](Entity entity, TableBoundsComponent&)
+            {
+                found = entity;
+            }
+        );
+
+        return found;
+    }
+
+    bool Application::anyBallInMotion() const
+    {
+        bool moving = false;
+
+        const_cast<Registry&>(m_registry).view<BallComponent>().each(
+            [&](Entity, BallComponent& ball)
+            {
+                if (glm::length(ball.linearVelocity) > 0.001f)
+                {
+                    moving = true;
+                }
+            }
+        );
+
+        return moving;
+    }
+
+    void Application::resetCueBall()
+    {
+        const Entity cueBall = findCueBall();
+        if (!cueBall.isValid())
+        {
+            return;
+        }
+
+        TransformComponent* transform = m_registry.tryGet<TransformComponent>(cueBall);
+        BallComponent* ball = m_registry.tryGet<BallComponent>(cueBall);
+
+        if ((transform == nullptr) || (ball == nullptr))
+        {
+            return;
+        }
+
+        transform->position = glm::vec3(0.0f, ball->radius, 0.42f);
+        transform->previousPosition = transform->position;
+        transform->rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+        transform->previousRotation = transform->rotation;
+
+        ball->linearVelocity = glm::vec3(0.0f);
+        ball->angularVelocity = glm::vec3(0.0f);
+    }
+
+    void Application::fireCurrentShot()
+    {
+        const Entity cueBall = findCueBall();
+        if (!cueBall.isValid())
+        {
+            return;
+        }
+
+        BallComponent* ball = m_registry.tryGet<BallComponent>(cueBall);
+        if (ball == nullptr)
+        {
+            return;
+        }
+
+        const glm::vec3 aimDirection = aimDirectionFromAngle(m_shotState.aimAngleRadians);
+
+        constexpr float MIN_SHOT_SPEED = 0.4f;
+        constexpr float MAX_SHOT_SPEED = 3.8f;
+
+        const float shotSpeed =
+            MIN_SHOT_SPEED + (MAX_SHOT_SPEED - MIN_SHOT_SPEED) * m_shotState.charge01;
+
+        ball->linearVelocity = aimDirection * shotSpeed;
+        ball->angularVelocity = glm::vec3(0.0f);
     }
 
     void Application::updateFixed(double deltaTimeSeconds)
     {
-        m_registry.view<TransformComponent, SpinComponent>().each(
-            [deltaTimeSeconds](Entity, TransformComponent& transform, SpinComponent& spin)
+        const Entity tableEntity = findTable();
+        TableBoundsComponent* tableBounds = tableEntity.isValid()
+            ? m_registry.tryGet<TableBoundsComponent>(tableEntity)
+            : nullptr;
+
+        m_registry.view<TransformComponent, BallComponent>().each(
+            [&](Entity, TransformComponent& transform, BallComponent& ball)
             {
                 transform.syncPrevious();
 
-                glm::vec3 axis = spin.axis;
-                const float axisLengthSquared = glm::dot(axis, axis);
+                transform.position += ball.linearVelocity * static_cast<float>(deltaTimeSeconds);
 
-                if (axisLengthSquared < 1.0e-6f)
+                if (glm::length(ball.linearVelocity) > 0.0f)
                 {
-                    axis = glm::vec3(0.0f, 1.0f, 0.0f);
+                    const float damping =
+                        std::pow(tableBounds != nullptr ? tableBounds->linearDampingPerSecond : 0.985f,
+                                 static_cast<float>(deltaTimeSeconds) * 120.0f);
+
+                    ball.linearVelocity *= damping;
                 }
-                else
+
+                if (tableBounds != nullptr)
                 {
-                    axis = glm::normalize(axis);
+                    const float maxX = tableBounds->halfWidth - ball.radius;
+                    const float maxZ = tableBounds->halfDepth - ball.radius;
+
+                    if (transform.position.x < -maxX)
+                    {
+                        transform.position.x = -maxX;
+                        ball.linearVelocity.x = -ball.linearVelocity.x * tableBounds->railRestitution;
+                    }
+                    else if (transform.position.x > maxX)
+                    {
+                        transform.position.x = maxX;
+                        ball.linearVelocity.x = -ball.linearVelocity.x * tableBounds->railRestitution;
+                    }
+
+                    if (transform.position.z < -maxZ)
+                    {
+                        transform.position.z = -maxZ;
+                        ball.linearVelocity.z = -ball.linearVelocity.z * tableBounds->railRestitution;
+                    }
+                    else if (transform.position.z > maxZ)
+                    {
+                        transform.position.z = maxZ;
+                        ball.linearVelocity.z = -ball.linearVelocity.z * tableBounds->railRestitution;
+                    }
+
+                    if (glm::length(ball.linearVelocity) < tableBounds->stopSpeedThreshold)
+                    {
+                        ball.linearVelocity = glm::vec3(0.0f);
+                    }
                 }
 
-                const float deltaAngle =
-                    static_cast<float>(deltaTimeSeconds) * spin.radiansPerSecond;
+                const float speed = glm::length(ball.linearVelocity);
+                if (speed > 0.0001f)
+                {
+                    const glm::vec3 direction = glm::normalize(ball.linearVelocity);
 
-                const glm::quat deltaRotation = glm::angleAxis(deltaAngle, axis);
-                transform.rotation = glm::normalize(deltaRotation * transform.rotation);
+                    const glm::vec3 rollAxis = glm::normalize(glm::cross(direction, glm::vec3(0.0f, 1.0f, 0.0f)));
+                    const float angularSpeed = speed / ball.radius;
+                    const float deltaAngle = angularSpeed * static_cast<float>(deltaTimeSeconds);
+
+                    const glm::quat deltaRotation = glm::angleAxis(deltaAngle, rollAxis);
+                    transform.rotation = glm::normalize(deltaRotation * transform.rotation);
+                }
             }
         );
+
+        if ((m_shotState.phase == ShotPhase::BallsInMotion) && !anyBallInMotion())
+        {
+            m_shotState.phase = ShotPhase::Aiming;
+        }
     }
 
     void Application::render(double alpha)
@@ -289,8 +514,20 @@ namespace BilliardsSaloon
             glm::vec3(1.00f, 0.72f, 0.42f)
         );
 
+        const Entity cueBall = findCueBall();
+        glm::vec3 cueBallPosition(0.0f);
+
+        if (cueBall.isValid())
+        {
+            if (const TransformComponent* cueBallTransform = m_registry.tryGet<TransformComponent>(cueBall))
+            {
+                cueBallPosition =
+                    interpolateTransform(*cueBallTransform, static_cast<float>(alpha)).position;
+            }
+        }
+
         m_registry.view<TransformComponent, StaticMeshComponent, MaterialComponent>().each(
-            [&](Entity, TransformComponent& transform, StaticMeshComponent& meshComponent, MaterialComponent& material)
+            [&](Entity entity, TransformComponent& transform, StaticMeshComponent& meshComponent, MaterialComponent& material)
             {
                 const glm::mat4 model =
                     composeInterpolatedMatrix(transform, static_cast<float>(alpha));
@@ -320,8 +557,55 @@ namespace BilliardsSaloon
                 m_basicShader->setFloat("uMaterialSpecularStrength", material.specularStrength);
                 m_basicShader->setFloat("uMaterialShininess", material.shininess);
 
+                const bool highlightCueBall =
+                    (entity == cueBall) && (m_shotState.phase != ShotPhase::BallsInMotion);
+
+                m_basicShader->setInt("uUseEmission", highlightCueBall ? 1 : 0);
+
+                if (highlightCueBall)
+                {
+                    const float glow = 0.08f + 0.25f * m_shotState.charge01;
+                    m_basicShader->setVec3("uEmissionColor", glm::vec3(glow, glow, glow * 0.85f));
+                }
+                else
+                {
+                    m_basicShader->setVec3("uEmissionColor", glm::vec3(0.0f));
+                }
+
                 mesh->draw();
             }
         );
+
+        if ((m_shotState.phase != ShotPhase::BallsInMotion) && cueBall.isValid())
+        {
+            const glm::vec3 aimDirection = aimDirectionFromAngle(m_shotState.aimAngleRadians);
+
+            TransformComponent guideTransform;
+            guideTransform.position = cueBallPosition + aimDirection * 0.18f;
+            guideTransform.previousPosition = guideTransform.position;
+            guideTransform.rotation = glm::quat(glm::vec3(0.0f, -m_shotState.aimAngleRadians, 0.0f));
+            guideTransform.previousRotation = guideTransform.rotation;
+            guideTransform.scale = glm::vec3(0.03f, 0.03f, 0.18f + 0.35f * m_shotState.charge01);
+            guideTransform.previousScale = guideTransform.scale;
+
+            m_basicShader->setMat4("uModel", composeMatrix(
+                guideTransform.position,
+                guideTransform.rotation,
+                guideTransform.scale
+            ));
+            m_basicShader->setVec3("uMaterialAlbedo", glm::vec3(0.92f, 0.82f, 0.42f));
+            m_basicShader->setFloat("uMaterialSpecularStrength", 0.15f);
+            m_basicShader->setFloat("uMaterialShininess", 8.0f);
+            m_basicShader->setInt("uUseEmission", 1);
+            m_basicShader->setVec3(
+                "uEmissionColor",
+                glm::vec3(0.10f, 0.08f, 0.02f) + glm::vec3(0.10f, 0.06f, 0.01f) * m_shotState.charge01
+            );
+
+            m_cubeMesh->draw();
+
+            m_basicShader->setInt("uUseEmission", 0);
+            m_basicShader->setVec3("uEmissionColor", glm::vec3(0.0f));
+        }
     }
 }

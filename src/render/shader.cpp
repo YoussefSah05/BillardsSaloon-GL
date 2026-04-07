@@ -61,6 +61,11 @@ namespace BilliardsSaloon
         glUniform1f(uniformLocation(name), value);
     }
 
+    void Shader::setInt(const std::string& name, int value) const
+    {
+        glUniform1i(uniformLocation(name), value);
+    }
+    
     std::string Shader::readTextFile(const std::string& path)
     {
         std::ifstream file(path, std::ios::in);

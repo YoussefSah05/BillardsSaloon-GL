@@ -56,6 +56,26 @@ namespace BilliardsSaloon
         float shininess {32.0f};
     };
 
+    struct BallComponent
+    {
+        float radius {0.028575f};
+        float massKg {0.17f};
+
+        glm::vec3 linearVelocity {0.0f, 0.0f, 0.0f};
+        glm::vec3 angularVelocity {0.0f, 0.0f, 0.0f};
+
+        bool isCueBall {false};
+    };
+
+    struct TableBoundsComponent
+    {
+        float halfWidth {1.42f};
+        float halfDepth {0.71f};
+        float railRestitution {0.92f};
+        float linearDampingPerSecond {0.985f};
+        float stopSpeedThreshold {0.03f};
+    };
+
     struct CameraTagComponent
     {
     };

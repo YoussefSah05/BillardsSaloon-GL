@@ -37,6 +37,7 @@ add_executable(BilliardsSaloon
     src/render/shader.cpp
     src/render/mesh.cpp
     src/render/camera.cpp
+    src/gameplay/shot_state.cpp
     external/glad/src/gl.c
 )
 

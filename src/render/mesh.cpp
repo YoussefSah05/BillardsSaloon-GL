@@ -140,8 +140,8 @@ namespace BilliardsSaloon
         };
 
         const std::vector<std::uint32_t> indices = {
-            0, 1, 2,
-            2, 3, 0
+            0, 2, 1,
+            2, 0, 3
         };
 
         return std::make_unique<Mesh>(vertices, indices);
