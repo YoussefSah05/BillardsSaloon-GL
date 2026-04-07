@@ -11,45 +11,141 @@
 
 namespace BilliardsSaloon
 {
+    namespace
+    {
+        Entity createSceneEntity(
+            Registry& registry,
+            const std::string& name,
+            const TransformComponent& transform,
+            const StaticMeshComponent& mesh,
+            const MaterialComponent& material)
+        {
+            const Entity entity = registry.createEntity();
+            registry.emplace<NameComponent>(entity, NameComponent{name});
+            registry.emplace<TransformComponent>(entity, transform);
+            registry.emplace<StaticMeshComponent>(entity, mesh);
+            registry.emplace<MaterialComponent>(entity, material);
+            return entity;
+        }
+    }
+
     Application::Application()
         : m_window(WindowDesc{})
     {
+        // Keep the shader paths consistent with whatever currently works in your setup.
+        // If you are still launching from the build folder, ../assets/... is fine for now.
         m_basicShader = std::make_unique<Shader>(
             "../assets/shaders/basic.vert",
             "../assets/shaders/basic.frag"
         );
 
         m_cubeMesh = Mesh::createCube();
+        m_planeMesh = Mesh::createPlane(2.84f, 1.42f);
 
-        m_demoCube = m_registry.createEntity();
-        m_registry.emplace<NameComponent>(m_demoCube, NameComponent{"Demo Cube"});
+        constexpr float BALL_RADIUS = 0.028575f;
+        m_sphereMesh = Mesh::createUVSphere(BALL_RADIUS, 32U, 16U);
 
         {
-            TransformComponent transform;
-            transform.position = glm::vec3(0.0f, 0.0f, 0.0f);
-            transform.previousPosition = transform.position;
-            transform.scale = glm::vec3(1.0f);
-            transform.previousScale = transform.scale;
-            transform.rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-            transform.previousRotation = transform.rotation;
+            TransformComponent tableTransform;
+            tableTransform.position = glm::vec3(0.0f, 0.0f, 0.0f);
+            tableTransform.previousPosition = tableTransform.position;
+            tableTransform.rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+            tableTransform.previousRotation = tableTransform.rotation;
+            tableTransform.scale = glm::vec3(1.0f);
+            tableTransform.previousScale = tableTransform.scale;
 
-            m_registry.emplace<TransformComponent>(m_demoCube, transform);
+            createSceneEntity(
+                m_registry,
+                "Table Surface",
+                tableTransform,
+                StaticMeshComponent{MeshPrimitive::Plane},
+                MaterialComponent{
+                    .albedo = glm::vec3(0.10f, 0.42f, 0.16f),
+                    .specularStrength = 0.08f,
+                    .shininess = 8.0f
+                }
+            );
         }
 
-        m_registry.emplace<SpinComponent>(m_demoCube, SpinComponent{
-            .axis = glm::vec3(0.3f, 1.0f, 0.2f),
-            .radiansPerSecond = 1.2f
-        });
-        m_registry.emplace<MeshRenderComponent>(m_demoCube, MeshRenderComponent{});
+        {
+            TransformComponent cueBallTransform;
+            cueBallTransform.position = glm::vec3(0.0f, BALL_RADIUS, 0.42f);
+            cueBallTransform.previousPosition = cueBallTransform.position;
+            cueBallTransform.rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+            cueBallTransform.previousRotation = cueBallTransform.rotation;
+            cueBallTransform.scale = glm::vec3(1.0f);
+            cueBallTransform.previousScale = cueBallTransform.scale;
+
+            const Entity cueBall = createSceneEntity(
+                m_registry,
+                "Cue Ball",
+                cueBallTransform,
+                StaticMeshComponent{MeshPrimitive::Sphere},
+                MaterialComponent{
+                    .albedo = glm::vec3(0.93f, 0.93f, 0.91f),
+                    .specularStrength = 0.95f,
+                    .shininess = 128.0f
+                }
+            );
+
+            m_registry.emplace<SpinComponent>(cueBall, SpinComponent{
+                .axis = glm::vec3(0.3f, 1.0f, 0.2f),
+                .radiansPerSecond = 0.9f
+            });
+        }
+
+        {
+            TransformComponent eightBallTransform;
+            eightBallTransform.position = glm::vec3(0.0f, BALL_RADIUS, -0.16f);
+            eightBallTransform.previousPosition = eightBallTransform.position;
+            eightBallTransform.rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+            eightBallTransform.previousRotation = eightBallTransform.rotation;
+            eightBallTransform.scale = glm::vec3(1.0f);
+            eightBallTransform.previousScale = eightBallTransform.scale;
+
+            createSceneEntity(
+                m_registry,
+                "Eight Ball",
+                eightBallTransform,
+                StaticMeshComponent{MeshPrimitive::Sphere},
+                MaterialComponent{
+                    .albedo = glm::vec3(0.05f, 0.05f, 0.06f),
+                    .specularStrength = 0.90f,
+                    .shininess = 128.0f
+                }
+            );
+        }
+
+        {
+            TransformComponent redBallTransform;
+            redBallTransform.position = glm::vec3(0.06f, BALL_RADIUS, -0.23f);
+            redBallTransform.previousPosition = redBallTransform.position;
+            redBallTransform.rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+            redBallTransform.previousRotation = redBallTransform.rotation;
+            redBallTransform.scale = glm::vec3(1.0f);
+            redBallTransform.previousScale = redBallTransform.scale;
+
+            createSceneEntity(
+                m_registry,
+                "Red Ball",
+                redBallTransform,
+                StaticMeshComponent{MeshPrimitive::Sphere},
+                MaterialComponent{
+                    .albedo = glm::vec3(0.73f, 0.10f, 0.08f),
+                    .specularStrength = 0.92f,
+                    .shininess = 128.0f
+                }
+            );
+        }
 
         m_cameraEntity = m_registry.createEntity();
         m_registry.emplace<NameComponent>(m_cameraEntity, NameComponent{"Main Camera"});
 
         {
             TransformComponent cameraTransform;
-            cameraTransform.position = glm::vec3(0.0f, 1.5f, 4.0f);
+            cameraTransform.position = glm::vec3(0.0f, 1.10f, 1.95f);
             cameraTransform.previousPosition = cameraTransform.position;
-            cameraTransform.rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+            cameraTransform.rotation = glm::quat(glm::vec3(glm::radians(-28.0f), 0.0f, 0.0f));
             cameraTransform.previousRotation = cameraTransform.rotation;
             cameraTransform.scale = glm::vec3(1.0f);
             cameraTransform.previousScale = cameraTransform.scale;
@@ -57,7 +153,11 @@ namespace BilliardsSaloon
             m_registry.emplace<TransformComponent>(m_cameraEntity, cameraTransform);
         }
 
-        m_registry.emplace<CameraComponent>(m_cameraEntity, CameraComponent{});
+        m_registry.emplace<CameraComponent>(m_cameraEntity, CameraComponent{
+            .verticalFieldOfViewRadians = glm::radians(55.0f),
+            .nearPlane = 0.05f,
+            .farPlane = 50.0f
+        });
         m_registry.emplace<CameraTagComponent>(m_cameraEntity, CameraTagComponent{});
     }
 
@@ -134,7 +234,7 @@ namespace BilliardsSaloon
     {
         glViewport(0, 0, m_window.width(), m_window.height());
 
-        glClearColor(0.08f, 0.06f, 0.04f, 1.0f);
+        glClearColor(0.05f, 0.035f, 0.025f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         const TransformComponent* cameraTransform = m_registry.tryGet<TransformComponent>(m_cameraEntity);
@@ -169,17 +269,58 @@ namespace BilliardsSaloon
         m_basicShader->bind();
         m_basicShader->setMat4("uView", view);
         m_basicShader->setMat4("uProjection", projection);
-        m_basicShader->setVec3("uLightDirection", glm::normalize(glm::vec3(-0.6f, -1.0f, -0.4f)));
-        m_basicShader->setVec3("uAlbedo", glm::vec3(0.82f, 0.74f, 0.62f));
+        m_basicShader->setVec3("uViewPosition", interpolatedCamera.position);
 
-        m_registry.view<TransformComponent, MeshRenderComponent>().each(
-            [&](Entity, TransformComponent& transform, MeshRenderComponent&)
+        m_basicShader->setVec3(
+            "uDirectionalLightDirection",
+            glm::normalize(glm::vec3(-0.6f, -1.0f, -0.25f))
+        );
+        m_basicShader->setVec3(
+            "uDirectionalLightColor",
+            glm::vec3(0.65f, 0.62f, 0.58f)
+        );
+
+        m_basicShader->setVec3(
+            "uPointLightPosition",
+            glm::vec3(0.55f, 1.15f, 0.35f)
+        );
+        m_basicShader->setVec3(
+            "uPointLightColor",
+            glm::vec3(1.00f, 0.72f, 0.42f)
+        );
+
+        m_registry.view<TransformComponent, StaticMeshComponent, MaterialComponent>().each(
+            [&](Entity, TransformComponent& transform, StaticMeshComponent& meshComponent, MaterialComponent& material)
             {
                 const glm::mat4 model =
                     composeInterpolatedMatrix(transform, static_cast<float>(alpha));
 
+                Mesh* mesh = nullptr;
+
+                switch (meshComponent.primitive)
+                {
+                    case MeshPrimitive::Cube:
+                        mesh = m_cubeMesh.get();
+                        break;
+                    case MeshPrimitive::Plane:
+                        mesh = m_planeMesh.get();
+                        break;
+                    case MeshPrimitive::Sphere:
+                        mesh = m_sphereMesh.get();
+                        break;
+                }
+
+                if (mesh == nullptr)
+                {
+                    return;
+                }
+
                 m_basicShader->setMat4("uModel", model);
-                m_cubeMesh->draw();
+                m_basicShader->setVec3("uMaterialAlbedo", material.albedo);
+                m_basicShader->setFloat("uMaterialSpecularStrength", material.specularStrength);
+                m_basicShader->setFloat("uMaterialShininess", material.shininess);
+
+                mesh->draw();
             }
         );
     }

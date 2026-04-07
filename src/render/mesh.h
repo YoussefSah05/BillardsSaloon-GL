@@ -1,8 +1,8 @@
 #pragma once
 
-#include <memory>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 namespace BilliardsSaloon
@@ -27,6 +27,8 @@ namespace BilliardsSaloon
         void draw() const;
 
         static std::unique_ptr<Mesh> createCube();
+        static std::unique_ptr<Mesh> createPlane(float width, float depth);
+        static std::unique_ptr<Mesh> createUVSphere(float radius, std::uint32_t slices, std::uint32_t stacks);
 
     private:
         unsigned int m_vao {0};

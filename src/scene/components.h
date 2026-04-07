@@ -37,8 +37,23 @@ namespace BilliardsSaloon
         float radiansPerSecond {1.0f};
     };
 
-    struct MeshRenderComponent
+    enum class MeshPrimitive
     {
+        Cube,
+        Plane,
+        Sphere
+    };
+
+    struct StaticMeshComponent
+    {
+        MeshPrimitive primitive {MeshPrimitive::Cube};
+    };
+
+    struct MaterialComponent
+    {
+        glm::vec3 albedo {1.0f, 1.0f, 1.0f};
+        float specularStrength {0.35f};
+        float shininess {32.0f};
     };
 
     struct CameraTagComponent

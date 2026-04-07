@@ -55,6 +55,11 @@ namespace BilliardsSaloon
     {
         glUniform3fv(uniformLocation(name), 1, &value[0]);
     }
+    
+    void Shader::setFloat(const std::string& name, float value) const
+    {
+        glUniform1f(uniformLocation(name), value);
+    }
 
     std::string Shader::readTextFile(const std::string& path)
     {
