@@ -135,12 +135,19 @@ namespace BilliardsSaloon
 
     int Shader::uniformLocation(const std::string& name) const
     {
+        const auto cached = m_uniformLocations.find(name);
+        if (cached != m_uniformLocations.end())
+        {
+            return cached->second;
+        }
+
         const int location = glGetUniformLocation(m_program, name.c_str());
         if (location < 0)
         {
             throw std::runtime_error("Uniform not found: " + name);
         }
 
+        m_uniformLocations.emplace(name, location);
         return location;
     }
 }

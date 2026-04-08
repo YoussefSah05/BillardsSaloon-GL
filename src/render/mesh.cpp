@@ -53,6 +53,12 @@ namespace BilliardsSaloon
             reinterpret_cast<void*>(offsetof(Vertex, normal))
         );
 
+        glEnableVertexAttribArray(2);
+        glVertexAttribPointer(
+            2, 2, GL_FLOAT, GL_FALSE, stride,
+            reinterpret_cast<void*>(offsetof(Vertex, texCoord))
+        );
+
         glBindVertexArray(0);
     }
 
@@ -84,35 +90,35 @@ namespace BilliardsSaloon
     std::unique_ptr<Mesh> Mesh::createCube()
     {
         const std::vector<Vertex> vertices = {
-            {{-0.5f, -0.5f,  0.5f}, { 0.0f,  0.0f,  1.0f}},
-            {{ 0.5f, -0.5f,  0.5f}, { 0.0f,  0.0f,  1.0f}},
-            {{ 0.5f,  0.5f,  0.5f}, { 0.0f,  0.0f,  1.0f}},
-            {{-0.5f,  0.5f,  0.5f}, { 0.0f,  0.0f,  1.0f}},
+            {{-0.5f, -0.5f,  0.5f}, { 0.0f,  0.0f,  1.0f}, {0.0f, 0.0f}},
+            {{ 0.5f, -0.5f,  0.5f}, { 0.0f,  0.0f,  1.0f}, {1.0f, 0.0f}},
+            {{ 0.5f,  0.5f,  0.5f}, { 0.0f,  0.0f,  1.0f}, {1.0f, 1.0f}},
+            {{-0.5f,  0.5f,  0.5f}, { 0.0f,  0.0f,  1.0f}, {0.0f, 1.0f}},
 
-            {{-0.5f, -0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}},
-            {{-0.5f,  0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}},
-            {{ 0.5f,  0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}},
-            {{ 0.5f, -0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}},
+            {{-0.5f, -0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}, {1.0f, 0.0f}},
+            {{-0.5f,  0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}, {1.0f, 1.0f}},
+            {{ 0.5f,  0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}, {0.0f, 1.0f}},
+            {{ 0.5f, -0.5f, -0.5f}, { 0.0f,  0.0f, -1.0f}, {0.0f, 0.0f}},
 
-            {{-0.5f, -0.5f, -0.5f}, {-1.0f,  0.0f,  0.0f}},
-            {{-0.5f, -0.5f,  0.5f}, {-1.0f,  0.0f,  0.0f}},
-            {{-0.5f,  0.5f,  0.5f}, {-1.0f,  0.0f,  0.0f}},
-            {{-0.5f,  0.5f, -0.5f}, {-1.0f,  0.0f,  0.0f}},
+            {{-0.5f, -0.5f, -0.5f}, {-1.0f,  0.0f,  0.0f}, {0.0f, 0.0f}},
+            {{-0.5f, -0.5f,  0.5f}, {-1.0f,  0.0f,  0.0f}, {1.0f, 0.0f}},
+            {{-0.5f,  0.5f,  0.5f}, {-1.0f,  0.0f,  0.0f}, {1.0f, 1.0f}},
+            {{-0.5f,  0.5f, -0.5f}, {-1.0f,  0.0f,  0.0f}, {0.0f, 1.0f}},
 
-            {{ 0.5f, -0.5f, -0.5f}, { 1.0f,  0.0f,  0.0f}},
-            {{ 0.5f,  0.5f, -0.5f}, { 1.0f,  0.0f,  0.0f}},
-            {{ 0.5f,  0.5f,  0.5f}, { 1.0f,  0.0f,  0.0f}},
-            {{ 0.5f, -0.5f,  0.5f}, { 1.0f,  0.0f,  0.0f}},
+            {{ 0.5f, -0.5f, -0.5f}, { 1.0f,  0.0f,  0.0f}, {1.0f, 0.0f}},
+            {{ 0.5f,  0.5f, -0.5f}, { 1.0f,  0.0f,  0.0f}, {1.0f, 1.0f}},
+            {{ 0.5f,  0.5f,  0.5f}, { 1.0f,  0.0f,  0.0f}, {0.0f, 1.0f}},
+            {{ 0.5f, -0.5f,  0.5f}, { 1.0f,  0.0f,  0.0f}, {0.0f, 0.0f}},
 
-            {{-0.5f,  0.5f, -0.5f}, { 0.0f,  1.0f,  0.0f}},
-            {{-0.5f,  0.5f,  0.5f}, { 0.0f,  1.0f,  0.0f}},
-            {{ 0.5f,  0.5f,  0.5f}, { 0.0f,  1.0f,  0.0f}},
-            {{ 0.5f,  0.5f, -0.5f}, { 0.0f,  1.0f,  0.0f}},
+            {{-0.5f,  0.5f, -0.5f}, { 0.0f,  1.0f,  0.0f}, {0.0f, 1.0f}},
+            {{-0.5f,  0.5f,  0.5f}, { 0.0f,  1.0f,  0.0f}, {0.0f, 0.0f}},
+            {{ 0.5f,  0.5f,  0.5f}, { 0.0f,  1.0f,  0.0f}, {1.0f, 0.0f}},
+            {{ 0.5f,  0.5f, -0.5f}, { 0.0f,  1.0f,  0.0f}, {1.0f, 1.0f}},
 
-            {{-0.5f, -0.5f, -0.5f}, { 0.0f, -1.0f,  0.0f}},
-            {{ 0.5f, -0.5f, -0.5f}, { 0.0f, -1.0f,  0.0f}},
-            {{ 0.5f, -0.5f,  0.5f}, { 0.0f, -1.0f,  0.0f}},
-            {{-0.5f, -0.5f,  0.5f}, { 0.0f, -1.0f,  0.0f}},
+            {{-0.5f, -0.5f, -0.5f}, { 0.0f, -1.0f,  0.0f}, {0.0f, 0.0f}},
+            {{ 0.5f, -0.5f, -0.5f}, { 0.0f, -1.0f,  0.0f}, {1.0f, 0.0f}},
+            {{ 0.5f, -0.5f,  0.5f}, { 0.0f, -1.0f,  0.0f}, {1.0f, 1.0f}},
+            {{-0.5f, -0.5f,  0.5f}, { 0.0f, -1.0f,  0.0f}, {0.0f, 1.0f}},
         };
 
         const std::vector<std::uint32_t> indices = {
@@ -133,10 +139,10 @@ namespace BilliardsSaloon
         const float halfDepth = 0.5f * depth;
 
         const std::vector<Vertex> vertices = {
-            {{-halfWidth, 0.0f, -halfDepth}, {0.0f, 1.0f, 0.0f}},
-            {{ halfWidth, 0.0f, -halfDepth}, {0.0f, 1.0f, 0.0f}},
-            {{ halfWidth, 0.0f,  halfDepth}, {0.0f, 1.0f, 0.0f}},
-            {{-halfWidth, 0.0f,  halfDepth}, {0.0f, 1.0f, 0.0f}},
+            {{-halfWidth, 0.0f, -halfDepth}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+            {{ halfWidth, 0.0f, -halfDepth}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
+            {{ halfWidth, 0.0f,  halfDepth}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},
+            {{-halfWidth, 0.0f,  halfDepth}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}},
         };
 
         const std::vector<std::uint32_t> indices = {
@@ -158,7 +164,7 @@ namespace BilliardsSaloon
         vertices.reserve(static_cast<std::size_t>((slices + 1U) * (stacks + 1U)));
         indices.reserve(static_cast<std::size_t>(slices * stacks * 6U));
 
-        constexpr float PI = 3.14159265358979323846f; // good precision for single-precision floating-point
+        constexpr float PI = 3.14159265358979323846f;
         constexpr float TWO_PI = 6.28318530717958647692f;
 
         for (std::uint32_t stack = 0; stack <= stacks; ++stack)
@@ -177,13 +183,10 @@ namespace BilliardsSaloon
                 const float x = ringRadius * std::cos(theta);
                 const float z = ringRadius * std::sin(theta);
 
-                const float nx = x;
-                const float ny = y;
-                const float nz = z;
-
                 vertices.push_back(Vertex{
                     {radius * x, radius * y, radius * z},
-                    {nx, ny, nz}
+                    {x, y, z},
+                    {u, v}
                 });
             }
         }

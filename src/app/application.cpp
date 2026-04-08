@@ -9,6 +9,7 @@
 #include <GLFW/glfw3.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <string>
 #include <vector>
@@ -17,6 +18,14 @@ namespace BilliardsSaloon
 {
     namespace
     {
+        constexpr int POINT_LIGHT_COUNT = 3;
+
+        struct PointLightRig
+        {
+            std::array<glm::vec3, POINT_LIGHT_COUNT> positions {};
+            std::array<glm::vec3, POINT_LIGHT_COUNT> colors {};
+        };
+
         Entity createSceneEntity(
             Registry& registry,
             const std::string& name,
@@ -32,9 +41,66 @@ namespace BilliardsSaloon
             return entity;
         }
 
+        TransformComponent makeTransform(
+            const glm::vec3& position,
+            const glm::quat& rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+            const glm::vec3& scale = glm::vec3(1.0f))
+        {
+            TransformComponent transform;
+            transform.position = position;
+            transform.previousPosition = position;
+            transform.rotation = rotation;
+            transform.previousRotation = rotation;
+            transform.scale = scale;
+            transform.previousScale = scale;
+            return transform;
+        }
+
         glm::vec3 aimDirectionFromAngle(float angleRadians)
         {
             return glm::normalize(glm::vec3(std::sin(angleRadians), 0.0f, -std::cos(angleRadians)));
+        }
+
+        PointLightRig buildSaloonLightRig()
+        {
+            PointLightRig rig;
+            rig.positions = {
+                glm::vec3(-0.82f, 1.58f, -0.04f),
+                glm::vec3( 0.00f, 1.66f,  0.00f),
+                glm::vec3( 0.82f, 1.58f, -0.04f)
+            };
+            rig.colors = {
+                glm::vec3(4.4f, 3.1f, 1.7f),
+                glm::vec3(5.2f, 3.7f, 2.0f),
+                glm::vec3(4.4f, 3.1f, 1.7f)
+            };
+            return rig;
+        }
+
+        int ballVisualType(const BallComponent& ball)
+        {
+            if (ball.isCueBall)
+            {
+                return 1;
+            }
+
+            switch (ball.ruleTag)
+            {
+                case BallRuleTag::Stripe:
+                    return 3;
+
+                case BallRuleTag::Eight:
+                    return 4;
+
+                case BallRuleTag::Solid:
+                case BallRuleTag::Numbered:
+                case BallRuleTag::Red:
+                case BallRuleTag::Color:
+                case BallRuleTag::Cue:
+                    return 2;
+            }
+
+            return 0;
         }
 
         std::vector<glm::vec3> buildTriangleRackPositions(
@@ -161,63 +227,249 @@ namespace BilliardsSaloon
 
         m_cubeMesh = Mesh::createCube();
         m_planeMesh = Mesh::createPlane(m_variant->table.clothWidth, m_variant->table.clothDepth);
-        m_sphereMesh = Mesh::createUVSphere(m_variant->table.ballRadius, 32U, 16U);
+        m_sphereMesh = Mesh::createUVSphere(m_variant->table.ballRadius, 40U, 20U);
 
+        const float halfWidth = 0.5f * m_variant->table.clothWidth;
+        const float halfDepth = 0.5f * m_variant->table.clothDepth;
+        const PointLightRig lightRig = buildSaloonLightRig();
+
+        const MaterialComponent clothMaterial{
+            .albedo = glm::vec3(0.07f, 0.36f, 0.16f),
+            .specularStrength = 0.30f,
+            .shininess = 24.0f,
+            .surfaceType = MaterialSurfaceType::Cloth,
+            .roughness = 0.58f,
+            .reflectivity = 0.035f,
+            .clearcoatStrength = 0.0f,
+            .emissionColor = glm::vec3(0.0f),
+            .emissionIntensity = 0.0f
+        };
+
+        const MaterialComponent railMaterial{
+            .albedo = glm::vec3(0.30f, 0.16f, 0.07f),
+            .specularStrength = 0.62f,
+            .shininess = 96.0f,
+            .surfaceType = MaterialSurfaceType::Wood,
+            .roughness = 0.26f,
+            .reflectivity = 0.08f,
+            .clearcoatStrength = 0.45f,
+            .emissionColor = glm::vec3(0.0f),
+            .emissionIntensity = 0.0f
+        };
+
+        const MaterialComponent legMaterial{
+            .albedo = glm::vec3(0.18f, 0.09f, 0.04f),
+            .specularStrength = 0.36f,
+            .shininess = 48.0f,
+            .surfaceType = MaterialSurfaceType::Wood,
+            .roughness = 0.42f,
+            .reflectivity = 0.04f,
+            .clearcoatStrength = 0.12f,
+            .emissionColor = glm::vec3(0.0f),
+            .emissionIntensity = 0.0f
+        };
+
+        const MaterialComponent floorMaterial{
+            .albedo = glm::vec3(0.26f, 0.16f, 0.09f),
+            .specularStrength = 0.28f,
+            .shininess = 32.0f,
+            .surfaceType = MaterialSurfaceType::Wood,
+            .roughness = 0.60f,
+            .reflectivity = 0.035f,
+            .clearcoatStrength = 0.08f,
+            .emissionColor = glm::vec3(0.0f),
+            .emissionIntensity = 0.0f
+        };
+
+        const MaterialComponent wallMaterial{
+            .albedo = glm::vec3(0.20f, 0.12f, 0.08f),
+            .specularStrength = 0.08f,
+            .shininess = 8.0f,
+            .surfaceType = MaterialSurfaceType::Generic,
+            .roughness = 0.92f,
+            .reflectivity = 0.02f,
+            .clearcoatStrength = 0.0f,
+            .emissionColor = glm::vec3(0.0f),
+            .emissionIntensity = 0.0f
+        };
+
+        const MaterialComponent lampMaterial{
+            .albedo = glm::vec3(0.98f, 0.86f, 0.62f),
+            .specularStrength = 0.35f,
+            .shininess = 96.0f,
+            .surfaceType = MaterialSurfaceType::LampGlass,
+            .roughness = 0.10f,
+            .reflectivity = 0.10f,
+            .clearcoatStrength = 0.18f,
+            .emissionColor = glm::vec3(1.00f, 0.68f, 0.28f),
+            .emissionIntensity = 1.80f
+        };
+
+        const Entity table = createSceneEntity(
+            m_registry,
+            "Table Cloth",
+            makeTransform(glm::vec3(0.0f, 0.0f, 0.0f)),
+            StaticMeshComponent{MeshPrimitive::Plane},
+            clothMaterial
+        );
+
+        createSceneEntity(
+            m_registry,
+            "Saloon Floor",
+            makeTransform(glm::vec3(0.0f, -0.46f, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), glm::vec3(4.8f, 1.0f, 4.8f)),
+            StaticMeshComponent{MeshPrimitive::Plane},
+            floorMaterial
+        );
+
+        createSceneEntity(
+            m_registry,
+            "Back Wall",
+            makeTransform(
+                glm::vec3(0.0f, 1.25f, -2.55f),
+                glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f)),
+                glm::vec3(5.6f, 1.0f, 2.6f)
+            ),
+            StaticMeshComponent{MeshPrimitive::Plane},
+            wallMaterial
+        );
+
+        const float frameThickness = 0.16f;
+        const float frameHeight = 0.12f;
+        const float frameCenterY = -0.055f;
+
+        createSceneEntity(
+            m_registry,
+            "North Rail",
+            makeTransform(
+                glm::vec3(0.0f, frameCenterY, -(halfDepth + 0.5f * frameThickness)),
+                glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+                glm::vec3(m_variant->table.clothWidth + 2.0f * frameThickness, frameHeight, frameThickness)
+            ),
+            StaticMeshComponent{MeshPrimitive::Cube},
+            railMaterial
+        );
+
+        createSceneEntity(
+            m_registry,
+            "South Rail",
+            makeTransform(
+                glm::vec3(0.0f, frameCenterY, halfDepth + 0.5f * frameThickness),
+                glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+                glm::vec3(m_variant->table.clothWidth + 2.0f * frameThickness, frameHeight, frameThickness)
+            ),
+            StaticMeshComponent{MeshPrimitive::Cube},
+            railMaterial
+        );
+
+        createSceneEntity(
+            m_registry,
+            "West Rail",
+            makeTransform(
+                glm::vec3(-(halfWidth + 0.5f * frameThickness), frameCenterY, 0.0f),
+                glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+                glm::vec3(frameThickness, frameHeight, m_variant->table.clothDepth)
+            ),
+            StaticMeshComponent{MeshPrimitive::Cube},
+            railMaterial
+        );
+
+        createSceneEntity(
+            m_registry,
+            "East Rail",
+            makeTransform(
+                glm::vec3(halfWidth + 0.5f * frameThickness, frameCenterY, 0.0f),
+                glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+                glm::vec3(frameThickness, frameHeight, m_variant->table.clothDepth)
+            ),
+            StaticMeshComponent{MeshPrimitive::Cube},
+            railMaterial
+        );
+
+        const float legOffsetX = halfWidth - 0.22f;
+        const float legOffsetZ = halfDepth - 0.15f;
+        const glm::vec3 legScale(0.16f, 0.84f, 0.16f);
+
+        createSceneEntity(
+            m_registry,
+            "North West Leg",
+            makeTransform(glm::vec3(-legOffsetX, -0.47f, -legOffsetZ), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), legScale),
+            StaticMeshComponent{MeshPrimitive::Cube},
+            legMaterial
+        );
+
+        createSceneEntity(
+            m_registry,
+            "North East Leg",
+            makeTransform(glm::vec3(legOffsetX, -0.47f, -legOffsetZ), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), legScale),
+            StaticMeshComponent{MeshPrimitive::Cube},
+            legMaterial
+        );
+
+        createSceneEntity(
+            m_registry,
+            "South West Leg",
+            makeTransform(glm::vec3(-legOffsetX, -0.47f, legOffsetZ), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), legScale),
+            StaticMeshComponent{MeshPrimitive::Cube},
+            legMaterial
+        );
+
+        createSceneEntity(
+            m_registry,
+            "South East Leg",
+            makeTransform(glm::vec3(legOffsetX, -0.47f, legOffsetZ), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), legScale),
+            StaticMeshComponent{MeshPrimitive::Cube},
+            legMaterial
+        );
+
+        for (std::size_t lightIndex = 0; lightIndex < lightRig.positions.size(); ++lightIndex)
         {
-            TransformComponent tableTransform;
-            tableTransform.position = glm::vec3(0.0f, 0.0f, 0.0f);
-            tableTransform.previousPosition = tableTransform.position;
-            tableTransform.rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-            tableTransform.previousRotation = tableTransform.rotation;
-            tableTransform.scale = glm::vec3(1.0f);
-            tableTransform.previousScale = tableTransform.scale;
-
-            const Entity table = createSceneEntity(
+            createSceneEntity(
                 m_registry,
-                m_variant->displayName + " Table",
-                tableTransform,
-                StaticMeshComponent{MeshPrimitive::Plane},
-                MaterialComponent{
-                    .albedo = glm::vec3(0.10f, 0.42f, 0.16f),
-                    .specularStrength = 0.08f,
-                    .shininess = 8.0f
-                }
+                "Lamp Globe " + std::to_string(lightIndex + 1),
+                makeTransform(
+                    lightRig.positions[lightIndex],
+                    glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+                    glm::vec3(1.75f)
+                ),
+                StaticMeshComponent{MeshPrimitive::Sphere},
+                lampMaterial
             );
-
-            m_registry.emplace<TableBoundsComponent>(table, TableBoundsComponent{
-                .halfWidth = 0.5f * m_variant->table.clothWidth,
-                .halfDepth = 0.5f * m_variant->table.clothDepth,
-                .railRestitution = 0.92f,
-                .ballRestitution = 0.96f,
-                .ballContactFrictionCoefficient = 0.06f,
-                .slidingFrictionCoefficient = 0.20f,
-                .rollingFrictionCoefficient = 0.020f,
-                .stopSpeedThreshold = 0.02f,
-                .sideSpinDampingPerSecond = 0.35f,
-                .cornerPocketRadius = 0.090f,
-                .sidePocketRadius = 0.080f
-            });
         }
 
+        m_registry.emplace<TableBoundsComponent>(table, TableBoundsComponent{
+            .halfWidth = halfWidth,
+            .halfDepth = halfDepth,
+            .railRestitution = 0.92f,
+            .ballRestitution = 0.96f,
+            .railContactFrictionCoefficient = 0.14f,
+            .ballContactFrictionCoefficient = 0.05f,
+            .slidingFrictionCoefficient = 0.20f,
+            .rollingFrictionCoefficient = 0.010f,
+            .spinningFrictionCoefficient = 0.015f,
+            .stopSpeedThreshold = 0.006f,
+            .cornerPocketRadius = 0.090f,
+            .sidePocketRadius = 0.080f
+        });
+
         {
-            TransformComponent cueBallTransform;
-            cueBallTransform.position = glm::vec3(0.0f, m_variant->table.ballRadius, 0.42f);
-            cueBallTransform.previousPosition = cueBallTransform.position;
-            cueBallTransform.rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-            cueBallTransform.previousRotation = cueBallTransform.rotation;
-            cueBallTransform.scale = glm::vec3(1.0f);
-            cueBallTransform.previousScale = cueBallTransform.scale;
+            const MaterialComponent cueBallMaterial{
+                .albedo = m_variant->cueBall.albedo,
+                .specularStrength = m_variant->cueBall.specularStrength,
+                .shininess = m_variant->cueBall.shininess,
+                .surfaceType = MaterialSurfaceType::BallResin,
+                .roughness = 0.08f,
+                .reflectivity = 0.08f,
+                .clearcoatStrength = 1.0f,
+                .emissionColor = glm::vec3(0.0f),
+                .emissionIntensity = 0.0f
+            };
 
             const Entity cueBall = createSceneEntity(
                 m_registry,
                 m_variant->cueBall.name,
-                cueBallTransform,
+                makeTransform(glm::vec3(0.0f, m_variant->table.ballRadius, 0.42f)),
                 StaticMeshComponent{MeshPrimitive::Sphere},
-                MaterialComponent{
-                    .albedo = m_variant->cueBall.albedo,
-                    .specularStrength = m_variant->cueBall.specularStrength,
-                    .shininess = m_variant->cueBall.shininess
-                }
+                cueBallMaterial
             );
 
             m_registry.emplace<BallComponent>(cueBall, BallComponent{
@@ -238,24 +490,24 @@ namespace BilliardsSaloon
         {
             const BallSpawnDefinition& definition = m_variant->objectBalls[i];
 
-            TransformComponent transform;
-            transform.position = rackPositions[i];
-            transform.previousPosition = transform.position;
-            transform.rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-            transform.previousRotation = transform.rotation;
-            transform.scale = glm::vec3(1.0f);
-            transform.previousScale = transform.scale;
+            const MaterialComponent ballMaterial{
+                .albedo = definition.albedo,
+                .specularStrength = definition.specularStrength,
+                .shininess = definition.shininess,
+                .surfaceType = MaterialSurfaceType::BallResin,
+                .roughness = 0.10f,
+                .reflectivity = 0.075f,
+                .clearcoatStrength = 1.0f,
+                .emissionColor = glm::vec3(0.0f),
+                .emissionIntensity = 0.0f
+            };
 
             const Entity ball = createSceneEntity(
                 m_registry,
                 definition.name,
-                transform,
+                makeTransform(rackPositions[i]),
                 StaticMeshComponent{MeshPrimitive::Sphere},
-                MaterialComponent{
-                    .albedo = definition.albedo,
-                    .specularStrength = definition.specularStrength,
-                    .shininess = definition.shininess
-                }
+                ballMaterial
             );
 
             m_registry.emplace<BallComponent>(ball, BallComponent{
@@ -272,23 +524,17 @@ namespace BilliardsSaloon
 
         m_cameraEntity = m_registry.createEntity();
         m_registry.emplace<NameComponent>(m_cameraEntity, NameComponent{"Main Camera"});
-
-        {
-            TransformComponent cameraTransform;
-            cameraTransform.position = glm::vec3(0.0f, 1.10f, 1.95f);
-            cameraTransform.previousPosition = cameraTransform.position;
-            cameraTransform.rotation = glm::quat(glm::vec3(glm::radians(-28.0f), 0.0f, 0.0f));
-            cameraTransform.previousRotation = cameraTransform.rotation;
-            cameraTransform.scale = glm::vec3(1.0f);
-            cameraTransform.previousScale = cameraTransform.scale;
-
-            m_registry.emplace<TransformComponent>(m_cameraEntity, cameraTransform);
-        }
-
+        m_registry.emplace<TransformComponent>(
+            m_cameraEntity,
+            makeTransform(
+                glm::vec3(0.0f, 1.14f, 2.10f),
+                glm::quat(glm::vec3(glm::radians(-27.0f), 0.0f, 0.0f))
+            )
+        );
         m_registry.emplace<CameraComponent>(m_cameraEntity, CameraComponent{
-            .verticalFieldOfViewRadians = glm::radians(55.0f),
+            .verticalFieldOfViewRadians = glm::radians(52.0f),
             .nearPlane = 0.05f,
-            .farPlane = 50.0f
+            .farPlane = 60.0f
         });
         m_registry.emplace<CameraTagComponent>(m_cameraEntity, CameraTagComponent{});
     }
@@ -417,10 +663,10 @@ namespace BilliardsSaloon
             }
             else if (m_spaceWasDownLastFrame)
             {
-                fireCurrentShot();
-                m_shotState.phase = ShotPhase::BallsInMotion;
+                const bool shotFired = fireCurrentShot();
+                m_shotState.phase = shotFired ? ShotPhase::BallsInMotion : ShotPhase::Aiming;
                 m_shotState.charge01 = 0.0f;
-                m_matchState.shotInProgress = true;
+                m_matchState.shotInProgress = shotFired;
             }
         }
 
@@ -473,18 +719,18 @@ namespace BilliardsSaloon
         m_shotState.strikeForward01 = 0.0f;
     }
 
-    void Application::fireCurrentShot()
+    bool Application::fireCurrentShot()
     {
         const Entity cueBall = findCueBall();
         if (!cueBall.isValid())
         {
-            return;
+            return false;
         }
 
         BallComponent* ball = m_registry.tryGet<BallComponent>(cueBall);
-        if (ball == nullptr)
+        if ((ball == nullptr) || ball->pocketed)
         {
-            return;
+            return false;
         }
 
         m_currentShotResult.clear();
@@ -511,6 +757,7 @@ namespace BilliardsSaloon
             right * (m_shotState.strikeForward01 * 1.00f * spinBase);
 
         ball->angularVelocity = sideSpin + topBackSpin;
+        return true;
     }
 
     void Application::updateFixed(double deltaTimeSeconds)
@@ -541,11 +788,11 @@ namespace BilliardsSaloon
 
         if (m_matchState.flowPhase == MatchFlowPhase::FrameOver)
         {
-            glClearColor(0.02f, 0.02f, 0.025f, 1.0f);
+            glClearColor(0.03f, 0.025f, 0.03f, 1.0f);
         }
         else
         {
-            glClearColor(0.05f, 0.035f, 0.025f, 1.0f);
+            glClearColor(0.035f, 0.025f, 0.02f, 1.0f);
         }
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -579,6 +826,8 @@ namespace BilliardsSaloon
             camera->farPlane
         );
 
+        const PointLightRig lightRig = buildSaloonLightRig();
+
         m_basicShader->bind();
         m_basicShader->setMat4("uView", view);
         m_basicShader->setMat4("uProjection", projection);
@@ -586,21 +835,40 @@ namespace BilliardsSaloon
 
         m_basicShader->setVec3(
             "uDirectionalLightDirection",
-            glm::normalize(glm::vec3(-0.6f, -1.0f, -0.25f))
+            glm::normalize(glm::vec3(-0.35f, -1.0f, -0.18f))
         );
         m_basicShader->setVec3(
             "uDirectionalLightColor",
-            glm::vec3(0.65f, 0.62f, 0.58f)
+            glm::vec3(0.22f, 0.24f, 0.28f)
         );
 
-        m_basicShader->setVec3(
-            "uPointLightPosition",
-            glm::vec3(0.55f, 1.15f, 0.35f)
-        );
-        m_basicShader->setVec3(
-            "uPointLightColor",
-            glm::vec3(1.00f, 0.72f, 0.42f)
-        );
+        for (std::size_t lightIndex = 0; lightIndex < lightRig.positions.size(); ++lightIndex)
+        {
+            m_basicShader->setVec3(
+                "uPointLightPositions[" + std::to_string(lightIndex) + "]",
+                lightRig.positions[lightIndex]
+            );
+            m_basicShader->setVec3(
+                "uPointLightColors[" + std::to_string(lightIndex) + "]",
+                lightRig.colors[lightIndex]
+            );
+        }
+
+        auto bindMaterial = [&](const MaterialComponent& material, const glm::vec3& dynamicEmission, int visualType)
+        {
+            m_basicShader->setVec3("uMaterialAlbedo", material.albedo);
+            m_basicShader->setFloat("uMaterialSpecularStrength", material.specularStrength);
+            m_basicShader->setFloat("uMaterialShininess", material.shininess);
+            m_basicShader->setInt("uMaterialSurfaceType", static_cast<int>(material.surfaceType));
+            m_basicShader->setFloat("uMaterialRoughness", material.roughness);
+            m_basicShader->setFloat("uMaterialReflectivity", material.reflectivity);
+            m_basicShader->setFloat("uMaterialClearcoatStrength", material.clearcoatStrength);
+            m_basicShader->setVec3(
+                "uEmissionColor",
+                material.emissionColor * material.emissionIntensity + dynamicEmission
+            );
+            m_basicShader->setInt("uBallVisualType", visualType);
+        };
 
         const Entity cueBall = findCueBall();
         glm::vec3 cueBallPosition(0.0f);
@@ -623,12 +891,10 @@ namespace BilliardsSaloon
         m_registry.view<TransformComponent, StaticMeshComponent, MaterialComponent>().each(
             [&](Entity entity, TransformComponent& transform, StaticMeshComponent& meshComponent, MaterialComponent& material)
             {
-                if (const BallComponent* ball = m_registry.tryGet<BallComponent>(entity))
+                const BallComponent* ball = m_registry.tryGet<BallComponent>(entity);
+                if ((ball != nullptr) && ball->pocketed)
                 {
-                    if (ball->pocketed)
-                    {
-                        return;
-                    }
+                    return;
                 }
 
                 const glm::mat4 model =
@@ -654,28 +920,20 @@ namespace BilliardsSaloon
                     return;
                 }
 
-                m_basicShader->setMat4("uModel", model);
-                m_basicShader->setVec3("uMaterialAlbedo", material.albedo);
-                m_basicShader->setFloat("uMaterialSpecularStrength", material.specularStrength);
-                m_basicShader->setFloat("uMaterialShininess", material.shininess);
-
                 const bool highlightCueBall =
                     (entity == cueBall) &&
                     (m_shotState.phase != ShotPhase::BallsInMotion) &&
                     (m_matchState.flowPhase != MatchFlowPhase::FrameOver);
 
-                m_basicShader->setInt("uUseEmission", highlightCueBall ? 1 : 0);
-
+                glm::vec3 dynamicEmission(0.0f);
                 if (highlightCueBall)
                 {
-                    const float glow = 0.08f + 0.25f * m_shotState.charge01;
-                    m_basicShader->setVec3("uEmissionColor", glm::vec3(glow, glow, glow * 0.85f));
-                }
-                else
-                {
-                    m_basicShader->setVec3("uEmissionColor", glm::vec3(0.0f));
+                    const float glow = 0.05f + 0.18f * m_shotState.charge01;
+                    dynamicEmission = glm::vec3(glow, glow, glow * 0.82f);
                 }
 
+                m_basicShader->setMat4("uModel", model);
+                bindMaterial(material, dynamicEmission, (ball != nullptr) ? ballVisualType(*ball) : 0);
                 mesh->draw();
             }
         );
@@ -687,28 +945,34 @@ namespace BilliardsSaloon
         {
             const glm::vec3 aimDirection = aimDirectionFromAngle(m_shotState.aimAngleRadians);
 
-            TransformComponent guideTransform;
-            guideTransform.position = cueBallPosition + aimDirection * 0.18f;
-            guideTransform.previousPosition = guideTransform.position;
-            guideTransform.rotation = glm::quat(glm::vec3(0.0f, -m_shotState.aimAngleRadians, 0.0f));
-            guideTransform.previousRotation = guideTransform.rotation;
-            guideTransform.scale = glm::vec3(0.03f, 0.03f, 0.18f + 0.35f * m_shotState.charge01);
-            guideTransform.previousScale = guideTransform.scale;
+            TransformComponent guideTransform = makeTransform(
+                cueBallPosition + aimDirection * 0.18f,
+                glm::quat(glm::vec3(0.0f, -m_shotState.aimAngleRadians, 0.0f)),
+                glm::vec3(0.03f, 0.03f, 0.18f + 0.35f * m_shotState.charge01)
+            );
+
+            const MaterialComponent guideMaterial{
+                .albedo = glm::vec3(0.92f, 0.82f, 0.42f),
+                .specularStrength = 0.20f,
+                .shininess = 16.0f,
+                .surfaceType = MaterialSurfaceType::Generic,
+                .roughness = 0.38f,
+                .reflectivity = 0.04f,
+                .clearcoatStrength = 0.0f,
+                .emissionColor = glm::vec3(0.0f),
+                .emissionIntensity = 0.0f
+            };
 
             m_basicShader->setMat4("uModel", composeMatrix(
                 guideTransform.position,
                 guideTransform.rotation,
                 guideTransform.scale
             ));
-            m_basicShader->setVec3("uMaterialAlbedo", glm::vec3(0.92f, 0.82f, 0.42f));
-            m_basicShader->setFloat("uMaterialSpecularStrength", 0.15f);
-            m_basicShader->setFloat("uMaterialShininess", 8.0f);
-            m_basicShader->setInt("uUseEmission", 1);
-            m_basicShader->setVec3(
-                "uEmissionColor",
-                glm::vec3(0.10f, 0.08f, 0.02f) + glm::vec3(0.10f, 0.06f, 0.01f) * m_shotState.charge01
+            bindMaterial(
+                guideMaterial,
+                glm::vec3(0.10f, 0.08f, 0.02f) + glm::vec3(0.10f, 0.06f, 0.01f) * m_shotState.charge01,
+                0
             );
-
             m_cubeMesh->draw();
 
             const glm::vec3 up(0.0f, 1.0f, 0.0f);
@@ -725,30 +989,32 @@ namespace BilliardsSaloon
                     aimDirection * (m_shotState.strikeForward01 * markerRadius) +
                     glm::vec3(0.0f, cueBallBall->radius * 0.25f, 0.0f);
 
-                TransformComponent markerTransform;
-                markerTransform.position = markerPosition;
-                markerTransform.previousPosition = markerPosition;
-                markerTransform.rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
-                markerTransform.previousRotation = markerTransform.rotation;
-                markerTransform.scale = glm::vec3(0.012f, 0.012f, 0.012f);
-                markerTransform.previousScale = markerTransform.scale;
+                const MaterialComponent markerMaterial{
+                    .albedo = glm::vec3(0.10f, 0.10f, 0.12f),
+                    .specularStrength = 0.10f,
+                    .shininess = 12.0f,
+                    .surfaceType = MaterialSurfaceType::Generic,
+                    .roughness = 0.52f,
+                    .reflectivity = 0.03f,
+                    .clearcoatStrength = 0.0f,
+                    .emissionColor = glm::vec3(0.0f),
+                    .emissionIntensity = 0.0f
+                };
+
+                const TransformComponent markerTransform = makeTransform(
+                    markerPosition,
+                    glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+                    glm::vec3(0.012f, 0.012f, 0.012f)
+                );
 
                 m_basicShader->setMat4("uModel", composeMatrix(
                     markerTransform.position,
                     markerTransform.rotation,
                     markerTransform.scale
                 ));
-                m_basicShader->setVec3("uMaterialAlbedo", glm::vec3(0.10f, 0.10f, 0.12f));
-                m_basicShader->setFloat("uMaterialSpecularStrength", 0.05f);
-                m_basicShader->setFloat("uMaterialShininess", 4.0f);
-                m_basicShader->setInt("uUseEmission", 1);
-                m_basicShader->setVec3("uEmissionColor", glm::vec3(0.18f, 0.12f, 0.02f));
-
+                bindMaterial(markerMaterial, glm::vec3(0.18f, 0.12f, 0.02f), 0);
                 m_cubeMesh->draw();
             }
-
-            m_basicShader->setInt("uUseEmission", 0);
-            m_basicShader->setVec3("uEmissionColor", glm::vec3(0.0f));
         }
     }
 }

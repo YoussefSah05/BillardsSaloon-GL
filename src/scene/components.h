@@ -49,11 +49,26 @@ namespace BilliardsSaloon
         MeshPrimitive primitive {MeshPrimitive::Cube};
     };
 
+    enum class MaterialSurfaceType
+    {
+        Generic,
+        Cloth,
+        BallResin,
+        Wood,
+        LampGlass
+    };
+
     struct MaterialComponent
     {
         glm::vec3 albedo {1.0f, 1.0f, 1.0f};
         float specularStrength {0.35f};
         float shininess {32.0f};
+        MaterialSurfaceType surfaceType {MaterialSurfaceType::Generic};
+        float roughness {0.45f};
+        float reflectivity {0.04f};
+        float clearcoatStrength {0.0f};
+        glm::vec3 emissionColor {0.0f, 0.0f, 0.0f};
+        float emissionIntensity {0.0f};
     };
 
     enum class BallRuleTag
@@ -89,14 +104,24 @@ namespace BilliardsSaloon
         float railRestitution {0.92f};
         float ballRestitution {0.96f};
 
+        // Effective tangential impulse cap for cushion contact.
+        // This primarily controls how strongly side spin and rail-parallel slide
+        // can redirect the rebound.
+        float railContactFrictionCoefficient {0.14f};
+
         // Effective tangential impulse cap for ball-ball contacts.
         // This is a gameplay-tuned coefficient, not a calibrated material constant.
-        float ballContactFrictionCoefficient {0.06f};
+        float ballContactFrictionCoefficient {0.05f};
 
+        // Cloth parameters guided by common pool-physics references.
+        // Typical values are roughly:
+        // - sliding friction: around 0.2
+        // - rolling resistance: around 0.005 to 0.015
+        // - spin decay: around 5 to 15 rad/s^2
         float slidingFrictionCoefficient {0.20f};
-        float rollingFrictionCoefficient {0.020f};
-        float stopSpeedThreshold {0.02f};
-        float sideSpinDampingPerSecond {0.35f};
+        float rollingFrictionCoefficient {0.010f};
+        float spinningFrictionCoefficient {0.015f};
+        float stopSpeedThreshold {0.006f};
 
         float cornerPocketRadius {0.090f};
         float sidePocketRadius {0.080f};

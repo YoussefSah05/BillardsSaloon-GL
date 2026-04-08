@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 
 #include <string>
+#include <unordered_map>
 
 namespace BilliardsSaloon
 {
@@ -32,5 +33,6 @@ namespace BilliardsSaloon
         int uniformLocation(const std::string& name) const;
 
         unsigned int m_program {0};
+        mutable std::unordered_map<std::string, int> m_uniformLocations;
     };
 }

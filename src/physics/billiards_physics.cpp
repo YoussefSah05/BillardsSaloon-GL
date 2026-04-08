@@ -17,9 +17,11 @@ namespace BilliardsSaloon
             constexpr float GRAVITY = 9.81f;
             constexpr float POSITIONAL_CORRECTION_PERCENT = 0.8f;
             constexpr float POSITIONAL_CORRECTION_SLOP = 0.0001f;
-            constexpr float SLIP_EPSILON = 0.01f;
+            constexpr float SLIP_EPSILON = 0.0015f;
             constexpr float SPIN_EPSILON = 0.01f;
             constexpr float CONTACT_TANGENT_SPEED_EPSILON = 0.0005f;
+            constexpr float MOTION_STATE_TIME_EPSILON = 1.0e-6f;
+            constexpr int MAX_CLOTH_STATE_STEPS = 4;
 
             struct BallRef
             {
@@ -105,6 +107,255 @@ namespace BilliardsSaloon
                 {
                     ball.angularVelocity += glm::cross(contactOffset, impulse) / inertia;
                 }
+            }
+
+            [[nodiscard]] float impulseDenominatorForDirection(
+                const BallComponent& ball,
+                const glm::vec3& contactOffset,
+                const glm::vec3& direction)
+            {
+                const float inverseMass = 1.0f / ball.massKg;
+                const float inertia = solidSphereInertia(ball);
+
+                if (inertia <= 0.0f)
+                {
+                    return inverseMass;
+                }
+
+                const glm::vec3 crossTerm = glm::cross(contactOffset, direction);
+                return inverseMass + glm::dot(crossTerm, crossTerm) / inertia;
+            }
+
+            [[nodiscard]] glm::vec3 railTangentFromNormal(const glm::vec3& railNormal)
+            {
+                return (std::abs(railNormal.x) > 0.5f)
+                    ? glm::vec3(0.0f, 0.0f, 1.0f)
+                    : glm::vec3(1.0f, 0.0f, 0.0f);
+            }
+
+            void setRollingAngularVelocityFromLinear(BallComponent& ball)
+            {
+                if (ball.radius <= 0.0f)
+                {
+                    ball.angularVelocity.x = 0.0f;
+                    ball.angularVelocity.z = 0.0f;
+                    return;
+                }
+
+                ball.angularVelocity.x = ball.linearVelocity.z / ball.radius;
+                ball.angularVelocity.z = -ball.linearVelocity.x / ball.radius;
+            }
+
+            void decayVerticalSpin(BallComponent& ball, float dt, float spinningFrictionCoefficient)
+            {
+                if ((dt <= 0.0f) || (spinningFrictionCoefficient <= 0.0f) || (ball.radius <= 0.0f))
+                {
+                    return;
+                }
+
+                const float spinDeceleration =
+                    spinningFrictionCoefficient * GRAVITY / ball.radius;
+
+                const float deltaSpin = spinDeceleration * dt;
+                const float spin = ball.angularVelocity.y;
+
+                if (std::abs(spin) <= deltaSpin)
+                {
+                    ball.angularVelocity.y = 0.0f;
+                    return;
+                }
+
+                ball.angularVelocity.y = spin - std::copysign(deltaSpin, spin);
+            }
+
+            [[nodiscard]] float evolveSlidingMotion(
+                BallComponent& ball,
+                float dt,
+                float slidingFrictionCoefficient,
+                float spinningFrictionCoefficient)
+            {
+                const glm::vec2 slip = contactSlipVelocity(ball);
+                const float slipSpeed = glm::length(slip);
+
+                if ((slipSpeed <= SLIP_EPSILON) || (slidingFrictionCoefficient <= 0.0f))
+                {
+                    setRollingAngularVelocityFromLinear(ball);
+                    return dt;
+                }
+
+                const float timeToRolling =
+                    (2.0f * slipSpeed) / (7.0f * slidingFrictionCoefficient * GRAVITY);
+
+                const float evolveTime = std::min(dt, timeToRolling);
+                const glm::vec2 slipDirection = slip / slipSpeed;
+
+                const glm::vec2 linearAcceleration =
+                    -slidingFrictionCoefficient * GRAVITY * slipDirection;
+
+                const glm::vec2 newPlanarVelocity =
+                    planarXZ(ball.linearVelocity) + linearAcceleration * evolveTime;
+
+                ball.linearVelocity = fromPlanarXZ(newPlanarVelocity);
+
+                const float angularAccelerationScale =
+                    (5.0f * slidingFrictionCoefficient * GRAVITY) / (2.0f * ball.radius);
+
+                ball.angularVelocity.x += angularAccelerationScale * slipDirection.y * evolveTime;
+                ball.angularVelocity.z -= angularAccelerationScale * slipDirection.x * evolveTime;
+
+                decayVerticalSpin(ball, evolveTime, spinningFrictionCoefficient);
+
+                const float remainingTime = dt - evolveTime;
+                if (remainingTime > MOTION_STATE_TIME_EPSILON)
+                {
+                    setRollingAngularVelocityFromLinear(ball);
+                }
+
+                return remainingTime;
+            }
+
+            [[nodiscard]] float evolveRollingMotion(
+                BallComponent& ball,
+                float dt,
+                float rollingFrictionCoefficient,
+                float spinningFrictionCoefficient,
+                float stopSpeedThreshold)
+            {
+                const glm::vec2 planarVelocity = planarXZ(ball.linearVelocity);
+                const float speed = glm::length(planarVelocity);
+
+                if (speed <= stopSpeedThreshold)
+                {
+                    ball.linearVelocity = glm::vec3(0.0f);
+                    ball.angularVelocity.x = 0.0f;
+                    ball.angularVelocity.z = 0.0f;
+                    return dt;
+                }
+
+                if (rollingFrictionCoefficient <= 0.0f)
+                {
+                    setRollingAngularVelocityFromLinear(ball);
+                    decayVerticalSpin(ball, dt, spinningFrictionCoefficient);
+                    return 0.0f;
+                }
+
+                const float rollingDeceleration = rollingFrictionCoefficient * GRAVITY;
+                const float timeToStop = speed / rollingDeceleration;
+                const float evolveTime = std::min(dt, timeToStop);
+
+                const glm::vec2 direction = planarVelocity / speed;
+                const float newSpeed = std::max(0.0f, speed - rollingDeceleration * evolveTime);
+                ball.linearVelocity = fromPlanarXZ(direction * newSpeed);
+                setRollingAngularVelocityFromLinear(ball);
+                decayVerticalSpin(ball, evolveTime, spinningFrictionCoefficient);
+
+                if (newSpeed <= stopSpeedThreshold)
+                {
+                    ball.linearVelocity = glm::vec3(0.0f);
+                    ball.angularVelocity.x = 0.0f;
+                    ball.angularVelocity.z = 0.0f;
+                }
+
+                return dt - evolveTime;
+            }
+
+            void evolveSpinningMotion(
+                BallComponent& ball,
+                float dt,
+                float spinningFrictionCoefficient)
+            {
+                ball.linearVelocity = glm::vec3(0.0f);
+                ball.angularVelocity.x = 0.0f;
+                ball.angularVelocity.z = 0.0f;
+                decayVerticalSpin(ball, dt, spinningFrictionCoefficient);
+
+                if (std::abs(ball.angularVelocity.y) < SPIN_EPSILON)
+                {
+                    ball.angularVelocity.y = 0.0f;
+                }
+            }
+
+            void resolveSingleRailContact(
+                BallRef& ref,
+                const glm::vec3& railNormal,
+                float boundaryCoordinate,
+                float restitution,
+                float frictionCoefficient)
+            {
+                if (std::abs(railNormal.x) > 0.5f)
+                {
+                    ref.transform->position.x = boundaryCoordinate;
+                }
+                else
+                {
+                    ref.transform->position.z = boundaryCoordinate;
+                }
+
+                const glm::vec3 contactOffset = -railNormal * ref.ball->radius;
+
+                glm::vec3 contactVelocity =
+                    contactPointVelocity(*ref.ball, contactOffset);
+                contactVelocity.y = 0.0f;
+
+                const float normalSpeed = glm::dot(contactVelocity, railNormal);
+                if (normalSpeed >= 0.0f)
+                {
+                    return;
+                }
+
+                const float normalDenominator =
+                    impulseDenominatorForDirection(*ref.ball, contactOffset, railNormal);
+
+                if (normalDenominator <= 0.0f)
+                {
+                    return;
+                }
+
+                const float normalImpulseMagnitude =
+                    -(1.0f + restitution) * normalSpeed / normalDenominator;
+
+                applyImpulseAtOffset(
+                    *ref.ball,
+                    normalImpulseMagnitude * railNormal,
+                    contactOffset
+                );
+
+                const glm::vec3 tangent = railTangentFromNormal(railNormal);
+
+                contactVelocity = contactPointVelocity(*ref.ball, contactOffset);
+                contactVelocity.y = 0.0f;
+
+                const float tangentSpeed = glm::dot(contactVelocity, tangent);
+                if (std::abs(tangentSpeed) < CONTACT_TANGENT_SPEED_EPSILON)
+                {
+                    return;
+                }
+
+                const float tangentDenominator =
+                    impulseDenominatorForDirection(*ref.ball, contactOffset, tangent);
+
+                if (tangentDenominator <= 0.0f)
+                {
+                    return;
+                }
+
+                float tangentialImpulseMagnitude = -tangentSpeed / tangentDenominator;
+                const float maxTangentialImpulse =
+                    frictionCoefficient * normalImpulseMagnitude;
+
+                tangentialImpulseMagnitude = std::clamp(
+                    tangentialImpulseMagnitude,
+                    -maxTangentialImpulse,
+                    maxTangentialImpulse
+                );
+
+                applyImpulseAtOffset(
+                    *ref.ball,
+                    tangentialImpulseMagnitude * tangent,
+                    contactOffset
+                );
+
+                ref.ball->linearVelocity.y = 0.0f;
             }
 
             void integratePositions(std::vector<BallRef>& balls, float dt)
@@ -216,6 +467,9 @@ namespace BilliardsSaloon
                     return;
                 }
 
+                const float restitution = tableBounds->railRestitution;
+                const float frictionCoefficient = tableBounds->railContactFrictionCoefficient;
+
                 for (BallRef& ref : balls)
                 {
                     if (ref.ball->pocketed)
@@ -228,24 +482,44 @@ namespace BilliardsSaloon
 
                     if (ref.transform->position.x < -maxX)
                     {
-                        ref.transform->position.x = -maxX;
-                        ref.ball->linearVelocity.x = -ref.ball->linearVelocity.x * tableBounds->railRestitution;
+                        resolveSingleRailContact(
+                            ref,
+                            glm::vec3(1.0f, 0.0f, 0.0f),
+                            -maxX,
+                            restitution,
+                            frictionCoefficient
+                        );
                     }
                     else if (ref.transform->position.x > maxX)
                     {
-                        ref.transform->position.x = maxX;
-                        ref.ball->linearVelocity.x = -ref.ball->linearVelocity.x * tableBounds->railRestitution;
+                        resolveSingleRailContact(
+                            ref,
+                            glm::vec3(-1.0f, 0.0f, 0.0f),
+                            maxX,
+                            restitution,
+                            frictionCoefficient
+                        );
                     }
 
                     if (ref.transform->position.z < -maxZ)
                     {
-                        ref.transform->position.z = -maxZ;
-                        ref.ball->linearVelocity.z = -ref.ball->linearVelocity.z * tableBounds->railRestitution;
+                        resolveSingleRailContact(
+                            ref,
+                            glm::vec3(0.0f, 0.0f, 1.0f),
+                            -maxZ,
+                            restitution,
+                            frictionCoefficient
+                        );
                     }
                     else if (ref.transform->position.z > maxZ)
                     {
-                        ref.transform->position.z = maxZ;
-                        ref.ball->linearVelocity.z = -ref.ball->linearVelocity.z * tableBounds->railRestitution;
+                        resolveSingleRailContact(
+                            ref,
+                            glm::vec3(0.0f, 0.0f, -1.0f),
+                            maxZ,
+                            restitution,
+                            frictionCoefficient
+                        );
                     }
                 }
             }
@@ -261,7 +535,7 @@ namespace BilliardsSaloon
 
                 const float contactFrictionCoefficient = (tableBounds != nullptr)
                     ? tableBounds->ballContactFrictionCoefficient
-                    : 0.06f;
+                    : 0.05f;
 
                 for (std::size_t i = 0; i < balls.size(); ++i)
                 {
@@ -364,16 +638,10 @@ namespace BilliardsSaloon
                         }
 
                         const glm::vec3 tangent = tangentialVelocity / tangentialSpeed;
-                        const glm::vec3 raCrossTangent = glm::cross(contactOffsetA, tangent);
-                        const glm::vec3 rbCrossTangent = glm::cross(contactOffsetB, tangent);
-
-                        const float inverseInertiaA = 1.0f / solidSphereInertia(*a.ball);
-                        const float inverseInertiaB = 1.0f / solidSphereInertia(*b.ball);
 
                         const float tangentDenominator =
-                            inverseMassSum +
-                            inverseInertiaA * glm::dot(raCrossTangent, raCrossTangent) +
-                            inverseInertiaB * glm::dot(rbCrossTangent, rbCrossTangent);
+                            impulseDenominatorForDirection(*a.ball, contactOffsetA, tangent) +
+                            impulseDenominatorForDirection(*b.ball, contactOffsetB, tangent);
 
                         if (tangentDenominator <= 0.0f)
                         {
@@ -411,15 +679,15 @@ namespace BilliardsSaloon
 
                 const float muRoll = (tableBounds != nullptr)
                     ? tableBounds->rollingFrictionCoefficient
-                    : 0.020f;
+                    : 0.010f;
+
+                const float muSpin = (tableBounds != nullptr)
+                    ? tableBounds->spinningFrictionCoefficient
+                    : 0.015f;
 
                 const float stopThreshold = (tableBounds != nullptr)
                     ? tableBounds->stopSpeedThreshold
-                    : 0.02f;
-
-                const float sideSpinDamping = (tableBounds != nullptr)
-                    ? tableBounds->sideSpinDampingPerSecond
-                    : 0.35f;
+                    : 0.006f;
 
                 for (BallRef& ref : balls)
                 {
@@ -428,46 +696,58 @@ namespace BilliardsSaloon
                         continue;
                     }
 
-                    glm::vec2 v = planarXZ(ref.ball->linearVelocity);
-                    glm::vec2 slip = contactSlipVelocity(*ref.ball);
-                    const float slipSpeed = glm::length(slip);
+                    float remainingTime = dt;
 
-                    if (slipSpeed > SLIP_EPSILON)
+                    for (int stateStep = 0;
+                         (stateStep < MAX_CLOTH_STATE_STEPS) && (remainingTime > MOTION_STATE_TIME_EPSILON);
+                         ++stateStep)
                     {
-                        const glm::vec2 slipDir = slip / slipSpeed;
-                        const glm::vec2 acceleration = -muSlide * GRAVITY * slipDir;
+                        const float slipSpeed = glm::length(contactSlipVelocity(*ref.ball));
+                        const float planarSpeed = glm::length(planarXZ(ref.ball->linearVelocity));
+                        const float verticalSpinMagnitude = std::abs(ref.ball->angularVelocity.y);
 
-                        v += acceleration * dt;
-
-                        ref.ball->angularVelocity.x +=
-                            (-5.0f * acceleration.y / (2.0f * ref.ball->radius)) * dt;
-                        ref.ball->angularVelocity.z +=
-                            ( 5.0f * acceleration.x / (2.0f * ref.ball->radius)) * dt;
-                    }
-                    else
-                    {
-                        const float speed = glm::length(v);
-
-                        if (speed > 0.0f)
+                        if (slipSpeed > SLIP_EPSILON)
                         {
-                            const glm::vec2 dir = v / speed;
-                            const float newSpeed = std::max(0.0f, speed - muRoll * GRAVITY * dt);
-                            v = dir * newSpeed;
+                            remainingTime = evolveSlidingMotion(
+                                *ref.ball,
+                                remainingTime,
+                                muSlide,
+                                muSpin
+                            );
+                            continue;
                         }
 
-                        ref.ball->angularVelocity.x = v.y / ref.ball->radius;
-                        ref.ball->angularVelocity.z = -v.x / ref.ball->radius;
+                        if (planarSpeed > stopThreshold)
+                        {
+                            setRollingAngularVelocityFromLinear(*ref.ball);
+                            remainingTime = evolveRollingMotion(
+                                *ref.ball,
+                                remainingTime,
+                                muRoll,
+                                muSpin,
+                                stopThreshold
+                            );
+                            continue;
+                        }
+
+                        if (verticalSpinMagnitude > SPIN_EPSILON)
+                        {
+                            evolveSpinningMotion(*ref.ball, remainingTime, muSpin);
+                            remainingTime = 0.0f;
+                            continue;
+                        }
+
+                        ref.ball->linearVelocity = glm::vec3(0.0f);
+                        ref.ball->angularVelocity = glm::vec3(0.0f);
+                        remainingTime = 0.0f;
                     }
 
-                    ref.ball->angularVelocity.y *= std::max(0.0f, 1.0f - sideSpinDamping * dt);
-                    ref.ball->linearVelocity.x = v.x;
-                    ref.ball->linearVelocity.z = v.y;
                     ref.ball->linearVelocity.y = 0.0f;
 
-                    const float speed = glm::length(v);
-                    if ((speed < stopThreshold) &&
-                        (std::abs(ref.ball->angularVelocity.y) < SPIN_EPSILON) &&
-                        (glm::length(glm::vec2(ref.ball->angularVelocity.x, ref.ball->angularVelocity.z)) < SPIN_EPSILON))
+                    const float finalPlanarSpeed = glm::length(planarXZ(ref.ball->linearVelocity));
+                    if ((finalPlanarSpeed <= stopThreshold) &&
+                        (std::abs(ref.ball->angularVelocity.y) <= SPIN_EPSILON) &&
+                        (glm::length(glm::vec2(ref.ball->angularVelocity.x, ref.ball->angularVelocity.z)) <= SPIN_EPSILON))
                     {
                         ref.ball->linearVelocity = glm::vec3(0.0f);
                         ref.ball->angularVelocity = glm::vec3(0.0f);

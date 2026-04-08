@@ -29,7 +29,7 @@ namespace BilliardsSaloon
 
         Entity findCueBall() const;
         void resetCueBall();
-        void fireCurrentShot();
+        bool fireCurrentShot();
 
         static constexpr double FIXED_TIME_STEP = 1.0 / 120.0;
         static constexpr double MAX_FRAME_TIME = 0.25;
