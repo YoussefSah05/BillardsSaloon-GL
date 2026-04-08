@@ -80,6 +80,11 @@ namespace BilliardsSaloon
         glfwSwapBuffers(m_handle);
     }
 
+    void Window::setTitle(const std::string& title) const
+    {
+        glfwSetWindowTitle(m_handle, title.c_str());
+    }
+
     bool Window::shouldClose() const
     {
         return glfwWindowShouldClose(m_handle) == GLFW_TRUE; // to return the boolean since glfwfunction returns int

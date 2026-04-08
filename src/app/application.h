@@ -16,6 +16,13 @@
 
 namespace BilliardsSaloon
 {
+    enum class RenderQualityPreset
+    {
+        Low,
+        Balanced,
+        High
+    };
+
     class Application
     {
     public:
@@ -26,6 +33,7 @@ namespace BilliardsSaloon
         void processPlatformInput();
         void updateFixed(double deltaTimeSeconds);
         void render(double alpha);
+        void updateWindowTitle(double frameTimeSeconds, std::uint32_t fixedStepsThisFrame);
 
         Entity findCueBall() const;
         void resetCueBall();
@@ -50,9 +58,17 @@ namespace BilliardsSaloon
         ShotState m_shotState {};
         ShotResult m_currentShotResult {};
         bool m_spaceWasDownLastFrame {false};
+        bool m_qualityToggleWasDownLastFrame {false};
+        bool m_titleStatsToggleWasDownLastFrame {false};
+        bool m_showPerformanceStatsInTitle {true};
+        RenderQualityPreset m_renderQuality {RenderQualityPreset::Balanced};
 
         double m_accumulator {0.0};
         double m_simulationTime {0.0};
+        double m_titleUpdateAccumulator {0.0};
+        double m_titleUpdateFrameTimeSum {0.0};
+        std::uint32_t m_titleUpdateFrameCount {0};
+        std::uint32_t m_titleUpdateFixedStepCount {0};
         std::uint64_t m_fixedFrameIndex {0};
     };
 }

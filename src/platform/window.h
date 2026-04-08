@@ -26,6 +26,7 @@ namespace BilliardsSaloon
 
         void pollEvents() const;
         void swapBuffers() const;
+        void setTitle(const std::string& title) const;
 
         [[nodiscard]] bool shouldClose() const;
         void requestClose() const;

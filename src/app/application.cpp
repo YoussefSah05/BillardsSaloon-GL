@@ -19,12 +19,30 @@ namespace BilliardsSaloon
     namespace
     {
         constexpr int POINT_LIGHT_COUNT = 3;
+        constexpr double TITLE_UPDATE_INTERVAL_SECONDS = 0.25;
 
         struct PointLightRig
         {
             std::array<glm::vec3, POINT_LIGHT_COUNT> positions {};
             std::array<glm::vec3, POINT_LIGHT_COUNT> colors {};
         };
+
+        const char* renderQualityLabel(RenderQualityPreset quality)
+        {
+            switch (quality)
+            {
+                case RenderQualityPreset::Low:
+                    return "Low";
+
+                case RenderQualityPreset::Balanced:
+                    return "Balanced";
+
+                case RenderQualityPreset::High:
+                    return "High";
+            }
+
+            return "Unknown";
+        }
 
         Entity createSceneEntity(
             Registry& registry,
@@ -552,6 +570,7 @@ namespace BilliardsSaloon
             frameTime = std::min(frameTime, MAX_FRAME_TIME);
 
             m_accumulator += frameTime;
+            std::uint32_t fixedStepsThisFrame = 0;
 
             while (m_accumulator >= FIXED_TIME_STEP)
             {
@@ -559,10 +578,12 @@ namespace BilliardsSaloon
                 m_accumulator -= FIXED_TIME_STEP;
                 m_simulationTime += FIXED_TIME_STEP;
                 ++m_fixedFrameIndex;
+                ++fixedStepsThisFrame;
             }
 
             const double alpha = m_accumulator / FIXED_TIME_STEP;
             render(alpha);
+            updateWindowTitle(frameTime, fixedStepsThisFrame);
 
             m_window.swapBuffers();
         }
@@ -581,8 +602,67 @@ namespace BilliardsSaloon
 
         if (m_matchState.flowPhase == MatchFlowPhase::FrameOver)
         {
+            const bool qualityToggleDown = glfwGetKey(handle, GLFW_KEY_F2) == GLFW_PRESS;
+            const bool titleStatsToggleDown = glfwGetKey(handle, GLFW_KEY_F1) == GLFW_PRESS;
+
+            if (qualityToggleDown && !m_qualityToggleWasDownLastFrame)
+            {
+                switch (m_renderQuality)
+                {
+                    case RenderQualityPreset::Low:
+                        m_renderQuality = RenderQualityPreset::Balanced;
+                        break;
+
+                    case RenderQualityPreset::Balanced:
+                        m_renderQuality = RenderQualityPreset::High;
+                        break;
+
+                    case RenderQualityPreset::High:
+                        m_renderQuality = RenderQualityPreset::Low;
+                        break;
+                }
+            }
+
+            if (titleStatsToggleDown && !m_titleStatsToggleWasDownLastFrame)
+            {
+                m_showPerformanceStatsInTitle = !m_showPerformanceStatsInTitle;
+                m_titleUpdateAccumulator = TITLE_UPDATE_INTERVAL_SECONDS;
+            }
+
+            m_qualityToggleWasDownLastFrame = qualityToggleDown;
+            m_titleStatsToggleWasDownLastFrame = titleStatsToggleDown;
             return;
         }
+
+        const bool qualityToggleDown = glfwGetKey(handle, GLFW_KEY_F2) == GLFW_PRESS;
+        const bool titleStatsToggleDown = glfwGetKey(handle, GLFW_KEY_F1) == GLFW_PRESS;
+
+        if (qualityToggleDown && !m_qualityToggleWasDownLastFrame)
+        {
+            switch (m_renderQuality)
+            {
+                case RenderQualityPreset::Low:
+                    m_renderQuality = RenderQualityPreset::Balanced;
+                    break;
+
+                case RenderQualityPreset::Balanced:
+                    m_renderQuality = RenderQualityPreset::High;
+                    break;
+
+                case RenderQualityPreset::High:
+                    m_renderQuality = RenderQualityPreset::Low;
+                    break;
+            }
+        }
+
+        if (titleStatsToggleDown && !m_titleStatsToggleWasDownLastFrame)
+        {
+            m_showPerformanceStatsInTitle = !m_showPerformanceStatsInTitle;
+            m_titleUpdateAccumulator = TITLE_UPDATE_INTERVAL_SECONDS;
+        }
+
+        m_qualityToggleWasDownLastFrame = qualityToggleDown;
+        m_titleStatsToggleWasDownLastFrame = titleStatsToggleDown;
 
         if (glfwGetKey(handle, GLFW_KEY_R) == GLFW_PRESS)
         {
@@ -842,6 +922,35 @@ namespace BilliardsSaloon
             glm::vec3(0.22f, 0.24f, 0.28f)
         );
 
+        int activePointLightCount = 2;
+        float reflectionScale = 0.55f;
+        float emissionScale = 0.85f;
+
+        switch (m_renderQuality)
+        {
+            case RenderQualityPreset::Low:
+                activePointLightCount = 1;
+                reflectionScale = 0.15f;
+                emissionScale = 0.70f;
+                break;
+
+            case RenderQualityPreset::Balanced:
+                activePointLightCount = 2;
+                reflectionScale = 0.55f;
+                emissionScale = 0.85f;
+                break;
+
+            case RenderQualityPreset::High:
+                activePointLightCount = 3;
+                reflectionScale = 1.0f;
+                emissionScale = 1.0f;
+                break;
+        }
+
+        m_basicShader->setInt("uActivePointLightCount", activePointLightCount);
+        m_basicShader->setFloat("uReflectionScale", reflectionScale);
+        m_basicShader->setFloat("uEmissionScale", emissionScale);
+
         for (std::size_t lightIndex = 0; lightIndex < lightRig.positions.size(); ++lightIndex)
         {
             m_basicShader->setVec3(
@@ -1016,5 +1125,56 @@ namespace BilliardsSaloon
                 m_cubeMesh->draw();
             }
         }
+    }
+
+    void Application::updateWindowTitle(double frameTimeSeconds, std::uint32_t fixedStepsThisFrame)
+    {
+        m_titleUpdateAccumulator += frameTimeSeconds;
+        m_titleUpdateFrameTimeSum += frameTimeSeconds;
+        ++m_titleUpdateFrameCount;
+        m_titleUpdateFixedStepCount += fixedStepsThisFrame;
+
+        if (m_titleUpdateAccumulator < TITLE_UPDATE_INTERVAL_SECONDS)
+        {
+            return;
+        }
+
+        std::string title = "Billiards Saloon";
+        title += " | Q:";
+        title += renderQualityLabel(m_renderQuality);
+
+        if (m_showPerformanceStatsInTitle && (m_titleUpdateFrameTimeSum > 0.0))
+        {
+            const double averageFrameSeconds =
+                m_titleUpdateFrameTimeSum / static_cast<double>(m_titleUpdateFrameCount);
+            const double fps = static_cast<double>(m_titleUpdateFrameCount) / m_titleUpdateFrameTimeSum;
+            const double fixedHz =
+                static_cast<double>(m_titleUpdateFixedStepCount) / m_titleUpdateFrameTimeSum;
+            const int roundedFps = static_cast<int>(std::round(fps));
+            const int roundedFrameMs = static_cast<int>(std::round(averageFrameSeconds * 1000.0));
+            const int roundedFixedHz = static_cast<int>(std::round(fixedHz));
+
+            title += " | ";
+            title += std::to_string(roundedFps);
+            title += " FPS";
+            title += " | ";
+            title += std::to_string(roundedFrameMs);
+            title += " ms";
+            title += " | fixed ";
+            title += std::to_string(roundedFixedHz);
+            title += " Hz";
+            title += " | F1 title stats | F2 quality";
+        }
+        else
+        {
+            title += " | F1 title stats | F2 quality";
+        }
+
+        m_window.setTitle(title);
+
+        m_titleUpdateAccumulator = 0.0;
+        m_titleUpdateFrameTimeSum = 0.0;
+        m_titleUpdateFrameCount = 0;
+        m_titleUpdateFixedStepCount = 0;
     }
 }

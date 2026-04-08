@@ -12,6 +12,7 @@ uniform vec3 uDirectionalLightColor;
 
 uniform vec3 uPointLightPositions[3];
 uniform vec3 uPointLightColors[3];
+uniform int uActivePointLightCount;
 
 uniform vec3 uMaterialAlbedo;
 uniform float uMaterialSpecularStrength;
@@ -20,6 +21,8 @@ uniform int uMaterialSurfaceType;
 uniform float uMaterialRoughness;
 uniform float uMaterialReflectivity;
 uniform float uMaterialClearcoatStrength;
+uniform float uReflectionScale;
+uniform float uEmissionScale;
 
 uniform vec3 uEmissionColor;
 
@@ -229,6 +232,11 @@ void main()
 
     for (int i = 0; i < 3; ++i)
     {
+        if (i >= uActivePointLightCount)
+        {
+            break;
+        }
+
         vec3 lightVector = uPointLightPositions[i] - vWorldPosition;
         float distanceToLight = length(lightVector);
         vec3 lightDirection = lightVector / max(distanceToLight, 1.0e-4);
@@ -278,7 +286,7 @@ void main()
         reflections += environment * rim * 0.06;
     }
 
-    vec3 color = ambient + lighting + reflections + uEmissionColor;
+    vec3 color = ambient + lighting + reflections * uReflectionScale + uEmissionColor * uEmissionScale;
 
     color = acesTonemap(color);
     color = pow(color, vec3(1.0 / 2.2));
