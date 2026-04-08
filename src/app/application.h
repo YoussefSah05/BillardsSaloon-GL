@@ -13,6 +13,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <vector>
 
 namespace BilliardsSaloon
 {
@@ -21,6 +22,26 @@ namespace BilliardsSaloon
         Low,
         Balanced,
         High
+    };
+
+    enum class ApplicationShellState
+    {
+        MainMenu,
+        Gameplay,
+        PauseMenu
+    };
+
+    enum class MainMenuSelection
+    {
+        StartMatch,
+        Quit
+    };
+
+    enum class PauseMenuSelection
+    {
+        Resume,
+        RestartRack,
+        ReturnToMainMenu
     };
 
     class Application
@@ -34,6 +55,9 @@ namespace BilliardsSaloon
         void updateFixed(double deltaTimeSeconds);
         void render(double alpha);
         void updateWindowTitle(double frameTimeSeconds, std::uint32_t fixedStepsThisFrame);
+        void resetMatchToOpeningRack();
+        void applyMainMenuSelection();
+        void applyPauseMenuSelection();
 
         Entity findCueBall() const;
         void resetCueBall();
@@ -47,6 +71,8 @@ namespace BilliardsSaloon
 
         Registry m_registry;
         Entity m_cameraEntity;
+        Entity m_cueBallEntity;
+        std::vector<Entity> m_objectBallEntities;
 
         std::unique_ptr<Shader> m_basicShader;
         std::unique_ptr<Mesh> m_cubeMesh;
@@ -57,9 +83,16 @@ namespace BilliardsSaloon
         MatchState m_matchState {};
         ShotState m_shotState {};
         ShotResult m_currentShotResult {};
+        ApplicationShellState m_shellState {ApplicationShellState::MainMenu};
+        MainMenuSelection m_mainMenuSelection {MainMenuSelection::StartMatch};
+        PauseMenuSelection m_pauseMenuSelection {PauseMenuSelection::Resume};
         bool m_spaceWasDownLastFrame {false};
+        bool m_escapeWasDownLastFrame {false};
         bool m_qualityToggleWasDownLastFrame {false};
         bool m_titleStatsToggleWasDownLastFrame {false};
+        bool m_menuUpWasDownLastFrame {false};
+        bool m_menuDownWasDownLastFrame {false};
+        bool m_menuConfirmWasDownLastFrame {false};
         bool m_showPerformanceStatsInTitle {true};
         RenderQualityPreset m_renderQuality {RenderQualityPreset::Balanced};
 

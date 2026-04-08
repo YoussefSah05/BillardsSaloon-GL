@@ -44,6 +44,54 @@ namespace BilliardsSaloon
             return "Unknown";
         }
 
+        const char* shellStateLabel(ApplicationShellState shellState)
+        {
+            switch (shellState)
+            {
+                case ApplicationShellState::MainMenu:
+                    return "Main Menu";
+
+                case ApplicationShellState::Gameplay:
+                    return "Gameplay";
+
+                case ApplicationShellState::PauseMenu:
+                    return "Paused";
+            }
+
+            return "Unknown";
+        }
+
+        const char* mainMenuSelectionLabel(MainMenuSelection selection)
+        {
+            switch (selection)
+            {
+                case MainMenuSelection::StartMatch:
+                    return "Start Match";
+
+                case MainMenuSelection::Quit:
+                    return "Quit";
+            }
+
+            return "Unknown";
+        }
+
+        const char* pauseMenuSelectionLabel(PauseMenuSelection selection)
+        {
+            switch (selection)
+            {
+                case PauseMenuSelection::Resume:
+                    return "Resume";
+
+                case PauseMenuSelection::RestartRack:
+                    return "Restart Rack";
+
+                case PauseMenuSelection::ReturnToMainMenu:
+                    return "Main Menu";
+            }
+
+            return "Unknown";
+        }
+
         Entity createSceneEntity(
             Registry& registry,
             const std::string& name,
@@ -229,14 +277,6 @@ namespace BilliardsSaloon
         : m_window(WindowDesc{})
     {
         m_variant = &eightBallVariant();
-
-        m_matchState.discipline = m_variant->discipline;
-        m_matchState.flowPhase = MatchFlowPhase::BreakShot;
-        m_matchState.activePlayerIndex = 0;
-        m_matchState.winnerPlayerIndex = -1;
-        m_matchState.shotInProgress = false;
-        m_matchState.foulCommittedThisTurn = false;
-        m_matchState.ballInHand = false;
 
         m_basicShader = std::make_unique<Shader>(
             "../assets/shaders/basic.vert",
@@ -490,6 +530,8 @@ namespace BilliardsSaloon
                 cueBallMaterial
             );
 
+            m_cueBallEntity = cueBall;
+
             m_registry.emplace<BallComponent>(cueBall, BallComponent{
                 .radius = m_variant->table.ballRadius,
                 .massKg = m_variant->table.ballMassKg,
@@ -528,6 +570,8 @@ namespace BilliardsSaloon
                 ballMaterial
             );
 
+            m_objectBallEntities.push_back(ball);
+
             m_registry.emplace<BallComponent>(ball, BallComponent{
                 .radius = m_variant->table.ballRadius,
                 .massKg = m_variant->table.ballMassKg,
@@ -555,6 +599,9 @@ namespace BilliardsSaloon
             .farPlane = 60.0f
         });
         m_registry.emplace<CameraTagComponent>(m_cameraEntity, CameraTagComponent{});
+
+        resetMatchToOpeningRack();
+        m_shellState = ApplicationShellState::MainMenu;
     }
 
     int Application::run()
@@ -591,53 +638,112 @@ namespace BilliardsSaloon
         return 0;
     }
 
+    void Application::resetMatchToOpeningRack()
+    {
+        m_matchState = MatchState{};
+        m_matchState.discipline = m_variant->discipline;
+        m_matchState.flowPhase = MatchFlowPhase::BreakShot;
+        m_matchState.activePlayerIndex = 0;
+        m_matchState.winnerPlayerIndex = -1;
+        m_matchState.shotInProgress = false;
+        m_matchState.foulCommittedThisTurn = false;
+        m_matchState.ballInHand = false;
+
+        m_shotState = ShotState{};
+        m_currentShotResult.clear();
+        m_spaceWasDownLastFrame = false;
+
+        resetCueBall();
+
+        const std::vector<glm::vec3> rackPositions = buildRackPositions(*m_variant);
+        const glm::quat identityRotation(1.0f, 0.0f, 0.0f, 0.0f);
+
+        for (std::size_t i = 0; i < m_objectBallEntities.size(); ++i)
+        {
+            TransformComponent* transform = m_registry.tryGet<TransformComponent>(m_objectBallEntities[i]);
+            BallComponent* ball = m_registry.tryGet<BallComponent>(m_objectBallEntities[i]);
+
+            if ((transform == nullptr) || (ball == nullptr))
+            {
+                continue;
+            }
+
+            transform->position = rackPositions[i];
+            transform->previousPosition = transform->position;
+            transform->rotation = identityRotation;
+            transform->previousRotation = transform->rotation;
+
+            ball->linearVelocity = glm::vec3(0.0f);
+            ball->angularVelocity = glm::vec3(0.0f);
+            ball->pocketed = false;
+        }
+
+        m_titleUpdateAccumulator = TITLE_UPDATE_INTERVAL_SECONDS;
+    }
+
+    void Application::applyMainMenuSelection()
+    {
+        switch (m_mainMenuSelection)
+        {
+            case MainMenuSelection::StartMatch:
+                resetMatchToOpeningRack();
+                m_shellState = ApplicationShellState::Gameplay;
+                break;
+
+            case MainMenuSelection::Quit:
+                m_window.requestClose();
+                break;
+        }
+
+        m_titleUpdateAccumulator = TITLE_UPDATE_INTERVAL_SECONDS;
+    }
+
+    void Application::applyPauseMenuSelection()
+    {
+        switch (m_pauseMenuSelection)
+        {
+            case PauseMenuSelection::Resume:
+                m_shellState = ApplicationShellState::Gameplay;
+                break;
+
+            case PauseMenuSelection::RestartRack:
+                resetMatchToOpeningRack();
+                m_shellState = ApplicationShellState::Gameplay;
+                break;
+
+            case PauseMenuSelection::ReturnToMainMenu:
+                m_shellState = ApplicationShellState::MainMenu;
+                break;
+        }
+
+        m_pauseMenuSelection = PauseMenuSelection::Resume;
+        m_titleUpdateAccumulator = TITLE_UPDATE_INTERVAL_SECONDS;
+    }
+
     void Application::processPlatformInput()
     {
         GLFWwindow* handle = m_window.nativeHandle();
-
-        if (glfwGetKey(handle, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-        {
-            m_window.requestClose();
-        }
-
-        if (m_matchState.flowPhase == MatchFlowPhase::FrameOver)
-        {
-            const bool qualityToggleDown = glfwGetKey(handle, GLFW_KEY_F2) == GLFW_PRESS;
-            const bool titleStatsToggleDown = glfwGetKey(handle, GLFW_KEY_F1) == GLFW_PRESS;
-
-            if (qualityToggleDown && !m_qualityToggleWasDownLastFrame)
-            {
-                switch (m_renderQuality)
-                {
-                    case RenderQualityPreset::Low:
-                        m_renderQuality = RenderQualityPreset::Balanced;
-                        break;
-
-                    case RenderQualityPreset::Balanced:
-                        m_renderQuality = RenderQualityPreset::High;
-                        break;
-
-                    case RenderQualityPreset::High:
-                        m_renderQuality = RenderQualityPreset::Low;
-                        break;
-                }
-            }
-
-            if (titleStatsToggleDown && !m_titleStatsToggleWasDownLastFrame)
-            {
-                m_showPerformanceStatsInTitle = !m_showPerformanceStatsInTitle;
-                m_titleUpdateAccumulator = TITLE_UPDATE_INTERVAL_SECONDS;
-            }
-
-            m_qualityToggleWasDownLastFrame = qualityToggleDown;
-            m_titleStatsToggleWasDownLastFrame = titleStatsToggleDown;
-            return;
-        }
-
+        const bool escapeDown = glfwGetKey(handle, GLFW_KEY_ESCAPE) == GLFW_PRESS;
         const bool qualityToggleDown = glfwGetKey(handle, GLFW_KEY_F2) == GLFW_PRESS;
         const bool titleStatsToggleDown = glfwGetKey(handle, GLFW_KEY_F1) == GLFW_PRESS;
+        const bool menuUpDown =
+            (glfwGetKey(handle, GLFW_KEY_UP) == GLFW_PRESS) ||
+            (glfwGetKey(handle, GLFW_KEY_W) == GLFW_PRESS);
+        const bool menuDownDown =
+            (glfwGetKey(handle, GLFW_KEY_DOWN) == GLFW_PRESS) ||
+            (glfwGetKey(handle, GLFW_KEY_S) == GLFW_PRESS);
+        const bool menuConfirmDown =
+            (glfwGetKey(handle, GLFW_KEY_ENTER) == GLFW_PRESS) ||
+            (glfwGetKey(handle, GLFW_KEY_KP_ENTER) == GLFW_PRESS);
 
-        if (qualityToggleDown && !m_qualityToggleWasDownLastFrame)
+        const bool escapePressed = escapeDown && !m_escapeWasDownLastFrame;
+        const bool qualityTogglePressed = qualityToggleDown && !m_qualityToggleWasDownLastFrame;
+        const bool titleStatsTogglePressed = titleStatsToggleDown && !m_titleStatsToggleWasDownLastFrame;
+        const bool menuUpPressed = menuUpDown && !m_menuUpWasDownLastFrame;
+        const bool menuDownPressed = menuDownDown && !m_menuDownWasDownLastFrame;
+        const bool menuConfirmPressed = menuConfirmDown && !m_menuConfirmWasDownLastFrame;
+
+        if (qualityTogglePressed)
         {
             switch (m_renderQuality)
             {
@@ -653,16 +759,125 @@ namespace BilliardsSaloon
                     m_renderQuality = RenderQualityPreset::Low;
                     break;
             }
+
+            m_titleUpdateAccumulator = TITLE_UPDATE_INTERVAL_SECONDS;
         }
 
-        if (titleStatsToggleDown && !m_titleStatsToggleWasDownLastFrame)
+        if (titleStatsTogglePressed)
         {
             m_showPerformanceStatsInTitle = !m_showPerformanceStatsInTitle;
             m_titleUpdateAccumulator = TITLE_UPDATE_INTERVAL_SECONDS;
         }
 
-        m_qualityToggleWasDownLastFrame = qualityToggleDown;
-        m_titleStatsToggleWasDownLastFrame = titleStatsToggleDown;
+        if (m_shellState == ApplicationShellState::MainMenu)
+        {
+            if (escapePressed)
+            {
+                m_window.requestClose();
+            }
+
+            if (menuUpPressed || menuDownPressed)
+            {
+                m_mainMenuSelection =
+                    (m_mainMenuSelection == MainMenuSelection::StartMatch)
+                    ? MainMenuSelection::Quit
+                    : MainMenuSelection::StartMatch;
+                m_titleUpdateAccumulator = TITLE_UPDATE_INTERVAL_SECONDS;
+            }
+
+            if (menuConfirmPressed)
+            {
+                applyMainMenuSelection();
+            }
+
+            m_spaceWasDownLastFrame = false;
+            m_escapeWasDownLastFrame = escapeDown;
+            m_qualityToggleWasDownLastFrame = qualityToggleDown;
+            m_titleStatsToggleWasDownLastFrame = titleStatsToggleDown;
+            m_menuUpWasDownLastFrame = menuUpDown;
+            m_menuDownWasDownLastFrame = menuDownDown;
+            m_menuConfirmWasDownLastFrame = menuConfirmDown;
+            return;
+        }
+
+        if (m_shellState == ApplicationShellState::PauseMenu)
+        {
+            if (escapePressed)
+            {
+                m_shellState = ApplicationShellState::Gameplay;
+                m_pauseMenuSelection = PauseMenuSelection::Resume;
+                m_titleUpdateAccumulator = TITLE_UPDATE_INTERVAL_SECONDS;
+            }
+
+            if (menuUpPressed)
+            {
+                switch (m_pauseMenuSelection)
+                {
+                    case PauseMenuSelection::Resume:
+                        m_pauseMenuSelection = PauseMenuSelection::ReturnToMainMenu;
+                        break;
+
+                    case PauseMenuSelection::RestartRack:
+                        m_pauseMenuSelection = PauseMenuSelection::Resume;
+                        break;
+
+                    case PauseMenuSelection::ReturnToMainMenu:
+                        m_pauseMenuSelection = PauseMenuSelection::RestartRack;
+                        break;
+                }
+
+                m_titleUpdateAccumulator = TITLE_UPDATE_INTERVAL_SECONDS;
+            }
+
+            if (menuDownPressed)
+            {
+                switch (m_pauseMenuSelection)
+                {
+                    case PauseMenuSelection::Resume:
+                        m_pauseMenuSelection = PauseMenuSelection::RestartRack;
+                        break;
+
+                    case PauseMenuSelection::RestartRack:
+                        m_pauseMenuSelection = PauseMenuSelection::ReturnToMainMenu;
+                        break;
+
+                    case PauseMenuSelection::ReturnToMainMenu:
+                        m_pauseMenuSelection = PauseMenuSelection::Resume;
+                        break;
+                }
+
+                m_titleUpdateAccumulator = TITLE_UPDATE_INTERVAL_SECONDS;
+            }
+
+            if (menuConfirmPressed)
+            {
+                applyPauseMenuSelection();
+            }
+
+            m_spaceWasDownLastFrame = false;
+            m_escapeWasDownLastFrame = escapeDown;
+            m_qualityToggleWasDownLastFrame = qualityToggleDown;
+            m_titleStatsToggleWasDownLastFrame = titleStatsToggleDown;
+            m_menuUpWasDownLastFrame = menuUpDown;
+            m_menuDownWasDownLastFrame = menuDownDown;
+            m_menuConfirmWasDownLastFrame = menuConfirmDown;
+            return;
+        }
+
+        if (escapePressed)
+        {
+            m_shellState = ApplicationShellState::PauseMenu;
+            m_pauseMenuSelection = PauseMenuSelection::Resume;
+            m_spaceWasDownLastFrame = false;
+            m_titleUpdateAccumulator = TITLE_UPDATE_INTERVAL_SECONDS;
+            m_escapeWasDownLastFrame = escapeDown;
+            m_qualityToggleWasDownLastFrame = qualityToggleDown;
+            m_titleStatsToggleWasDownLastFrame = titleStatsToggleDown;
+            m_menuUpWasDownLastFrame = menuUpDown;
+            m_menuDownWasDownLastFrame = menuDownDown;
+            m_menuConfirmWasDownLastFrame = menuConfirmDown;
+            return;
+        }
 
         if (glfwGetKey(handle, GLFW_KEY_R) == GLFW_PRESS)
         {
@@ -673,9 +888,16 @@ namespace BilliardsSaloon
             m_currentShotResult.clear();
         }
 
-        if (m_shotState.phase == ShotPhase::BallsInMotion)
+        if ((m_matchState.flowPhase == MatchFlowPhase::FrameOver) ||
+            (m_shotState.phase == ShotPhase::BallsInMotion))
         {
             m_spaceWasDownLastFrame = glfwGetKey(handle, GLFW_KEY_SPACE) == GLFW_PRESS;
+            m_escapeWasDownLastFrame = escapeDown;
+            m_qualityToggleWasDownLastFrame = qualityToggleDown;
+            m_titleStatsToggleWasDownLastFrame = titleStatsToggleDown;
+            m_menuUpWasDownLastFrame = menuUpDown;
+            m_menuDownWasDownLastFrame = menuDownDown;
+            m_menuConfirmWasDownLastFrame = menuConfirmDown;
             return;
         }
 
@@ -751,10 +973,21 @@ namespace BilliardsSaloon
         }
 
         m_spaceWasDownLastFrame = spaceDown;
+        m_escapeWasDownLastFrame = escapeDown;
+        m_qualityToggleWasDownLastFrame = qualityToggleDown;
+        m_titleStatsToggleWasDownLastFrame = titleStatsToggleDown;
+        m_menuUpWasDownLastFrame = menuUpDown;
+        m_menuDownWasDownLastFrame = menuDownDown;
+        m_menuConfirmWasDownLastFrame = menuConfirmDown;
     }
 
     Entity Application::findCueBall() const
     {
+        if (m_cueBallEntity.isValid())
+        {
+            return m_cueBallEntity;
+        }
+
         Entity found {};
 
         const_cast<Registry&>(m_registry).view<BallComponent>().each(
@@ -842,6 +1075,11 @@ namespace BilliardsSaloon
 
     void Application::updateFixed(double deltaTimeSeconds)
     {
+        if (m_shellState != ApplicationShellState::Gameplay)
+        {
+            return;
+        }
+
         Physics::stepBilliardsWorld(m_registry, deltaTimeSeconds, m_currentShotResult);
 
         if ((m_shotState.phase == ShotPhase::BallsInMotion) && !Physics::anyBallInMotion(m_registry))
@@ -866,7 +1104,15 @@ namespace BilliardsSaloon
     {
         glViewport(0, 0, m_window.width(), m_window.height());
 
-        if (m_matchState.flowPhase == MatchFlowPhase::FrameOver)
+        if (m_shellState == ApplicationShellState::MainMenu)
+        {
+            glClearColor(0.025f, 0.020f, 0.022f, 1.0f);
+        }
+        else if (m_shellState == ApplicationShellState::PauseMenu)
+        {
+            glClearColor(0.022f, 0.020f, 0.024f, 1.0f);
+        }
+        else if (m_matchState.flowPhase == MatchFlowPhase::FrameOver)
         {
             glClearColor(0.03f, 0.025f, 0.03f, 1.0f);
         }
@@ -1031,6 +1277,7 @@ namespace BilliardsSaloon
 
                 const bool highlightCueBall =
                     (entity == cueBall) &&
+                    (m_shellState == ApplicationShellState::Gameplay) &&
                     (m_shotState.phase != ShotPhase::BallsInMotion) &&
                     (m_matchState.flowPhase != MatchFlowPhase::FrameOver);
 
@@ -1047,7 +1294,8 @@ namespace BilliardsSaloon
             }
         );
 
-        if ((m_shotState.phase != ShotPhase::BallsInMotion) &&
+        if ((m_shellState == ApplicationShellState::Gameplay) &&
+            (m_shotState.phase != ShotPhase::BallsInMotion) &&
             cueBall.isValid() &&
             cueBallVisible &&
             (m_matchState.flowPhase != MatchFlowPhase::FrameOver))
@@ -1125,6 +1373,130 @@ namespace BilliardsSaloon
                 m_cubeMesh->draw();
             }
         }
+
+        if (m_shellState != ApplicationShellState::Gameplay)
+        {
+            const glm::vec3 cameraRight =
+                interpolatedCamera.rotation * glm::vec3(1.0f, 0.0f, 0.0f);
+            const glm::vec3 menuBase =
+                interpolatedCamera.position +
+                cameraForward * 1.45f +
+                cameraUp * 0.08f;
+
+            const MaterialComponent backdropMaterial{
+                .albedo = glm::vec3(0.06f, 0.045f, 0.04f),
+                .specularStrength = 0.04f,
+                .shininess = 8.0f,
+                .surfaceType = MaterialSurfaceType::Generic,
+                .roughness = 0.95f,
+                .reflectivity = 0.02f,
+                .clearcoatStrength = 0.0f,
+                .emissionColor = glm::vec3(0.0f),
+                .emissionIntensity = 0.0f
+            };
+
+            const MaterialComponent cardMaterial{
+                .albedo = glm::vec3(0.25f, 0.14f, 0.08f),
+                .specularStrength = 0.10f,
+                .shininess = 12.0f,
+                .surfaceType = MaterialSurfaceType::Generic,
+                .roughness = 0.70f,
+                .reflectivity = 0.03f,
+                .clearcoatStrength = 0.0f,
+                .emissionColor = glm::vec3(0.0f),
+                .emissionIntensity = 0.0f
+            };
+
+            const MaterialComponent selectedCardMaterial{
+                .albedo = glm::vec3(0.72f, 0.53f, 0.22f),
+                .specularStrength = 0.18f,
+                .shininess = 20.0f,
+                .surfaceType = MaterialSurfaceType::Generic,
+                .roughness = 0.38f,
+                .reflectivity = 0.05f,
+                .clearcoatStrength = 0.0f,
+                .emissionColor = glm::vec3(0.0f),
+                .emissionIntensity = 0.0f
+            };
+
+            auto renderOverlayCard =
+                [&](const glm::vec3& position,
+                    const glm::vec3& scale,
+                    const MaterialComponent& material,
+                    const glm::vec3& dynamicEmission)
+            {
+                glDisable(GL_DEPTH_TEST);
+                m_basicShader->setMat4("uModel", composeMatrix(
+                    position,
+                    interpolatedCamera.rotation,
+                    scale
+                ));
+                bindMaterial(material, dynamicEmission, 0);
+                m_cubeMesh->draw();
+                glEnable(GL_DEPTH_TEST);
+            };
+
+            renderOverlayCard(
+                menuBase + cameraForward * 0.12f,
+                glm::vec3(1.20f, 0.78f, 0.02f),
+                backdropMaterial,
+                glm::vec3(0.01f, 0.008f, 0.008f)
+            );
+
+            const glm::vec3 cardScale(0.72f, 0.08f, 0.035f);
+
+            if (m_shellState == ApplicationShellState::MainMenu)
+            {
+                const MainMenuSelection entries[2] = {
+                    MainMenuSelection::StartMatch,
+                    MainMenuSelection::Quit
+                };
+
+                for (int i = 0; i < 2; ++i)
+                {
+                    const bool selected = entries[i] == m_mainMenuSelection;
+                    renderOverlayCard(
+                        menuBase + cameraUp * (0.12f - 0.22f * static_cast<float>(i)),
+                        cardScale,
+                        selected ? selectedCardMaterial : cardMaterial,
+                        selected ? glm::vec3(0.08f, 0.05f, 0.01f) : glm::vec3(0.0f)
+                    );
+                }
+
+                renderOverlayCard(
+                    menuBase + cameraUp * 0.34f - cameraRight * 0.18f,
+                    glm::vec3(0.30f, 0.05f, 0.025f),
+                    backdropMaterial,
+                    glm::vec3(0.03f, 0.02f, 0.01f)
+                );
+            }
+            else if (m_shellState == ApplicationShellState::PauseMenu)
+            {
+                const PauseMenuSelection entries[3] = {
+                    PauseMenuSelection::Resume,
+                    PauseMenuSelection::RestartRack,
+                    PauseMenuSelection::ReturnToMainMenu
+                };
+
+                for (int i = 0; i < 3; ++i)
+                {
+                    const bool selected = entries[i] == m_pauseMenuSelection;
+                    renderOverlayCard(
+                        menuBase + cameraUp * (0.20f - 0.18f * static_cast<float>(i)),
+                        cardScale,
+                        selected ? selectedCardMaterial : cardMaterial,
+                        selected ? glm::vec3(0.08f, 0.05f, 0.01f) : glm::vec3(0.0f)
+                    );
+                }
+
+                renderOverlayCard(
+                    menuBase + cameraUp * 0.40f - cameraRight * 0.18f,
+                    glm::vec3(0.26f, 0.05f, 0.025f),
+                    backdropMaterial,
+                    glm::vec3(0.025f, 0.02f, 0.02f)
+                );
+            }
+        }
     }
 
     void Application::updateWindowTitle(double frameTimeSeconds, std::uint32_t fixedStepsThisFrame)
@@ -1140,8 +1512,41 @@ namespace BilliardsSaloon
         }
 
         std::string title = "Billiards Saloon";
+        title += " | ";
+        title += shellStateLabel(m_shellState);
         title += " | Q:";
         title += renderQualityLabel(m_renderQuality);
+
+        if (m_shellState == ApplicationShellState::MainMenu)
+        {
+            title += " | Up/Down Select | Enter Confirm | ";
+            title += (m_mainMenuSelection == MainMenuSelection::StartMatch) ? "[" : "";
+            title += mainMenuSelectionLabel(MainMenuSelection::StartMatch);
+            title += (m_mainMenuSelection == MainMenuSelection::StartMatch) ? "]" : "";
+            title += " ";
+            title += (m_mainMenuSelection == MainMenuSelection::Quit) ? "[" : "";
+            title += mainMenuSelectionLabel(MainMenuSelection::Quit);
+            title += (m_mainMenuSelection == MainMenuSelection::Quit) ? "]" : "";
+        }
+        else if (m_shellState == ApplicationShellState::PauseMenu)
+        {
+            title += " | Up/Down Select | Enter Confirm | ";
+            title += (m_pauseMenuSelection == PauseMenuSelection::Resume) ? "[" : "";
+            title += pauseMenuSelectionLabel(PauseMenuSelection::Resume);
+            title += (m_pauseMenuSelection == PauseMenuSelection::Resume) ? "]" : "";
+            title += " ";
+            title += (m_pauseMenuSelection == PauseMenuSelection::RestartRack) ? "[" : "";
+            title += pauseMenuSelectionLabel(PauseMenuSelection::RestartRack);
+            title += (m_pauseMenuSelection == PauseMenuSelection::RestartRack) ? "]" : "";
+            title += " ";
+            title += (m_pauseMenuSelection == PauseMenuSelection::ReturnToMainMenu) ? "[" : "";
+            title += pauseMenuSelectionLabel(PauseMenuSelection::ReturnToMainMenu);
+            title += (m_pauseMenuSelection == PauseMenuSelection::ReturnToMainMenu) ? "]" : "";
+        }
+        else
+        {
+            title += " | Esc Pause";
+        }
 
         if (m_showPerformanceStatsInTitle && (m_titleUpdateFrameTimeSum > 0.0))
         {
@@ -1163,12 +1568,9 @@ namespace BilliardsSaloon
             title += " | fixed ";
             title += std::to_string(roundedFixedHz);
             title += " Hz";
-            title += " | F1 title stats | F2 quality";
         }
-        else
-        {
-            title += " | F1 title stats | F2 quality";
-        }
+
+        title += " | F1 title stats | F2 quality";
 
         m_window.setTitle(title);
 
