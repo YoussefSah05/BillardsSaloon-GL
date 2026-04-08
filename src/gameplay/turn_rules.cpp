@@ -88,6 +88,33 @@ namespace BilliardsSaloon
                 return count;
             }
 
+            [[nodiscard]] std::optional<BallRuleTag> requiredFirstContactTag(
+                const MatchState& matchState,
+                Registry& registry)
+            {
+                if (matchState.flowPhase != MatchFlowPhase::GroupsAssigned)
+                {
+                    return std::nullopt;
+                }
+
+                const PlayerTargetGroup activeGroup =
+                    matchState.players[matchState.activePlayerIndex].targetGroup;
+
+                if (activeGroup == PlayerTargetGroup::None)
+                {
+                    return std::nullopt;
+                }
+
+                if (remainingBallsForGroup(registry, activeGroup) == 0)
+                {
+                    return BallRuleTag::Eight;
+                }
+
+                return (activeGroup == PlayerTargetGroup::Solids)
+                    ? BallRuleTag::Solid
+                    : BallRuleTag::Stripe;
+            }
+
             void resolveEightBallShot(
                 MatchState& matchState,
                 Registry& registry,
@@ -105,6 +132,18 @@ namespace BilliardsSaloon
                 bool continueTurn = false;
 
                 if (shotResult.cueBallPocketed)
+                {
+                    foul = true;
+                }
+
+                const std::optional<BallRuleTag> requiredTag =
+                    requiredFirstContactTag(matchState, registry);
+
+                if (shotResult.firstObjectBallNumber < 0)
+                {
+                    foul = true;
+                }
+                else if (requiredTag.has_value() && (shotResult.firstObjectBallTag != *requiredTag))
                 {
                     foul = true;
                 }
@@ -189,7 +228,6 @@ namespace BilliardsSaloon
                     break;
 
                 case GameDiscipline::NineBall:
-                    // Placeholder until 9-ball turn rules are implemented.
                     resolveEightBallShot(matchState, registry, shotResult);
                     break;
             }

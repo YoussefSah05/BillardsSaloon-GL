@@ -89,8 +89,14 @@ namespace BilliardsSaloon
         float railRestitution {0.92f};
         float ballRestitution {0.96f};
 
+        // Effective tangential impulse cap for ball-ball contacts.
+        // This is a gameplay-tuned coefficient, not a calibrated material constant.
+        float ballContactFrictionCoefficient {0.06f};
+
+        float slidingFrictionCoefficient {0.20f};
         float rollingFrictionCoefficient {0.020f};
         float stopSpeedThreshold {0.02f};
+        float sideSpinDampingPerSecond {0.35f};
 
         float cornerPocketRadius {0.090f};
         float sidePocketRadius {0.080f};

@@ -126,6 +126,19 @@ namespace BilliardsSaloon
 
             return {};
         }
+
+        glm::vec2 clampStrikeOffset(float right01, float forward01, float maxRadius01)
+        {
+            glm::vec2 offset(right01, forward01);
+            const float length = glm::length(offset);
+
+            if (length > maxRadius01)
+            {
+                offset = (offset / length) * maxRadius01;
+            }
+
+            return offset;
+        }
     }
 
     Application::Application()
@@ -176,8 +189,11 @@ namespace BilliardsSaloon
                 .halfDepth = 0.5f * m_variant->table.clothDepth,
                 .railRestitution = 0.92f,
                 .ballRestitution = 0.96f,
+                .ballContactFrictionCoefficient = 0.06f,
+                .slidingFrictionCoefficient = 0.20f,
                 .rollingFrictionCoefficient = 0.020f,
                 .stopSpeedThreshold = 0.02f,
+                .sideSpinDampingPerSecond = 0.35f,
                 .cornerPocketRadius = 0.090f,
                 .sidePocketRadius = 0.080f
             });
@@ -338,6 +354,8 @@ namespace BilliardsSaloon
         }
 
         constexpr float AIM_SPEED = 1.8f;
+        constexpr float STRIKE_ADJUST_SPEED = 1.8f;
+        constexpr float MAX_STRIKE_RADIUS01 = 0.75f;
 
         if (glfwGetKey(handle, GLFW_KEY_A) == GLFW_PRESS)
         {
@@ -348,6 +366,41 @@ namespace BilliardsSaloon
         {
             m_shotState.aimAngleRadians -= static_cast<float>(FIXED_TIME_STEP) * AIM_SPEED;
         }
+
+        if (glfwGetKey(handle, GLFW_KEY_LEFT) == GLFW_PRESS)
+        {
+            m_shotState.strikeRight01 -= static_cast<float>(FIXED_TIME_STEP) * STRIKE_ADJUST_SPEED;
+        }
+
+        if (glfwGetKey(handle, GLFW_KEY_RIGHT) == GLFW_PRESS)
+        {
+            m_shotState.strikeRight01 += static_cast<float>(FIXED_TIME_STEP) * STRIKE_ADJUST_SPEED;
+        }
+
+        if (glfwGetKey(handle, GLFW_KEY_UP) == GLFW_PRESS)
+        {
+            m_shotState.strikeForward01 += static_cast<float>(FIXED_TIME_STEP) * STRIKE_ADJUST_SPEED;
+        }
+
+        if (glfwGetKey(handle, GLFW_KEY_DOWN) == GLFW_PRESS)
+        {
+            m_shotState.strikeForward01 -= static_cast<float>(FIXED_TIME_STEP) * STRIKE_ADJUST_SPEED;
+        }
+
+        if (glfwGetKey(handle, GLFW_KEY_C) == GLFW_PRESS)
+        {
+            m_shotState.strikeRight01 = 0.0f;
+            m_shotState.strikeForward01 = 0.0f;
+        }
+
+        const glm::vec2 clampedStrike = clampStrikeOffset(
+            m_shotState.strikeRight01,
+            m_shotState.strikeForward01,
+            MAX_STRIKE_RADIUS01
+        );
+
+        m_shotState.strikeRight01 = clampedStrike.x;
+        m_shotState.strikeForward01 = clampedStrike.y;
 
         const bool spaceDown = glfwGetKey(handle, GLFW_KEY_SPACE) == GLFW_PRESS;
 
@@ -415,6 +468,9 @@ namespace BilliardsSaloon
         ball->linearVelocity = glm::vec3(0.0f);
         ball->angularVelocity = glm::vec3(0.0f);
         ball->pocketed = false;
+
+        m_shotState.strikeRight01 = 0.0f;
+        m_shotState.strikeForward01 = 0.0f;
     }
 
     void Application::fireCurrentShot()
@@ -434,7 +490,9 @@ namespace BilliardsSaloon
         m_currentShotResult.clear();
         m_currentShotResult.shotActive = true;
 
-        const glm::vec3 aimDirection = aimDirectionFromAngle(m_shotState.aimAngleRadians);
+        const glm::vec3 forward = aimDirectionFromAngle(m_shotState.aimAngleRadians);
+        const glm::vec3 up(0.0f, 1.0f, 0.0f);
+        const glm::vec3 right = glm::normalize(glm::cross(up, forward));
 
         constexpr float MIN_SHOT_SPEED = 0.4f;
         constexpr float MAX_SHOT_SPEED = 3.8f;
@@ -442,8 +500,17 @@ namespace BilliardsSaloon
         const float shotSpeed =
             MIN_SHOT_SPEED + (MAX_SHOT_SPEED - MIN_SHOT_SPEED) * m_shotState.charge01;
 
-        ball->linearVelocity = aimDirection * shotSpeed;
-        ball->angularVelocity = glm::vec3(0.0f);
+        ball->linearVelocity = forward * shotSpeed;
+
+        const float spinBase = shotSpeed / ball->radius;
+
+        const glm::vec3 sideSpin =
+            up * (m_shotState.strikeRight01 * 0.85f * spinBase);
+
+        const glm::vec3 topBackSpin =
+            right * (m_shotState.strikeForward01 * 1.00f * spinBase);
+
+        ball->angularVelocity = sideSpin + topBackSpin;
     }
 
     void Application::updateFixed(double deltaTimeSeconds)
@@ -643,6 +710,42 @@ namespace BilliardsSaloon
             );
 
             m_cubeMesh->draw();
+
+            const glm::vec3 up(0.0f, 1.0f, 0.0f);
+            const glm::vec3 right = glm::normalize(glm::cross(up, aimDirection));
+
+            const BallComponent* cueBallBall = m_registry.tryGet<BallComponent>(cueBall);
+            if (cueBallBall != nullptr)
+            {
+                const float markerRadius = cueBallBall->radius * 0.72f;
+
+                const glm::vec3 markerPosition =
+                    cueBallPosition +
+                    right * (m_shotState.strikeRight01 * markerRadius) +
+                    aimDirection * (m_shotState.strikeForward01 * markerRadius) +
+                    glm::vec3(0.0f, cueBallBall->radius * 0.25f, 0.0f);
+
+                TransformComponent markerTransform;
+                markerTransform.position = markerPosition;
+                markerTransform.previousPosition = markerPosition;
+                markerTransform.rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+                markerTransform.previousRotation = markerTransform.rotation;
+                markerTransform.scale = glm::vec3(0.012f, 0.012f, 0.012f);
+                markerTransform.previousScale = markerTransform.scale;
+
+                m_basicShader->setMat4("uModel", composeMatrix(
+                    markerTransform.position,
+                    markerTransform.rotation,
+                    markerTransform.scale
+                ));
+                m_basicShader->setVec3("uMaterialAlbedo", glm::vec3(0.10f, 0.10f, 0.12f));
+                m_basicShader->setFloat("uMaterialSpecularStrength", 0.05f);
+                m_basicShader->setFloat("uMaterialShininess", 4.0f);
+                m_basicShader->setInt("uUseEmission", 1);
+                m_basicShader->setVec3("uEmissionColor", glm::vec3(0.18f, 0.12f, 0.02f));
+
+                m_cubeMesh->draw();
+            }
 
             m_basicShader->setInt("uUseEmission", 0);
             m_basicShader->setVec3("uEmissionColor", glm::vec3(0.0f));
