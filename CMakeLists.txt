@@ -37,6 +37,7 @@ add_executable(BilliardsSaloon
     src/render/shader.cpp
     src/render/mesh.cpp
     src/render/camera.cpp
+    src/render/ui_overlay.cpp
     src/gameplay/shot_state.cpp
     src/gameplay/game_variant.cpp
     src/gameplay/match_state.cpp

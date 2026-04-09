@@ -3,6 +3,7 @@
 #include "gameplay/turn_rules.h"
 #include "physics/billiards_physics.h"
 #include "render/camera.h"
+#include "render/ui_overlay.h"
 #include "scene/components.h"
 
 #include <glad/gl.h>
@@ -90,6 +91,60 @@ namespace BilliardsSaloon
             }
 
             return "Unknown";
+        }
+
+        const char* shotPhaseLabel(ShotPhase phase)
+        {
+            switch (phase)
+            {
+                case ShotPhase::Aiming:
+                    return "AIMING";
+
+                case ShotPhase::Charging:
+                    return "CHARGING";
+
+                case ShotPhase::BallsInMotion:
+                    return "BALLS IN MOTION";
+            }
+
+            return "UNKNOWN";
+        }
+
+        const char* matchFlowPhaseLabel(MatchFlowPhase phase)
+        {
+            switch (phase)
+            {
+                case MatchFlowPhase::BreakShot:
+                    return "BREAK SHOT";
+
+                case MatchFlowPhase::TableOpen:
+                    return "TABLE OPEN";
+
+                case MatchFlowPhase::GroupsAssigned:
+                    return "GROUPS ASSIGNED";
+
+                case MatchFlowPhase::FrameOver:
+                    return "FRAME OVER";
+            }
+
+            return "UNKNOWN";
+        }
+
+        const char* playerTargetGroupLabel(PlayerTargetGroup group)
+        {
+            switch (group)
+            {
+                case PlayerTargetGroup::None:
+                    return "OPEN";
+
+                case PlayerTargetGroup::Solids:
+                    return "SOLIDS";
+
+                case PlayerTargetGroup::Stripes:
+                    return "STRIPES";
+            }
+
+            return "UNKNOWN";
         }
 
         Entity createSceneEntity(
@@ -1138,6 +1193,14 @@ namespace BilliardsSaloon
             interpolatedCamera.rotation * glm::vec3(0.0f, 0.0f, -1.0f);
         const glm::vec3 cameraUp =
             interpolatedCamera.rotation * glm::vec3(0.0f, 1.0f, 0.0f);
+        const glm::vec3 cameraRight =
+            interpolatedCamera.rotation * glm::vec3(1.0f, 0.0f, 0.0f);
+
+        const UiOverlayFrame overlayFrame{
+            .rotation = interpolatedCamera.rotation,
+            .right = cameraRight,
+            .up = cameraUp
+        };
 
         const glm::mat4 view = Camera::viewMatrix(
             interpolatedCamera.position,
@@ -1374,10 +1437,326 @@ namespace BilliardsSaloon
             }
         }
 
-        if (m_shellState != ApplicationShellState::Gameplay)
+        if (m_shellState == ApplicationShellState::Gameplay)
         {
-            const glm::vec3 cameraRight =
-                interpolatedCamera.rotation * glm::vec3(1.0f, 0.0f, 0.0f);
+            const glm::vec3 hudLeft =
+                interpolatedCamera.position +
+                cameraForward * 1.10f +
+                cameraUp * 0.50f -
+                cameraRight * 0.82f;
+
+            const MaterialComponent panelMaterial{
+                .albedo = glm::vec3(0.05f, 0.045f, 0.040f),
+                .specularStrength = 0.04f,
+                .shininess = 8.0f,
+                .surfaceType = MaterialSurfaceType::Generic,
+                .roughness = 0.95f,
+                .reflectivity = 0.02f,
+                .clearcoatStrength = 0.0f,
+                .emissionColor = glm::vec3(0.0f),
+                .emissionIntensity = 0.0f
+            };
+
+            const MaterialComponent titleTextMaterial{
+                .albedo = glm::vec3(0.95f, 0.90f, 0.76f),
+                .specularStrength = 0.10f,
+                .shininess = 12.0f,
+                .surfaceType = MaterialSurfaceType::Generic,
+                .roughness = 0.32f,
+                .reflectivity = 0.04f,
+                .clearcoatStrength = 0.0f,
+                .emissionColor = glm::vec3(0.0f),
+                .emissionIntensity = 0.0f
+            };
+
+            const MaterialComponent bodyTextMaterial{
+                .albedo = glm::vec3(0.90f, 0.86f, 0.80f),
+                .specularStrength = 0.07f,
+                .shininess = 10.0f,
+                .surfaceType = MaterialSurfaceType::Generic,
+                .roughness = 0.50f,
+                .reflectivity = 0.03f,
+                .clearcoatStrength = 0.0f,
+                .emissionColor = glm::vec3(0.0f),
+                .emissionIntensity = 0.0f
+            };
+
+            const MaterialComponent accentTextMaterial{
+                .albedo = glm::vec3(0.84f, 0.68f, 0.36f),
+                .specularStrength = 0.08f,
+                .shininess = 12.0f,
+                .surfaceType = MaterialSurfaceType::Generic,
+                .roughness = 0.42f,
+                .reflectivity = 0.03f,
+                .clearcoatStrength = 0.0f,
+                .emissionColor = glm::vec3(0.0f),
+                .emissionIntensity = 0.0f
+            };
+
+            const MaterialComponent hintTextMaterial{
+                .albedo = glm::vec3(0.74f, 0.67f, 0.58f),
+                .specularStrength = 0.04f,
+                .shininess = 8.0f,
+                .surfaceType = MaterialSurfaceType::Generic,
+                .roughness = 0.88f,
+                .reflectivity = 0.02f,
+                .clearcoatStrength = 0.0f,
+                .emissionColor = glm::vec3(0.0f),
+                .emissionIntensity = 0.0f
+            };
+
+            const MaterialComponent chargeTrackMaterial{
+                .albedo = glm::vec3(0.14f, 0.10f, 0.08f),
+                .specularStrength = 0.04f,
+                .shininess = 8.0f,
+                .surfaceType = MaterialSurfaceType::Generic,
+                .roughness = 0.88f,
+                .reflectivity = 0.02f,
+                .clearcoatStrength = 0.0f,
+                .emissionColor = glm::vec3(0.0f),
+                .emissionIntensity = 0.0f
+            };
+
+            const MaterialComponent chargeFillMaterial{
+                .albedo = glm::vec3(0.82f, 0.56f, 0.20f),
+                .specularStrength = 0.10f,
+                .shininess = 14.0f,
+                .surfaceType = MaterialSurfaceType::Generic,
+                .roughness = 0.34f,
+                .reflectivity = 0.04f,
+                .clearcoatStrength = 0.0f,
+                .emissionColor = glm::vec3(0.0f),
+                .emissionIntensity = 0.0f
+            };
+
+            const UiTextStyle titleStyle{
+                .material = titleTextMaterial,
+                .dynamicEmission = glm::vec3(0.030f, 0.020f, 0.008f),
+                .cellSize = 0.0085f,
+                .depth = 0.010f,
+                .alignment = UiTextAlignment::Left
+            };
+
+            const UiTextStyle bodyStyle{
+                .material = bodyTextMaterial,
+                .dynamicEmission = glm::vec3(0.012f, 0.010f, 0.006f),
+                .cellSize = 0.0065f,
+                .depth = 0.008f,
+                .alignment = UiTextAlignment::Left
+            };
+
+            const UiTextStyle accentStyle{
+                .material = accentTextMaterial,
+                .dynamicEmission = glm::vec3(0.022f, 0.014f, 0.006f),
+                .cellSize = 0.0065f,
+                .depth = 0.008f,
+                .alignment = UiTextAlignment::Left
+            };
+
+            const UiTextStyle hintStyle{
+                .material = hintTextMaterial,
+                .dynamicEmission = glm::vec3(0.010f, 0.008f, 0.004f),
+                .cellSize = 0.0055f,
+                .depth = 0.007f,
+                .alignment = UiTextAlignment::Left
+            };
+
+            const int activePlayerIndex =
+                std::clamp(m_matchState.activePlayerIndex, 0, 1);
+
+            const std::string disciplineLine =
+                (m_variant != nullptr) ? m_variant->displayName : "BILLIARDS";
+            const std::string playerLine =
+                "PLAYER " + std::to_string(activePlayerIndex + 1);
+            const std::string phaseLine =
+                std::string("PHASE ") + shotPhaseLabel(m_shotState.phase);
+            const std::string flowLine =
+                std::string("TABLE ") + matchFlowPhaseLabel(m_matchState.flowPhase);
+            const std::string groupLine =
+                std::string("GROUP ") +
+                playerTargetGroupLabel(m_matchState.players[activePlayerIndex].targetGroup);
+            const std::string qualityLine =
+                std::string("QUALITY ") + renderQualityLabel(m_renderQuality);
+
+            std::string statusLine = "STATUS READY";
+            if (m_matchState.foulCommittedThisTurn)
+            {
+                statusLine = "FOUL RECORDED";
+            }
+
+            if (m_matchState.ballInHand)
+            {
+                statusLine = "BALL IN HAND";
+            }
+
+            if ((m_matchState.flowPhase == MatchFlowPhase::FrameOver) &&
+                (m_matchState.winnerPlayerIndex >= 0))
+            {
+                statusLine =
+                    "WINNER PLAYER " +
+                    std::to_string(m_matchState.winnerPlayerIndex + 1);
+            }
+
+            const float panelWidth = 0.96f;
+            const float chargeBarWidth = 0.60f;
+            const float clampedCharge = std::clamp(m_shotState.charge01, 0.0f, 1.0f);
+            const float chargeFillWidth = chargeBarWidth * clampedCharge;
+            const glm::vec3 panelCenter =
+                hudLeft +
+                cameraRight * 0.44f -
+                cameraUp * 0.12f +
+                cameraForward * 0.10f;
+
+            glDisable(GL_DEPTH_TEST);
+
+            renderUiOverlayBox(
+                *m_basicShader,
+                *m_cubeMesh,
+                overlayFrame,
+                panelCenter,
+                glm::vec3(panelWidth, 0.40f, 0.020f),
+                panelMaterial,
+                glm::vec3(0.010f, 0.008f, 0.008f)
+            );
+
+            renderUiOverlayText(
+                *m_basicShader,
+                *m_cubeMesh,
+                overlayFrame,
+                disciplineLine,
+                hudLeft + cameraUp * 0.02f + cameraForward * 0.020f,
+                titleStyle
+            );
+
+            renderUiOverlayText(
+                *m_basicShader,
+                *m_cubeMesh,
+                overlayFrame,
+                playerLine,
+                hudLeft - cameraUp * 0.05f + cameraForward * 0.020f,
+                accentStyle
+            );
+
+            renderUiOverlayText(
+                *m_basicShader,
+                *m_cubeMesh,
+                overlayFrame,
+                phaseLine,
+                hudLeft - cameraUp * 0.12f + cameraForward * 0.020f,
+                bodyStyle
+            );
+
+            renderUiOverlayText(
+                *m_basicShader,
+                *m_cubeMesh,
+                overlayFrame,
+                flowLine,
+                hudLeft - cameraUp * 0.18f + cameraForward * 0.020f,
+                bodyStyle
+            );
+
+            renderUiOverlayText(
+                *m_basicShader,
+                *m_cubeMesh,
+                overlayFrame,
+                groupLine,
+                hudLeft - cameraUp * 0.24f + cameraForward * 0.020f,
+                bodyStyle
+            );
+
+            renderUiOverlayText(
+                *m_basicShader,
+                *m_cubeMesh,
+                overlayFrame,
+                statusLine,
+                hudLeft - cameraUp * 0.30f + cameraForward * 0.020f,
+                bodyStyle
+            );
+
+            renderUiOverlayText(
+                *m_basicShader,
+                *m_cubeMesh,
+                overlayFrame,
+                qualityLine,
+                hudLeft + cameraRight * 0.52f - cameraUp * 0.05f + cameraForward * 0.020f,
+                hintStyle
+            );
+
+            const glm::vec3 chargeTrackCenter =
+                hudLeft + cameraRight * 0.35f - cameraUp * 0.37f + cameraForward * 0.020f;
+
+            renderUiOverlayText(
+                *m_basicShader,
+                *m_cubeMesh,
+                overlayFrame,
+                "CHARGE",
+                hudLeft - cameraUp * 0.37f + cameraForward * 0.020f,
+                hintStyle
+            );
+
+            renderUiOverlayBox(
+                *m_basicShader,
+                *m_cubeMesh,
+                overlayFrame,
+                chargeTrackCenter,
+                glm::vec3(chargeBarWidth, 0.026f, 0.012f),
+                chargeTrackMaterial,
+                glm::vec3(0.0f)
+            );
+
+            if (chargeFillWidth > 0.0f)
+            {
+                renderUiOverlayBox(
+                    *m_basicShader,
+                    *m_cubeMesh,
+                    overlayFrame,
+                    chargeTrackCenter - cameraRight * (0.5f * (chargeBarWidth - chargeFillWidth)),
+                    glm::vec3(chargeFillWidth, 0.018f, 0.010f),
+                    chargeFillMaterial,
+                    glm::vec3(0.040f, 0.020f, 0.006f) * clampedCharge
+                );
+            }
+
+            renderUiOverlayText(
+                *m_basicShader,
+                *m_cubeMesh,
+                overlayFrame,
+                "A/D AIM",
+                hudLeft - cameraUp * 0.46f + cameraForward * 0.020f,
+                hintStyle
+            );
+
+            renderUiOverlayText(
+                *m_basicShader,
+                *m_cubeMesh,
+                overlayFrame,
+                "SPACE SHOOT",
+                hudLeft + cameraRight * 0.24f - cameraUp * 0.46f + cameraForward * 0.020f,
+                hintStyle
+            );
+
+            renderUiOverlayText(
+                *m_basicShader,
+                *m_cubeMesh,
+                overlayFrame,
+                "ARROWS ENGLISH",
+                hudLeft - cameraUp * 0.53f + cameraForward * 0.020f,
+                hintStyle
+            );
+
+            renderUiOverlayText(
+                *m_basicShader,
+                *m_cubeMesh,
+                overlayFrame,
+                "ESC PAUSE   F2 QUALITY",
+                hudLeft + cameraRight * 0.24f - cameraUp * 0.53f + cameraForward * 0.020f,
+                hintStyle
+            );
+
+            glEnable(GL_DEPTH_TEST);
+        }
+        else
+        {
             const glm::vec3 menuBase =
                 interpolatedCamera.position +
                 cameraForward * 1.45f +
@@ -1419,24 +1798,92 @@ namespace BilliardsSaloon
                 .emissionIntensity = 0.0f
             };
 
-            auto renderOverlayCard =
-                [&](const glm::vec3& position,
-                    const glm::vec3& scale,
-                    const MaterialComponent& material,
-                    const glm::vec3& dynamicEmission)
-            {
-                glDisable(GL_DEPTH_TEST);
-                m_basicShader->setMat4("uModel", composeMatrix(
-                    position,
-                    interpolatedCamera.rotation,
-                    scale
-                ));
-                bindMaterial(material, dynamicEmission, 0);
-                m_cubeMesh->draw();
-                glEnable(GL_DEPTH_TEST);
+            const MaterialComponent titleTextMaterial{
+                .albedo = glm::vec3(0.95f, 0.90f, 0.76f),
+                .specularStrength = 0.10f,
+                .shininess = 12.0f,
+                .surfaceType = MaterialSurfaceType::Generic,
+                .roughness = 0.32f,
+                .reflectivity = 0.04f,
+                .clearcoatStrength = 0.0f,
+                .emissionColor = glm::vec3(0.0f),
+                .emissionIntensity = 0.0f
             };
 
-            renderOverlayCard(
+            const MaterialComponent bodyTextMaterial{
+                .albedo = glm::vec3(0.95f, 0.91f, 0.82f),
+                .specularStrength = 0.08f,
+                .shininess = 10.0f,
+                .surfaceType = MaterialSurfaceType::Generic,
+                .roughness = 0.45f,
+                .reflectivity = 0.03f,
+                .clearcoatStrength = 0.0f,
+                .emissionColor = glm::vec3(0.0f),
+                .emissionIntensity = 0.0f
+            };
+
+            const MaterialComponent selectedTextMaterial{
+                .albedo = glm::vec3(0.17f, 0.10f, 0.04f),
+                .specularStrength = 0.04f,
+                .shininess = 8.0f,
+                .surfaceType = MaterialSurfaceType::Generic,
+                .roughness = 0.82f,
+                .reflectivity = 0.02f,
+                .clearcoatStrength = 0.0f,
+                .emissionColor = glm::vec3(0.0f),
+                .emissionIntensity = 0.0f
+            };
+
+            const MaterialComponent hintTextMaterial{
+                .albedo = glm::vec3(0.74f, 0.67f, 0.58f),
+                .specularStrength = 0.04f,
+                .shininess = 8.0f,
+                .surfaceType = MaterialSurfaceType::Generic,
+                .roughness = 0.88f,
+                .reflectivity = 0.02f,
+                .clearcoatStrength = 0.0f,
+                .emissionColor = glm::vec3(0.0f),
+                .emissionIntensity = 0.0f
+            };
+
+            const UiTextStyle menuTitleStyle{
+                .material = titleTextMaterial,
+                .dynamicEmission = glm::vec3(0.035f, 0.020f, 0.008f),
+                .cellSize = 0.0095f,
+                .depth = 0.010f,
+                .alignment = UiTextAlignment::Center
+            };
+
+            const UiTextStyle menuBodyStyle{
+                .material = bodyTextMaterial,
+                .dynamicEmission = glm::vec3(0.015f, 0.010f, 0.004f),
+                .cellSize = 0.0100f,
+                .depth = 0.010f,
+                .alignment = UiTextAlignment::Center
+            };
+
+            const UiTextStyle selectedMenuStyle{
+                .material = selectedTextMaterial,
+                .dynamicEmission = glm::vec3(0.0f),
+                .cellSize = 0.0100f,
+                .depth = 0.010f,
+                .alignment = UiTextAlignment::Center
+            };
+
+            const UiTextStyle hintStyle{
+                .material = hintTextMaterial,
+                .dynamicEmission = glm::vec3(0.010f, 0.008f, 0.004f),
+                .cellSize = 0.0065f,
+                .depth = 0.008f,
+                .alignment = UiTextAlignment::Center
+            };
+
+            glDisable(GL_DEPTH_TEST);
+
+            renderUiOverlayBox(
+                *m_basicShader,
+                *m_cubeMesh,
+                overlayFrame,
                 menuBase + cameraForward * 0.12f,
                 glm::vec3(1.20f, 0.78f, 0.02f),
                 backdropMaterial,
@@ -1455,19 +1902,73 @@ namespace BilliardsSaloon
                 for (int i = 0; i < 2; ++i)
                 {
                     const bool selected = entries[i] == m_mainMenuSelection;
-                    renderOverlayCard(
-                        menuBase + cameraUp * (0.12f - 0.22f * static_cast<float>(i)),
+                    const glm::vec3 cardCenter =
+                        menuBase + cameraUp * (0.12f - 0.22f * static_cast<float>(i));
+
+                    renderUiOverlayBox(
+                        *m_basicShader,
+                        *m_cubeMesh,
+                        overlayFrame,
+                        cardCenter,
                         cardScale,
                         selected ? selectedCardMaterial : cardMaterial,
                         selected ? glm::vec3(0.08f, 0.05f, 0.01f) : glm::vec3(0.0f)
                     );
+
+                    renderUiOverlayText(
+                        *m_basicShader,
+                        *m_cubeMesh,
+                        overlayFrame,
+                        mainMenuSelectionLabel(entries[i]),
+                        cardCenter + cameraForward * 0.020f,
+                        selected ? selectedMenuStyle : menuBodyStyle
+                    );
                 }
 
-                renderOverlayCard(
-                    menuBase + cameraUp * 0.34f - cameraRight * 0.18f,
-                    glm::vec3(0.30f, 0.05f, 0.025f),
+                renderUiOverlayBox(
+                    *m_basicShader,
+                    *m_cubeMesh,
+                    overlayFrame,
+                    menuBase + cameraUp * 0.34f,
+                    glm::vec3(0.52f, 0.07f, 0.025f),
                     backdropMaterial,
                     glm::vec3(0.03f, 0.02f, 0.01f)
+                );
+
+                renderUiOverlayText(
+                    *m_basicShader,
+                    *m_cubeMesh,
+                    overlayFrame,
+                    "MAIN MENU",
+                    menuBase + cameraUp * 0.34f + cameraForward * 0.022f,
+                    menuTitleStyle
+                );
+
+                renderUiOverlayText(
+                    *m_basicShader,
+                    *m_cubeMesh,
+                    overlayFrame,
+                    "UP/DOWN SELECT",
+                    menuBase - cameraUp * 0.29f,
+                    hintStyle
+                );
+
+                renderUiOverlayText(
+                    *m_basicShader,
+                    *m_cubeMesh,
+                    overlayFrame,
+                    "ENTER CONFIRM",
+                    menuBase - cameraUp * 0.37f,
+                    hintStyle
+                );
+
+                renderUiOverlayText(
+                    *m_basicShader,
+                    *m_cubeMesh,
+                    overlayFrame,
+                    "ESC QUIT",
+                    menuBase - cameraUp * 0.45f,
+                    hintStyle
                 );
             }
             else if (m_shellState == ApplicationShellState::PauseMenu)
@@ -1481,21 +1982,77 @@ namespace BilliardsSaloon
                 for (int i = 0; i < 3; ++i)
                 {
                     const bool selected = entries[i] == m_pauseMenuSelection;
-                    renderOverlayCard(
-                        menuBase + cameraUp * (0.20f - 0.18f * static_cast<float>(i)),
+                    const glm::vec3 cardCenter =
+                        menuBase + cameraUp * (0.20f - 0.18f * static_cast<float>(i));
+
+                    renderUiOverlayBox(
+                        *m_basicShader,
+                        *m_cubeMesh,
+                        overlayFrame,
+                        cardCenter,
                         cardScale,
                         selected ? selectedCardMaterial : cardMaterial,
                         selected ? glm::vec3(0.08f, 0.05f, 0.01f) : glm::vec3(0.0f)
                     );
+
+                    renderUiOverlayText(
+                        *m_basicShader,
+                        *m_cubeMesh,
+                        overlayFrame,
+                        pauseMenuSelectionLabel(entries[i]),
+                        cardCenter + cameraForward * 0.020f,
+                        selected ? selectedMenuStyle : menuBodyStyle
+                    );
                 }
 
-                renderOverlayCard(
-                    menuBase + cameraUp * 0.40f - cameraRight * 0.18f,
-                    glm::vec3(0.26f, 0.05f, 0.025f),
+                renderUiOverlayBox(
+                    *m_basicShader,
+                    *m_cubeMesh,
+                    overlayFrame,
+                    menuBase + cameraUp * 0.40f,
+                    glm::vec3(0.44f, 0.07f, 0.025f),
                     backdropMaterial,
                     glm::vec3(0.025f, 0.02f, 0.02f)
                 );
+
+                renderUiOverlayText(
+                    *m_basicShader,
+                    *m_cubeMesh,
+                    overlayFrame,
+                    "PAUSED",
+                    menuBase + cameraUp * 0.40f + cameraForward * 0.022f,
+                    menuTitleStyle
+                );
+
+                renderUiOverlayText(
+                    *m_basicShader,
+                    *m_cubeMesh,
+                    overlayFrame,
+                    "UP/DOWN SELECT",
+                    menuBase - cameraUp * 0.29f,
+                    hintStyle
+                );
+
+                renderUiOverlayText(
+                    *m_basicShader,
+                    *m_cubeMesh,
+                    overlayFrame,
+                    "ENTER CONFIRM",
+                    menuBase - cameraUp * 0.37f,
+                    hintStyle
+                );
+
+                renderUiOverlayText(
+                    *m_basicShader,
+                    *m_cubeMesh,
+                    overlayFrame,
+                    "ESC RESUME",
+                    menuBase - cameraUp * 0.45f,
+                    hintStyle
+                );
             }
+
+            glEnable(GL_DEPTH_TEST);
         }
     }
 
