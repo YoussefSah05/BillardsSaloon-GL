@@ -23,16 +23,29 @@ namespace BilliardsSaloon
         float maxStrikeRadius01 {0.75f};
         float minShotSpeed {0.4f};
         float maxShotSpeed {3.8f};
+
+        // Releasing a mouse stroke below this power cancels instead of shooting.
+        float strokeCancelBelow {0.03f};
     };
 
-    // One frame of player intent, already mapped from devices to axes.
+    // One frame of player intent, already mapped from devices.
+    // *Axis fields are rates (-1..1, scaled by frame time); *Delta fields are
+    // direct changes this frame (from mouse motion).
     struct ShotControls
     {
-        float aimAxis {0.0f};            // +1 rotates aim counter-clockwise (seen from above)
-        float strikeRightAxis {0.0f};    // +1 moves the tip toward right english
-        float strikeForwardAxis {0.0f};  // +1 moves the tip toward follow
+        float aimAxis {0.0f};             // +1 rotates aim counter-clockwise (seen from above)
+        float aimDeltaRadians {0.0f};
+        float strikeRightAxis {0.0f};     // +1 moves the tip toward right english
+        float strikeForwardAxis {0.0f};   // +1 moves the tip toward follow
+        glm::vec2 strikeDelta {0.0f};     // (right, forward) in tip-offset units
         bool centerStrike {false};
+
+        // Keyboard: hold to charge power over time, release to shoot.
         bool shootHeld {false};
+
+        // Mouse: hold and drag back to set power, release to shoot.
+        bool strokeHeld {false};
+        float strokeDelta {0.0f};         // power change this frame; 1.0 = full range
     };
 
     [[nodiscard]] glm::vec3 aimDirectionFromAngle(float angleRadians);
@@ -69,8 +82,8 @@ namespace BilliardsSaloon
         // gesture for one frame of length deltaTimeSeconds.
         void applyShotControls(const ShotControls& controls, float deltaTimeSeconds);
 
-        // Forget a held shoot button, e.g. when the game is paused, so the
-        // release after resuming does not fire a shot.
+        // Abandon a shot being charged, e.g. when the game is paused, so the
+        // release after resuming does not fire it.
         void cancelHeldShot();
 
         // Development aid: put the cue ball back on its start spot mid-shot.
@@ -96,6 +109,7 @@ namespace BilliardsSaloon
         MatchState m_matchState {};
         ShotState m_shotState {};
         ShotResult m_currentShotResult {};
-        bool m_shootWasHeld {false};
+        bool m_holdWasActive {false};
+        bool m_chargingByStroke {false};
     };
 }

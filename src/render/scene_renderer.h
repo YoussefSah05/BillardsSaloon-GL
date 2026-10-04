@@ -33,7 +33,22 @@ namespace BilliardsSaloon
         glm::vec3 up {0.0f, 1.0f, 0.0f};
         glm::vec3 right {1.0f, 0.0f, 0.0f};
         UiOverlayFrame overlayFrame {};
+        glm::mat4 viewProjection {1.0f};
     };
+
+    // Projects a world point to normalized device coordinates (x, y in -1..1).
+    // Returns false for points behind the camera.
+    [[nodiscard]] inline bool projectToNdc(const FrameView& view, const glm::vec3& point, glm::vec2& outNdc)
+    {
+        const glm::vec4 clip = view.viewProjection * glm::vec4(point, 1.0f);
+        if (clip.w <= 1.0e-6f)
+        {
+            return false;
+        }
+
+        outNdc = glm::vec2(clip.x, clip.y) / clip.w;
+        return true;
+    }
 
     struct FrameSettings
     {

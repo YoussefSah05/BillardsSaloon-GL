@@ -90,12 +90,23 @@ namespace BilliardsSaloon
         const CameraRigInputAxes& inputAxes,
         float deltaTimeSeconds)
     {
-        state.freeLookYawRadians +=
-            inputAxes.orbitYaw * FREE_LOOK_YAW_SPEED * deltaTimeSeconds;
-        state.freeLookPitchRadians +=
-            inputAxes.orbitPitch * FREE_LOOK_PITCH_SPEED * deltaTimeSeconds;
-        state.freeLookDistance -=
-            inputAxes.zoom * FREE_LOOK_ZOOM_SPEED * deltaTimeSeconds;
+        applyCameraRigDelta(
+            state,
+            inputAxes.orbitYaw * FREE_LOOK_YAW_SPEED * deltaTimeSeconds,
+            inputAxes.orbitPitch * FREE_LOOK_PITCH_SPEED * deltaTimeSeconds,
+            inputAxes.zoom * FREE_LOOK_ZOOM_SPEED * deltaTimeSeconds
+        );
+    }
+
+    void applyCameraRigDelta(
+        CameraRigState& state,
+        float yawRadians,
+        float pitchRadians,
+        float zoomMeters)
+    {
+        state.freeLookYawRadians += yawRadians;
+        state.freeLookPitchRadians += pitchRadians;
+        state.freeLookDistance -= zoomMeters;
 
         state.freeLookPitchRadians = std::clamp(
             state.freeLookPitchRadians,

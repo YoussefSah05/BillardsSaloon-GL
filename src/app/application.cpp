@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <optional>
 #include <string>
 
 namespace BilliardsSaloon
@@ -33,12 +34,64 @@ namespace BilliardsSaloon
             return "Unknown";
         }
 
-        const char* mainMenuSelectionLabel(MainMenuSelection selection)
+        // Mouse feel. Cursor deltas are in window coordinates (points), so
+        // these behave the same on standard and HiDPI displays.
+        constexpr float MOUSE_AIM_RADIANS_PER_POINT = 0.0025f;
+        constexpr float FINE_AIM_SCALE = 0.15f;
+        constexpr float STROKE_POWER_PER_POINT = 1.0f / 300.0f;
+        constexpr float MOUSE_SPIN_PER_POINT = 1.0f / 250.0f;
+        constexpr float MOUSE_ORBIT_RADIANS_PER_POINT = 0.005f;
+        constexpr float WHEEL_ZOOM_METERS_PER_STEP = 0.15f;
+
+        constexpr MainMenuSelection MAIN_MENU_ENTRIES[] = {
+            MainMenuSelection::StartMatch,
+            MainMenuSelection::Fullscreen,
+            MainMenuSelection::Quit
+        };
+
+        constexpr PauseMenuSelection PAUSE_MENU_ENTRIES[] = {
+            PauseMenuSelection::Resume,
+            PauseMenuSelection::RestartRack,
+            PauseMenuSelection::Fullscreen,
+            PauseMenuSelection::ReturnToMainMenu
+        };
+
+        template <typename Selection, std::size_t Count>
+        std::size_t indexOf(const Selection (&entries)[Count], Selection selection)
+        {
+            for (std::size_t i = 0; i < Count; ++i)
+            {
+                if (entries[i] == selection)
+                {
+                    return i;
+                }
+            }
+            return 0;
+        }
+
+        // Moves a menu selection one step up (-1) or down (+1), wrapping around.
+        template <typename Selection, std::size_t Count>
+        Selection stepSelection(const Selection (&entries)[Count], Selection selection, int direction)
+        {
+            const std::size_t index = indexOf(entries, selection);
+            const std::size_t next = (index + Count + static_cast<std::size_t>(direction + static_cast<int>(Count))) % Count;
+            return entries[next];
+        }
+
+        const char* fullscreenLabel(bool fullscreen)
+        {
+            return fullscreen ? "Fullscreen: On" : "Fullscreen: Off";
+        }
+
+        const char* mainMenuLabel(MainMenuSelection selection, bool fullscreen)
         {
             switch (selection)
             {
                 case MainMenuSelection::StartMatch:
                     return "Start Match";
+
+                case MainMenuSelection::Fullscreen:
+                    return fullscreenLabel(fullscreen);
 
                 case MainMenuSelection::Quit:
                     return "Quit";
@@ -47,7 +100,7 @@ namespace BilliardsSaloon
             return "Unknown";
         }
 
-        const char* pauseMenuSelectionLabel(PauseMenuSelection selection)
+        const char* pauseMenuLabel(PauseMenuSelection selection, bool fullscreen)
         {
             switch (selection)
             {
@@ -57,42 +110,14 @@ namespace BilliardsSaloon
                 case PauseMenuSelection::RestartRack:
                     return "Restart Rack";
 
+                case PauseMenuSelection::Fullscreen:
+                    return fullscreenLabel(fullscreen);
+
                 case PauseMenuSelection::ReturnToMainMenu:
                     return "Main Menu";
             }
 
             return "Unknown";
-        }
-
-
-        PauseMenuSelection previousPauseSelection(PauseMenuSelection selection)
-        {
-            switch (selection)
-            {
-                case PauseMenuSelection::Resume:
-                    return PauseMenuSelection::ReturnToMainMenu;
-                case PauseMenuSelection::RestartRack:
-                    return PauseMenuSelection::Resume;
-                case PauseMenuSelection::ReturnToMainMenu:
-                    return PauseMenuSelection::RestartRack;
-            }
-
-            return PauseMenuSelection::Resume;
-        }
-
-        PauseMenuSelection nextPauseSelection(PauseMenuSelection selection)
-        {
-            switch (selection)
-            {
-                case PauseMenuSelection::Resume:
-                    return PauseMenuSelection::RestartRack;
-                case PauseMenuSelection::RestartRack:
-                    return PauseMenuSelection::ReturnToMainMenu;
-                case PauseMenuSelection::ReturnToMainMenu:
-                    return PauseMenuSelection::Resume;
-            }
-
-            return PauseMenuSelection::Resume;
         }
 
         CameraViewMode nextCameraViewMode(CameraViewMode mode)
@@ -173,7 +198,7 @@ namespace BilliardsSaloon
 
     void Application::processInput(float frameTimeSeconds)
     {
-        m_input.update(m_window.nativeHandle());
+        m_input.update(m_window);
         m_cameraInput = CameraRigInputAxes{};
 
         processGlobalShortcuts();
@@ -192,10 +217,42 @@ namespace BilliardsSaloon
                 processGameplayInput(frameTimeSeconds);
                 break;
         }
+
+        updateCursorCapture();
+    }
+
+    void Application::updateCursorCapture()
+    {
+        // Capture the cursor only while playing, so aiming has unlimited travel
+        // and menus (or other apps, after alt-tab) get a normal pointer.
+        const bool wantCaptured =
+            (m_shellState == ApplicationShellState::Gameplay) && m_window.isFocused();
+
+        if (wantCaptured != m_window.isCursorCaptured())
+        {
+            m_window.setCursorCaptured(wantCaptured);
+            m_input.discardNextMouseDelta();
+        }
     }
 
     void Application::processGlobalShortcuts()
     {
+        const bool altHeld = m_input.isDown(GLFW_KEY_LEFT_ALT) || m_input.isDown(GLFW_KEY_RIGHT_ALT);
+        const bool commandControlHeld =
+            (m_input.isDown(GLFW_KEY_LEFT_SUPER) || m_input.isDown(GLFW_KEY_RIGHT_SUPER)) &&
+            (m_input.isDown(GLFW_KEY_LEFT_CONTROL) || m_input.isDown(GLFW_KEY_RIGHT_CONTROL));
+
+        const bool toggleFullscreen =
+            m_input.wasPressed(GLFW_KEY_F11) ||
+            (altHeld && (m_input.wasPressed(GLFW_KEY_ENTER) || m_input.wasPressed(GLFW_KEY_KP_ENTER))) ||
+            (commandControlHeld && m_input.wasPressed(GLFW_KEY_F));   // macOS convention
+
+        if (toggleFullscreen)
+        {
+            m_window.toggleFullscreen();
+            m_input.discardNextMouseDelta();
+        }
+
         if (m_input.wasPressed(GLFW_KEY_F2))
         {
             m_renderQuality = nextRenderQuality(m_renderQuality);
@@ -207,6 +264,47 @@ namespace BilliardsSaloon
             m_showPerformanceStatsInTitle = !m_showPerformanceStatsInTitle;
             refreshTitleSoon();
         }
+    }
+
+    bool Application::menuConfirmPressed() const
+    {
+        // Alt+Enter toggles fullscreen and must not also confirm.
+        const bool altHeld = m_input.isDown(GLFW_KEY_LEFT_ALT) || m_input.isDown(GLFW_KEY_RIGHT_ALT);
+        return !altHeld && (m_input.wasPressed(GLFW_KEY_ENTER) || m_input.wasPressed(GLFW_KEY_KP_ENTER));
+    }
+
+    std::optional<std::size_t> Application::processMenuMouse(std::size_t& selectedIndex)
+    {
+        const MenuScreenModel model =
+            (m_shellState == ApplicationShellState::MainMenu) ? mainMenuModel() : pauseMenuModel();
+
+        const std::optional<std::size_t> hovered =
+            menuEntryAt(m_lastFrameView, model, m_input.cursorNdc());
+
+        if (!hovered)
+        {
+            return std::nullopt;
+        }
+
+        // Follow the pointer only when it moves, so keyboard selection is not
+        // overridden by a resting cursor.
+        const glm::vec2 delta = m_input.mouseDelta();
+        if ((delta.x != 0.0f) || (delta.y != 0.0f))
+        {
+            if (selectedIndex != *hovered)
+            {
+                selectedIndex = *hovered;
+                refreshTitleSoon();
+            }
+        }
+
+        if (m_input.wasMousePressed(GLFW_MOUSE_BUTTON_LEFT))
+        {
+            selectedIndex = *hovered;
+            return hovered;
+        }
+
+        return std::nullopt;
     }
 
     void Application::processMainMenuInput()
@@ -223,14 +321,15 @@ namespace BilliardsSaloon
 
         if (up || down)
         {
-            m_mainMenuSelection =
-                (m_mainMenuSelection == MainMenuSelection::StartMatch)
-                ? MainMenuSelection::Quit
-                : MainMenuSelection::StartMatch;
+            m_mainMenuSelection = stepSelection(MAIN_MENU_ENTRIES, m_mainMenuSelection, up ? -1 : 1);
             refreshTitleSoon();
         }
 
-        if (m_input.wasPressed(GLFW_KEY_ENTER) || m_input.wasPressed(GLFW_KEY_KP_ENTER))
+        std::size_t selected = indexOf(MAIN_MENU_ENTRIES, m_mainMenuSelection);
+        const bool clicked = processMenuMouse(selected).has_value();
+        m_mainMenuSelection = MAIN_MENU_ENTRIES[selected];
+
+        if (clicked || menuConfirmPressed())
         {
             applyMainMenuSelection();
         }
@@ -248,19 +347,20 @@ namespace BilliardsSaloon
             return;
         }
 
-        if (m_input.wasPressed(GLFW_KEY_UP) || m_input.wasPressed(GLFW_KEY_W))
+        const bool up = m_input.wasPressed(GLFW_KEY_UP) || m_input.wasPressed(GLFW_KEY_W);
+        const bool down = m_input.wasPressed(GLFW_KEY_DOWN) || m_input.wasPressed(GLFW_KEY_S);
+
+        if (up || down)
         {
-            m_pauseMenuSelection = previousPauseSelection(m_pauseMenuSelection);
+            m_pauseMenuSelection = stepSelection(PAUSE_MENU_ENTRIES, m_pauseMenuSelection, up ? -1 : 1);
             refreshTitleSoon();
         }
 
-        if (m_input.wasPressed(GLFW_KEY_DOWN) || m_input.wasPressed(GLFW_KEY_S))
-        {
-            m_pauseMenuSelection = nextPauseSelection(m_pauseMenuSelection);
-            refreshTitleSoon();
-        }
+        std::size_t selected = indexOf(PAUSE_MENU_ENTRIES, m_pauseMenuSelection);
+        const bool clicked = processMenuMouse(selected).has_value();
+        m_pauseMenuSelection = PAUSE_MENU_ENTRIES[selected];
 
-        if (m_input.wasPressed(GLFW_KEY_ENTER) || m_input.wasPressed(GLFW_KEY_KP_ENTER))
+        if (clicked || menuConfirmPressed())
         {
             applyPauseMenuSelection();
         }
@@ -299,11 +399,26 @@ namespace BilliardsSaloon
             setCameraViewMode(CameraViewMode::FreeLook);
         }
 
-        if (m_cameraRigState.mode == CameraViewMode::FreeLook)
+        const bool freeLook = (m_cameraRigState.mode == CameraViewMode::FreeLook);
+
+        // Mouse motion only counts while the cursor is captured by the game.
+        const glm::vec2 mouse = m_window.isCursorCaptured() ? m_input.mouseDelta() : glm::vec2(0.0f);
+        const bool leftHeld = m_input.isMouseDown(GLFW_MOUSE_BUTTON_LEFT);
+        const bool rightHeld = m_input.isMouseDown(GLFW_MOUSE_BUTTON_RIGHT);
+        const bool fineAim = m_input.isDown(GLFW_KEY_LEFT_SHIFT) || m_input.isDown(GLFW_KEY_RIGHT_SHIFT);
+
+        if (freeLook)
         {
             m_cameraInput.orbitYaw = keyAxis(m_input, GLFW_KEY_J, GLFW_KEY_L);
             m_cameraInput.orbitPitch = keyAxis(m_input, GLFW_KEY_K, GLFW_KEY_I);
             m_cameraInput.zoom = keyAxis(m_input, GLFW_KEY_O, GLFW_KEY_U);
+
+            applyCameraRigDelta(
+                m_cameraRigState,
+                rightHeld ? mouse.x * MOUSE_ORBIT_RADIANS_PER_POINT : 0.0f,
+                rightHeld ? mouse.y * MOUSE_ORBIT_RADIANS_PER_POINT : 0.0f,
+                m_input.scrollDelta() * WHEEL_ZOOM_METERS_PER_STEP
+            );
         }
 
 #if defined(BS_DEBUG)
@@ -313,16 +428,32 @@ namespace BilliardsSaloon
         }
 #endif
 
-        m_session.applyShotControls(
-            ShotControls{
-                .aimAxis = keyAxis(m_input, GLFW_KEY_D, GLFW_KEY_A),
-                .strikeRightAxis = keyAxis(m_input, GLFW_KEY_LEFT, GLFW_KEY_RIGHT),
-                .strikeForwardAxis = keyAxis(m_input, GLFW_KEY_DOWN, GLFW_KEY_UP),
-                .centerStrike = m_input.isDown(GLFW_KEY_C),
-                .shootHeld = m_input.isDown(GLFW_KEY_SPACE)
-            },
-            frameTimeSeconds
-        );
+        ShotControls controls;
+        controls.aimAxis = keyAxis(m_input, GLFW_KEY_D, GLFW_KEY_A) * (fineAim ? FINE_AIM_SCALE : 1.0f);
+        controls.strikeRightAxis = keyAxis(m_input, GLFW_KEY_LEFT, GLFW_KEY_RIGHT);
+        controls.strikeForwardAxis = keyAxis(m_input, GLFW_KEY_DOWN, GLFW_KEY_UP);
+        controls.centerStrike = m_input.isDown(GLFW_KEY_C);
+        controls.shootHeld = m_input.isDown(GLFW_KEY_SPACE);
+
+        if (leftHeld)
+        {
+            // Stroke: drag the mouse back (toward you) to add power. Aim is locked.
+            controls.strokeHeld = true;
+            controls.strokeDelta = mouse.y * STROKE_POWER_PER_POINT;
+        }
+        else if (rightHeld && !freeLook)
+        {
+            // Move the cue tip on the ball: right = right english, up = follow.
+            controls.strikeDelta = glm::vec2(mouse.x, -mouse.y) * MOUSE_SPIN_PER_POINT;
+        }
+        else if (!rightHeld)
+        {
+            // Moving the mouse right turns the aim to the right.
+            controls.aimDeltaRadians =
+                -mouse.x * MOUSE_AIM_RADIANS_PER_POINT * (fineAim ? FINE_AIM_SCALE : 1.0f);
+        }
+
+        m_session.applyShotControls(controls, frameTimeSeconds);
     }
 
     void Application::enterPauseMenu()
@@ -341,6 +472,11 @@ namespace BilliardsSaloon
             case MainMenuSelection::StartMatch:
                 m_session.resetRack();
                 m_shellState = ApplicationShellState::Gameplay;
+                break;
+
+            case MainMenuSelection::Fullscreen:
+                m_window.toggleFullscreen();
+                m_input.discardNextMouseDelta();
                 break;
 
             case MainMenuSelection::Quit:
@@ -364,6 +500,13 @@ namespace BilliardsSaloon
                 m_shellState = ApplicationShellState::Gameplay;
                 break;
 
+            case PauseMenuSelection::Fullscreen:
+                // Stay in the pause menu so the player sees the result.
+                m_window.toggleFullscreen();
+                m_input.discardNextMouseDelta();
+                refreshTitleSoon();
+                return;
+
             case PauseMenuSelection::ReturnToMainMenu:
                 m_shellState = ApplicationShellState::MainMenu;
                 break;
@@ -371,6 +514,40 @@ namespace BilliardsSaloon
 
         m_pauseMenuSelection = PauseMenuSelection::Resume;
         refreshTitleSoon();
+    }
+
+    MenuScreenModel Application::mainMenuModel() const
+    {
+        MenuScreenModel model;
+        model.title = "MAIN MENU";
+        for (const MainMenuSelection entry : MAIN_MENU_ENTRIES)
+        {
+            model.entries.emplace_back(mainMenuLabel(entry, m_window.isFullscreen()));
+        }
+        model.selectedIndex = indexOf(MAIN_MENU_ENTRIES, m_mainMenuSelection);
+        model.hints = {"MOUSE OR UP/DOWN SELECT", "CLICK OR ENTER CONFIRM", "ESC QUIT"};
+        model.titleOffset = 0.38f;
+        model.firstEntryOffset = 0.18f;
+        model.entrySpacing = 0.15f;
+        return model;
+    }
+
+    MenuScreenModel Application::pauseMenuModel() const
+    {
+        MenuScreenModel model;
+        model.title = "PAUSED";
+        for (const PauseMenuSelection entry : PAUSE_MENU_ENTRIES)
+        {
+            model.entries.emplace_back(pauseMenuLabel(entry, m_window.isFullscreen()));
+        }
+        model.selectedIndex = indexOf(PAUSE_MENU_ENTRIES, m_pauseMenuSelection);
+        model.hints = {"MOUSE OR UP/DOWN SELECT", "CLICK OR ENTER CONFIRM", "ESC RESUME"};
+        model.titleOffset = 0.40f;
+        model.titleBoxWidth = 0.44f;
+        model.titleBoxEmission = glm::vec3(0.025f, 0.02f, 0.02f);
+        model.firstEntryOffset = 0.21f;
+        model.entrySpacing = 0.14f;
+        return model;
     }
 
     void Application::setCameraViewMode(CameraViewMode mode)
@@ -537,6 +714,7 @@ namespace BilliardsSaloon
         {
             return;
         }
+        m_lastFrameView = view;
 
         Registry& registry = m_session.registry();
         const Entity cueBall = m_session.cueBallEntity();
@@ -595,33 +773,11 @@ namespace BilliardsSaloon
             }
 
             case ApplicationShellState::MainMenu:
-                drawMenuScreen(*m_renderer, view, MenuScreenModel{
-                    .title = "MAIN MENU",
-                    .entries = {
-                        mainMenuSelectionLabel(MainMenuSelection::StartMatch),
-                        mainMenuSelectionLabel(MainMenuSelection::Quit)
-                    },
-                    .selectedIndex = static_cast<std::size_t>(m_mainMenuSelection),
-                    .hints = {"UP/DOWN SELECT", "ENTER CONFIRM", "ESC QUIT"}
-                });
+                drawMenuScreen(*m_renderer, view, mainMenuModel());
                 break;
 
             case ApplicationShellState::PauseMenu:
-                drawMenuScreen(*m_renderer, view, MenuScreenModel{
-                    .title = "PAUSED",
-                    .entries = {
-                        pauseMenuSelectionLabel(PauseMenuSelection::Resume),
-                        pauseMenuSelectionLabel(PauseMenuSelection::RestartRack),
-                        pauseMenuSelectionLabel(PauseMenuSelection::ReturnToMainMenu)
-                    },
-                    .selectedIndex = static_cast<std::size_t>(m_pauseMenuSelection),
-                    .hints = {"UP/DOWN SELECT", "ENTER CONFIRM", "ESC RESUME"},
-                    .titleOffset = 0.40f,
-                    .titleBoxWidth = 0.44f,
-                    .titleBoxEmission = glm::vec3(0.025f, 0.02f, 0.02f),
-                    .firstEntryOffset = 0.20f,
-                    .entrySpacing = 0.18f
-                });
+                drawMenuScreen(*m_renderer, view, pauseMenuModel());
                 break;
         }
     }
@@ -646,37 +802,6 @@ namespace BilliardsSaloon
         title += " | Cam:";
         title += cameraViewModeLabel(m_cameraRigState.mode);
 
-        if (m_shellState == ApplicationShellState::MainMenu)
-        {
-            title += " | Up/Down Select | Enter Confirm | ";
-            title += (m_mainMenuSelection == MainMenuSelection::StartMatch) ? "[" : "";
-            title += mainMenuSelectionLabel(MainMenuSelection::StartMatch);
-            title += (m_mainMenuSelection == MainMenuSelection::StartMatch) ? "]" : "";
-            title += " ";
-            title += (m_mainMenuSelection == MainMenuSelection::Quit) ? "[" : "";
-            title += mainMenuSelectionLabel(MainMenuSelection::Quit);
-            title += (m_mainMenuSelection == MainMenuSelection::Quit) ? "]" : "";
-        }
-        else if (m_shellState == ApplicationShellState::PauseMenu)
-        {
-            title += " | Up/Down Select | Enter Confirm | ";
-            title += (m_pauseMenuSelection == PauseMenuSelection::Resume) ? "[" : "";
-            title += pauseMenuSelectionLabel(PauseMenuSelection::Resume);
-            title += (m_pauseMenuSelection == PauseMenuSelection::Resume) ? "]" : "";
-            title += " ";
-            title += (m_pauseMenuSelection == PauseMenuSelection::RestartRack) ? "[" : "";
-            title += pauseMenuSelectionLabel(PauseMenuSelection::RestartRack);
-            title += (m_pauseMenuSelection == PauseMenuSelection::RestartRack) ? "]" : "";
-            title += " ";
-            title += (m_pauseMenuSelection == PauseMenuSelection::ReturnToMainMenu) ? "[" : "";
-            title += pauseMenuSelectionLabel(PauseMenuSelection::ReturnToMainMenu);
-            title += (m_pauseMenuSelection == PauseMenuSelection::ReturnToMainMenu) ? "]" : "";
-        }
-        else
-        {
-            title += " | Tab Cycle Camera | 1 Aim | 2 Overview | 3 Follow | 4 Free";
-        }
-
         if (m_showPerformanceStatsInTitle && (m_titleUpdateFrameTimeSum > 0.0))
         {
             const double averageFrameSeconds =
@@ -699,7 +824,7 @@ namespace BilliardsSaloon
             title += " Hz";
         }
 
-        title += " | F1 title stats | F2 quality";
+        title += " | F1 stats | F2 quality | F11 fullscreen";
 
         m_window.setTitle(title);
 

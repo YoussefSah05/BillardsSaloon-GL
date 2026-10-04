@@ -1,5 +1,6 @@
 #pragma once
 
+#include "app/overlay_screens.h"
 #include "ecs/entity.h"
 #include "gameplay/match_session.h"
 #include "platform/input.h"
@@ -23,6 +24,7 @@ namespace BilliardsSaloon
     enum class MainMenuSelection
     {
         StartMatch,
+        Fullscreen,
         Quit
     };
 
@@ -30,6 +32,7 @@ namespace BilliardsSaloon
     {
         Resume,
         RestartRack,
+        Fullscreen,
         ReturnToMainMenu
     };
 
@@ -47,10 +50,18 @@ namespace BilliardsSaloon
         void processMainMenuInput();
         void processPauseMenuInput();
         void processGameplayInput(float frameTimeSeconds);
+        void updateCursorCapture();
+
+        // Mouse hover/click on the visible menu. Returns the clicked entry.
+        [[nodiscard]] std::optional<std::size_t> processMenuMouse(std::size_t& selectedIndex);
+        [[nodiscard]] bool menuConfirmPressed() const;
 
         void updateFixed(double deltaTimeSeconds);
         void updateCameraRig(double deltaTimeSeconds);
         [[nodiscard]] CameraRigContext buildGameplayCameraContext() const;
+
+        [[nodiscard]] MenuScreenModel mainMenuModel() const;
+        [[nodiscard]] MenuScreenModel pauseMenuModel() const;
 
         void render(double alpha);
         void updateWindowTitle(double frameTimeSeconds, std::uint32_t fixedStepsThisFrame);
@@ -71,6 +82,7 @@ namespace BilliardsSaloon
         MatchSession m_session;
         Entity m_cameraEntity;
         std::unique_ptr<SceneRenderer> m_renderer;
+        FrameView m_lastFrameView {};
 
         ApplicationShellState m_shellState {ApplicationShellState::MainMenu};
         MainMenuSelection m_mainMenuSelection {MainMenuSelection::StartMatch};

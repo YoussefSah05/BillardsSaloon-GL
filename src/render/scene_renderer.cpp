@@ -133,14 +133,18 @@ namespace BilliardsSaloon
         const float aspectRatio =
             static_cast<float>(settings.viewportWidth) / static_cast<float>(std::max(settings.viewportHeight, 1));
 
-        m_shader->bind();
-        m_shader->setMat4("uView", Camera::viewMatrix(outView.position, outView.forward, outView.up));
-        m_shader->setMat4("uProjection", Camera::projectionMatrix(
+        const glm::mat4 viewMatrix = Camera::viewMatrix(outView.position, outView.forward, outView.up);
+        const glm::mat4 projectionMatrix = Camera::projectionMatrix(
             cameraLens.verticalFieldOfViewRadians,
             aspectRatio,
             cameraLens.nearPlane,
             cameraLens.farPlane
-        ));
+        );
+        outView.viewProjection = projectionMatrix * viewMatrix;
+
+        m_shader->bind();
+        m_shader->setMat4("uView", viewMatrix);
+        m_shader->setMat4("uProjection", projectionMatrix);
         m_shader->setVec3("uViewPosition", outView.position);
 
         m_shader->setVec3("uDirectionalLightDirection", glm::normalize(glm::vec3(-0.35f, -1.0f, -0.18f)));

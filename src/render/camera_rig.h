@@ -53,6 +53,14 @@ namespace BilliardsSaloon
         const CameraRigInputAxes& inputAxes,
         float deltaTimeSeconds);
 
+    // Direct free-look change from mouse motion: orbit angles in radians,
+    // zoom in metres (positive moves closer).
+    void applyCameraRigDelta(
+        CameraRigState& state,
+        float yawRadians,
+        float pitchRadians,
+        float zoomMeters);
+
     [[nodiscard]] CameraPose desiredCameraPose(
         const CameraRigState& state,
         const CameraRigContext& context);

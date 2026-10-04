@@ -131,16 +131,80 @@ TEST_CASE("the break resolves once the balls stop and play continues")
     }
 }
 
-TEST_CASE("a button held through a pause does not fire on release")
+TEST_CASE("pausing while charging abandons the shot")
 {
     MatchSession session(eightBallVariant());
-    session.applyShotControls(holdShoot(), 1.0f / 60.0f);
+    for (int i = 0; i < 20; ++i)
+    {
+        session.applyShotControls(holdShoot(), 1.0f / 60.0f);
+    }
     session.cancelHeldShot();
 
-    // Simulates resuming with the button already released: the charge phase
-    // only fires on a release it saw held, so nothing happens yet.
+    CHECK(session.shotState().phase == ShotPhase::Aiming);
+    CHECK(session.shotState().charge01 == 0.0f);
+
+    // Releasing after resuming must not fire.
     session.applyShotControls(ShotControls{}, 1.0f / 60.0f);
+    CHECK(session.shotState().phase == ShotPhase::Aiming);
+    CHECK_FALSE(session.ballsInMotion());
+}
+
+TEST_CASE("mouse aim and spin deltas apply directly")
+{
+    MatchSession session(eightBallVariant());
+
+    ShotControls controls;
+    controls.aimDeltaRadians = 0.25f;
+    controls.strikeDelta = glm::vec2(0.2f, -0.3f);
+    session.applyShotControls(controls, 1.0f / 60.0f);
+
+    CHECK(session.shotState().aimAngleRadians == doctest::Approx(0.25f));
+    CHECK(session.shotState().strikeRight01 == doctest::Approx(0.2f));
+    CHECK(session.shotState().strikeForward01 == doctest::Approx(-0.3f));
+}
+
+TEST_CASE("a mouse stroke sets power by drag distance and shoots on release")
+{
+    MatchSession session(eightBallVariant());
+
+    ShotControls stroke;
+    stroke.strokeHeld = true;
+    stroke.strokeDelta = 0.4f;
+    session.applyShotControls(stroke, 1.0f / 60.0f);
+    stroke.strokeDelta = 0.4f;
+    session.applyShotControls(stroke, 1.0f / 60.0f);
+    stroke.strokeDelta = -0.2f;   // pushing forward again reduces power
+    session.applyShotControls(stroke, 1.0f / 60.0f);
+
     CHECK(session.shotState().phase == ShotPhase::Charging);
+    CHECK(session.shotState().charge01 == doctest::Approx(0.6f));
+
+    // Time held does not add power for a stroke.
+    stroke.strokeDelta = 0.0f;
+    for (int i = 0; i < 60; ++i)
+    {
+        session.applyShotControls(stroke, 1.0f / 60.0f);
+    }
+    CHECK(session.shotState().charge01 == doctest::Approx(0.6f));
+
+    session.applyShotControls(ShotControls{}, 1.0f / 60.0f);
+    CHECK(session.shotState().phase == ShotPhase::BallsInMotion);
+}
+
+TEST_CASE("releasing a mouse stroke with almost no power cancels it")
+{
+    MatchSession session(eightBallVariant());
+
+    ShotControls stroke;
+    stroke.strokeHeld = true;
+    stroke.strokeDelta = 0.3f;
+    session.applyShotControls(stroke, 1.0f / 60.0f);
+    stroke.strokeDelta = -0.29f;
+    session.applyShotControls(stroke, 1.0f / 60.0f);
+
+    session.applyShotControls(ShotControls{}, 1.0f / 60.0f);
+    CHECK(session.shotState().phase == ShotPhase::Aiming);
+    CHECK(session.shotState().charge01 == 0.0f);
     CHECK_FALSE(session.ballsInMotion());
 }
 

@@ -360,55 +360,32 @@ namespace BilliardsSaloon
             );
         }
 
-        renderUiOverlayText(
-            shader,
-            cube,
-            view.overlayFrame,
-            "A/D AIM",
-            hudLeft - view.up * 0.46f + view.forward * 0.020f,
-            hintStyle
-        );
+        // One hint per line: two columns overlapped at this text size.
+        const char* const freeLookHints[] = {
+            "RMB DRAG ORBIT - WHEEL ZOOM",
+            "JL ORBIT - IK TILT - UO ZOOM",
+            "TAB OR 1-4 CAMERA",
+            "ESC PAUSE - F11 FULLSCREEN"
+        };
+        const char* const aimingHints[] = {
+            "MOUSE OR A/D AIM - SHIFT FINE",
+            "LMB DRAG BACK SHOOT - SPACE",
+            "RMB DRAG OR ARROWS SPIN",
+            "ESC PAUSE - F11 FULLSCREEN"
+        };
+        const bool freeLook = (model.cameraMode == CameraViewMode::FreeLook);
 
-        renderUiOverlayText(
-            shader,
-            cube,
-            view.overlayFrame,
-            "SPACE SHOOT",
-            hudLeft + view.right * 0.24f - view.up * 0.46f + view.forward * 0.020f,
-            hintStyle
-        );
-
-        renderUiOverlayText(
-            shader,
-            cube,
-            view.overlayFrame,
-            "ARROWS ENGLISH",
-            hudLeft - view.up * 0.53f + view.forward * 0.020f,
-            hintStyle
-        );
-
-        renderUiOverlayText(
-            shader,
-            cube,
-            view.overlayFrame,
-            "TAB CYCLE 1 2 3 4",
-            hudLeft + view.right * 0.24f - view.up * 0.53f + view.forward * 0.020f,
-            hintStyle
-        );
-
-        const char* cameraControlHint =
-            (model.cameraMode == CameraViewMode::FreeLook)
-            ? "J L ORBIT   I K TILT   U O ZOOM"
-            : "ESC PAUSE   F2 QUALITY";
-
-        renderUiOverlayText(
-            shader,
-            cube,
-            view.overlayFrame,
-            cameraControlHint,
-            hudLeft - view.up * 0.60f + view.forward * 0.020f,
-            hintStyle
-        );
+        for (int line = 0; line < 4; ++line)
+        {
+            renderUiOverlayText(
+                shader,
+                cube,
+                view.overlayFrame,
+                freeLook ? freeLookHints[line] : aimingHints[line],
+                hudLeft - view.up * (0.46f + 0.07f * static_cast<float>(line)) + view.forward * 0.020f,
+                hintStyle
+            );
+        }
 
         glEnable(GL_DEPTH_TEST);
     }
@@ -418,10 +395,7 @@ namespace BilliardsSaloon
         Shader& shader = renderer.shader();
         Mesh& cube = renderer.cubeMesh();
 
-        const glm::vec3 menuBase =
-            view.position +
-            view.forward * 1.45f +
-            view.up * 0.08f;
+        const glm::vec3 menuBase = menuOrigin(view);
 
         const MaterialComponent backdropMaterial{
             .albedo = glm::vec3(0.06f, 0.045f, 0.04f),
@@ -551,20 +525,17 @@ namespace BilliardsSaloon
             glm::vec3(0.01f, 0.008f, 0.008f)
         );
 
-        const glm::vec3 cardScale(0.72f, 0.08f, 0.035f);
-
         for (std::size_t i = 0; i < model.entries.size(); ++i)
         {
             const bool selected = (i == model.selectedIndex);
-            const glm::vec3 cardCenter =
-                menuBase + view.up * (model.firstEntryOffset - model.entrySpacing * static_cast<float>(i));
+            const glm::vec3 cardCenter = menuCardCenter(view, model, i);
 
             renderUiOverlayBox(
                 shader,
                 cube,
                 view.overlayFrame,
                 cardCenter,
-                cardScale,
+                MENU_CARD_SCALE,
                 selected ? selectedCardMaterial : cardMaterial,
                 selected ? glm::vec3(0.08f, 0.05f, 0.01f) : glm::vec3(0.0f)
             );

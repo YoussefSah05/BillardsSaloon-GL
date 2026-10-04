@@ -140,6 +140,7 @@ if(BS_BUILD_TESTS)
         tests/test_match_session.cpp
         tests/test_game_variant.cpp
         tests/test_game_data.cpp
+        tests/test_menu_layout.cpp
         tests/test_physics.cpp
         tests/test_asset_paths.cpp
     )

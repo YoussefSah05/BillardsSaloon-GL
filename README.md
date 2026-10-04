@@ -29,6 +29,21 @@ cmake --build build -j8
 ctest --test-dir build --output-on-failure   # unit tests
 ```
 
+## Controls
+
+| Action | Mouse | Keyboard |
+|--------|-------|----------|
+| Aim | Move the mouse (hold Shift for fine aim) | A / D (Shift for fine aim) |
+| Shoot | Hold left button, drag back for power, release | Hold Space, release |
+| Cancel a shot | Push the mouse forward again and release | — |
+| Spin (cue tip offset) | Hold right button and move | Arrow keys, C to centre |
+| Camera views | — | Tab cycles, 1 aim, 2 overview, 3 follow, 4 free look |
+| Free look | Right-drag to orbit, wheel to zoom | J/L orbit, I/K tilt, U/O zoom |
+| Menus | Point and click | Up/Down, Enter |
+| Pause | — | Esc |
+| Fullscreen | Menu entry | F11, Alt+Enter, or Cmd+Ctrl+F on macOS |
+| Graphics quality / FPS in title | — | F2 / F1 |
+
 ## Project layout
 
 | Path | Contents |
