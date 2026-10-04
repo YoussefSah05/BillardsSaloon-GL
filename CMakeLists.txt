@@ -11,7 +11,13 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+option(BS_BUILD_TESTS "Build the unit test executable" ON)
+
 include(FetchContent)
+
+set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 
 FetchContent_Declare(
     glfw
@@ -29,6 +35,33 @@ FetchContent_MakeAvailable(glm)
 
 find_package(OpenGL REQUIRED)
 
+function(bs_set_warnings target)
+    if(MSVC)
+        target_compile_options(${target} PRIVATE /W4 /permissive- /EHsc)
+    else()
+        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+    endif()
+endfunction()
+
+# Headless game library: ECS, gameplay rules and physics. No OpenGL or GLFW,
+# so it can be linked by unit tests, tools and (later) the AI.
+add_library(bs_game STATIC
+    src/core/asset_paths.cpp
+    src/gameplay/shot_state.cpp
+    src/gameplay/game_variant.cpp
+    src/gameplay/match_state.cpp
+    src/gameplay/shot_result.cpp
+    src/gameplay/turn_rules.cpp
+    src/physics/billiards_physics.cpp
+)
+
+target_include_directories(bs_game PUBLIC src)
+target_link_libraries(bs_game PUBLIC glm::glm)
+target_compile_definitions(bs_game PRIVATE
+    BS_SOURCE_ASSET_DIR="${CMAKE_SOURCE_DIR}/assets"
+)
+bs_set_warnings(bs_game)
+
 add_executable(BilliardsSaloon
     src/app/main.cpp
     src/app/application.cpp
@@ -39,12 +72,6 @@ add_executable(BilliardsSaloon
     src/render/camera.cpp
     src/render/camera_rig.cpp
     src/render/ui_overlay.cpp
-    src/gameplay/shot_state.cpp
-    src/gameplay/game_variant.cpp
-    src/gameplay/match_state.cpp
-    src/gameplay/shot_result.cpp
-    src/gameplay/turn_rules.cpp
-    src/physics/billiards_physics.cpp
     external/glad/src/gl.c
 )
 
@@ -54,18 +81,46 @@ target_include_directories(BilliardsSaloon PRIVATE
 )
 
 target_link_libraries(BilliardsSaloon PRIVATE
+    bs_game
     glfw
     OpenGL::GL
-    glm::glm
 )
 
-if(MSVC)
-    target_compile_options(BilliardsSaloon PRIVATE /W4 /permissive- /EHsc)
-else()
-    target_compile_options(BilliardsSaloon PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
-endif()
+bs_set_warnings(BilliardsSaloon)
 
 target_compile_definitions(BilliardsSaloon PRIVATE
     GLFW_INCLUDE_NONE
     $<$<CONFIG:Debug>:BS_DEBUG=1>
 )
+
+# Ship assets next to the executable so it runs from any working directory.
+add_custom_command(TARGET BilliardsSaloon POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/assets
+        $<TARGET_FILE_DIR:BilliardsSaloon>/assets
+    COMMENT "Copying assets next to BilliardsSaloon"
+)
+
+if(BS_BUILD_TESTS)
+    FetchContent_Declare(
+        doctest
+        GIT_REPOSITORY https://github.com/doctest/doctest.git
+        GIT_TAG v2.4.12
+    )
+    FetchContent_MakeAvailable(doctest)
+
+    enable_testing()
+
+    add_executable(bs_tests
+        tests/test_main.cpp
+        tests/test_registry.cpp
+        tests/test_turn_rules.cpp
+        tests/test_physics.cpp
+        tests/test_asset_paths.cpp
+    )
+
+    target_link_libraries(bs_tests PRIVATE bs_game doctest::doctest)
+    bs_set_warnings(bs_tests)
+
+    add_test(NAME bs_tests COMMAND bs_tests)
+endif()

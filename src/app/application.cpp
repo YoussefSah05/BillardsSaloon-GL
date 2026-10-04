@@ -1,5 +1,6 @@
 #include "app/application.h"
 
+#include "core/asset_paths.h"
 #include "gameplay/turn_rules.h"
 #include "physics/billiards_physics.h"
 #include "render/camera.h"
@@ -334,8 +335,8 @@ namespace BilliardsSaloon
         m_variant = &eightBallVariant();
 
         m_basicShader = std::make_unique<Shader>(
-            "../assets/shaders/basic.vert",
-            "../assets/shaders/basic.frag"
+            resolveAssetPath("shaders/basic.vert").string(),
+            resolveAssetPath("shaders/basic.frag").string()
         );
 
         m_cubeMesh = Mesh::createCube();
