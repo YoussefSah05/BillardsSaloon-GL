@@ -657,6 +657,7 @@ namespace BilliardsSaloon
 
         resetMatchToOpeningRack();
         m_shellState = ApplicationShellState::MainMenu;
+        updateCameraRig(FIXED_TIME_STEP);
     }
 
     int Application::run()
@@ -775,6 +776,128 @@ namespace BilliardsSaloon
         m_titleUpdateAccumulator = TITLE_UPDATE_INTERVAL_SECONDS;
     }
 
+    void Application::setCameraViewMode(CameraViewMode mode)
+    {
+        m_cameraRigState.mode = mode;
+        m_titleUpdateAccumulator = TITLE_UPDATE_INTERVAL_SECONDS;
+    }
+
+    CameraRigContext Application::buildGameplayCameraContext() const
+    {
+        CameraRigContext context;
+        context.tableCenter = glm::vec3(0.0f, m_variant->table.ballRadius, 0.0f);
+        context.aimDirection = aimDirectionFromAngle(m_shotState.aimAngleRadians);
+        context.ballsInMotion = Physics::anyBallInMotion(const_cast<Registry&>(m_registry));
+
+        float fastestSpeedSquared = 0.0f;
+
+        const_cast<Registry&>(m_registry).view<TransformComponent, BallComponent>().each(
+            [&](Entity, TransformComponent& transform, BallComponent& ball)
+            {
+                if (ball.pocketed)
+                {
+                    return;
+                }
+
+                if (ball.isCueBall)
+                {
+                    context.cueBallPosition = transform.position;
+                    context.cueBallAvailable = true;
+                }
+
+                glm::vec3 planarVelocity = ball.linearVelocity;
+                planarVelocity.y = 0.0f;
+
+                const float speedSquared = glm::dot(planarVelocity, planarVelocity);
+                if (speedSquared > fastestSpeedSquared)
+                {
+                    fastestSpeedSquared = speedSquared;
+                    context.trackedBallPosition = transform.position;
+                    context.trackedBallVelocity = planarVelocity;
+                    context.trackedBallAvailable = true;
+                }
+            }
+        );
+
+        if (!context.trackedBallAvailable && context.cueBallAvailable)
+        {
+            context.trackedBallPosition = context.cueBallPosition;
+            context.trackedBallVelocity = glm::vec3(0.0f);
+            context.trackedBallAvailable = true;
+        }
+
+        return context;
+    }
+
+    void Application::updateCameraRig(double deltaTimeSeconds)
+    {
+        TransformComponent* cameraTransform = m_registry.tryGet<TransformComponent>(m_cameraEntity);
+        if (cameraTransform == nullptr)
+        {
+            return;
+        }
+
+        CameraPose targetPose;
+
+        if (m_shellState == ApplicationShellState::Gameplay)
+        {
+            if (m_cameraRigState.mode == CameraViewMode::FreeLook)
+            {
+                applyCameraRigInput(
+                    m_cameraRigState,
+                    CameraRigInputAxes{
+                        .orbitYaw = m_cameraOrbitYawInput,
+                        .orbitPitch = m_cameraOrbitPitchInput,
+                        .zoom = m_cameraZoomInput
+                    },
+                    static_cast<float>(deltaTimeSeconds)
+                );
+            }
+
+            targetPose = desiredCameraPose(m_cameraRigState, buildGameplayCameraContext());
+        }
+        else
+        {
+            CameraRigState menuRigState;
+            menuRigState.mode = CameraViewMode::TableOverview;
+            targetPose = desiredCameraPose(
+                menuRigState,
+                CameraRigContext{
+                    .tableCenter = glm::vec3(0.0f, m_variant->table.ballRadius, 0.0f),
+                    .cueBallPosition = glm::vec3(0.0f, m_variant->table.ballRadius, 0.42f),
+                    .trackedBallPosition = glm::vec3(0.0f, m_variant->table.ballRadius, 0.42f),
+                    .trackedBallVelocity = glm::vec3(0.0f),
+                    .aimDirection = glm::vec3(0.0f, 0.0f, -1.0f),
+                    .cueBallAvailable = true,
+                    .trackedBallAvailable = true,
+                    .ballsInMotion = false
+                }
+            );
+        }
+
+        const float blendRate =
+            (m_shellState == ApplicationShellState::Gameplay) ? 10.0f : 7.0f;
+        const float blendAlpha =
+            (deltaTimeSeconds > 0.0)
+            ? (1.0f - std::exp(-blendRate * static_cast<float>(deltaTimeSeconds)))
+            : 1.0f;
+
+        cameraTransform->syncPrevious();
+
+        const CameraPose blendedPose = blendCameraPose(
+            CameraPose{
+                .position = cameraTransform->position,
+                .rotation = cameraTransform->rotation
+            },
+            targetPose,
+            blendAlpha,
+            blendAlpha
+        );
+
+        cameraTransform->position = blendedPose.position;
+        cameraTransform->rotation = blendedPose.rotation;
+    }
+
     void Application::processPlatformInput()
     {
         GLFWwindow* handle = m_window.nativeHandle();
@@ -790,6 +913,17 @@ namespace BilliardsSaloon
         const bool menuConfirmDown =
             (glfwGetKey(handle, GLFW_KEY_ENTER) == GLFW_PRESS) ||
             (glfwGetKey(handle, GLFW_KEY_KP_ENTER) == GLFW_PRESS);
+        const bool cameraCycleDown = glfwGetKey(handle, GLFW_KEY_TAB) == GLFW_PRESS;
+        const bool cameraAimDown = glfwGetKey(handle, GLFW_KEY_1) == GLFW_PRESS;
+        const bool cameraOverviewDown = glfwGetKey(handle, GLFW_KEY_2) == GLFW_PRESS;
+        const bool cameraFollowDown = glfwGetKey(handle, GLFW_KEY_3) == GLFW_PRESS;
+        const bool cameraFreeLookDown = glfwGetKey(handle, GLFW_KEY_4) == GLFW_PRESS;
+        const bool freeLookLeftDown = glfwGetKey(handle, GLFW_KEY_J) == GLFW_PRESS;
+        const bool freeLookRightDown = glfwGetKey(handle, GLFW_KEY_L) == GLFW_PRESS;
+        const bool freeLookUpDown = glfwGetKey(handle, GLFW_KEY_I) == GLFW_PRESS;
+        const bool freeLookDownDown = glfwGetKey(handle, GLFW_KEY_K) == GLFW_PRESS;
+        const bool freeLookZoomInDown = glfwGetKey(handle, GLFW_KEY_U) == GLFW_PRESS;
+        const bool freeLookZoomOutDown = glfwGetKey(handle, GLFW_KEY_O) == GLFW_PRESS;
 
         const bool escapePressed = escapeDown && !m_escapeWasDownLastFrame;
         const bool qualityTogglePressed = qualityToggleDown && !m_qualityToggleWasDownLastFrame;
@@ -797,6 +931,33 @@ namespace BilliardsSaloon
         const bool menuUpPressed = menuUpDown && !m_menuUpWasDownLastFrame;
         const bool menuDownPressed = menuDownDown && !m_menuDownWasDownLastFrame;
         const bool menuConfirmPressed = menuConfirmDown && !m_menuConfirmWasDownLastFrame;
+        const bool cameraCyclePressed = cameraCycleDown && !m_cameraCycleWasDownLastFrame;
+        const bool cameraAimPressed = cameraAimDown && !m_cameraAimWasDownLastFrame;
+        const bool cameraOverviewPressed = cameraOverviewDown && !m_cameraOverviewWasDownLastFrame;
+        const bool cameraFollowPressed = cameraFollowDown && !m_cameraFollowWasDownLastFrame;
+        const bool cameraFreeLookPressed = cameraFreeLookDown && !m_cameraFreeLookWasDownLastFrame;
+
+        auto latchInputEdges = [&]()
+        {
+            m_escapeWasDownLastFrame = escapeDown;
+            m_qualityToggleWasDownLastFrame = qualityToggleDown;
+            m_titleStatsToggleWasDownLastFrame = titleStatsToggleDown;
+            m_menuUpWasDownLastFrame = menuUpDown;
+            m_menuDownWasDownLastFrame = menuDownDown;
+            m_menuConfirmWasDownLastFrame = menuConfirmDown;
+            m_cameraCycleWasDownLastFrame = cameraCycleDown;
+            m_cameraAimWasDownLastFrame = cameraAimDown;
+            m_cameraOverviewWasDownLastFrame = cameraOverviewDown;
+            m_cameraFollowWasDownLastFrame = cameraFollowDown;
+            m_cameraFreeLookWasDownLastFrame = cameraFreeLookDown;
+        };
+
+        auto clearCameraInputAxes = [&]()
+        {
+            m_cameraOrbitYawInput = 0.0f;
+            m_cameraOrbitPitchInput = 0.0f;
+            m_cameraZoomInput = 0.0f;
+        };
 
         if (qualityTogglePressed)
         {
@@ -845,13 +1006,9 @@ namespace BilliardsSaloon
                 applyMainMenuSelection();
             }
 
+            clearCameraInputAxes();
             m_spaceWasDownLastFrame = false;
-            m_escapeWasDownLastFrame = escapeDown;
-            m_qualityToggleWasDownLastFrame = qualityToggleDown;
-            m_titleStatsToggleWasDownLastFrame = titleStatsToggleDown;
-            m_menuUpWasDownLastFrame = menuUpDown;
-            m_menuDownWasDownLastFrame = menuDownDown;
-            m_menuConfirmWasDownLastFrame = menuConfirmDown;
+            latchInputEdges();
             return;
         }
 
@@ -909,13 +1066,9 @@ namespace BilliardsSaloon
                 applyPauseMenuSelection();
             }
 
+            clearCameraInputAxes();
             m_spaceWasDownLastFrame = false;
-            m_escapeWasDownLastFrame = escapeDown;
-            m_qualityToggleWasDownLastFrame = qualityToggleDown;
-            m_titleStatsToggleWasDownLastFrame = titleStatsToggleDown;
-            m_menuUpWasDownLastFrame = menuUpDown;
-            m_menuDownWasDownLastFrame = menuDownDown;
-            m_menuConfirmWasDownLastFrame = menuConfirmDown;
+            latchInputEdges();
             return;
         }
 
@@ -923,15 +1076,87 @@ namespace BilliardsSaloon
         {
             m_shellState = ApplicationShellState::PauseMenu;
             m_pauseMenuSelection = PauseMenuSelection::Resume;
+            clearCameraInputAxes();
             m_spaceWasDownLastFrame = false;
             m_titleUpdateAccumulator = TITLE_UPDATE_INTERVAL_SECONDS;
-            m_escapeWasDownLastFrame = escapeDown;
-            m_qualityToggleWasDownLastFrame = qualityToggleDown;
-            m_titleStatsToggleWasDownLastFrame = titleStatsToggleDown;
-            m_menuUpWasDownLastFrame = menuUpDown;
-            m_menuDownWasDownLastFrame = menuDownDown;
-            m_menuConfirmWasDownLastFrame = menuConfirmDown;
+            latchInputEdges();
             return;
+        }
+
+        if (cameraCyclePressed)
+        {
+            switch (m_cameraRigState.mode)
+            {
+                case CameraViewMode::PlayerAim:
+                    setCameraViewMode(CameraViewMode::TableOverview);
+                    break;
+
+                case CameraViewMode::TableOverview:
+                    setCameraViewMode(CameraViewMode::ShotFollow);
+                    break;
+
+                case CameraViewMode::ShotFollow:
+                    setCameraViewMode(CameraViewMode::FreeLook);
+                    break;
+
+                case CameraViewMode::FreeLook:
+                    setCameraViewMode(CameraViewMode::PlayerAim);
+                    break;
+            }
+        }
+
+        if (cameraAimPressed)
+        {
+            setCameraViewMode(CameraViewMode::PlayerAim);
+        }
+
+        if (cameraOverviewPressed)
+        {
+            setCameraViewMode(CameraViewMode::TableOverview);
+        }
+
+        if (cameraFollowPressed)
+        {
+            setCameraViewMode(CameraViewMode::ShotFollow);
+        }
+
+        if (cameraFreeLookPressed)
+        {
+            setCameraViewMode(CameraViewMode::FreeLook);
+        }
+
+        clearCameraInputAxes();
+        if (m_cameraRigState.mode == CameraViewMode::FreeLook)
+        {
+            if (freeLookLeftDown)
+            {
+                m_cameraOrbitYawInput -= 1.0f;
+            }
+
+            if (freeLookRightDown)
+            {
+                m_cameraOrbitYawInput += 1.0f;
+            }
+
+            if (freeLookUpDown)
+            {
+                m_cameraOrbitPitchInput += 1.0f;
+            }
+
+            if (freeLookDownDown)
+            {
+                m_cameraOrbitPitchInput -= 1.0f;
+            }
+
+            if (freeLookZoomInDown)
+            {
+                m_cameraZoomInput += 1.0f;
+            }
+
+            if (freeLookZoomOutDown)
+            {
+                m_cameraZoomInput -= 1.0f;
+            }
         }
 
         if (glfwGetKey(handle, GLFW_KEY_R) == GLFW_PRESS)
@@ -947,12 +1172,7 @@ namespace BilliardsSaloon
             (m_shotState.phase == ShotPhase::BallsInMotion))
         {
             m_spaceWasDownLastFrame = glfwGetKey(handle, GLFW_KEY_SPACE) == GLFW_PRESS;
-            m_escapeWasDownLastFrame = escapeDown;
-            m_qualityToggleWasDownLastFrame = qualityToggleDown;
-            m_titleStatsToggleWasDownLastFrame = titleStatsToggleDown;
-            m_menuUpWasDownLastFrame = menuUpDown;
-            m_menuDownWasDownLastFrame = menuDownDown;
-            m_menuConfirmWasDownLastFrame = menuConfirmDown;
+            latchInputEdges();
             return;
         }
 
@@ -1028,12 +1248,7 @@ namespace BilliardsSaloon
         }
 
         m_spaceWasDownLastFrame = spaceDown;
-        m_escapeWasDownLastFrame = escapeDown;
-        m_qualityToggleWasDownLastFrame = qualityToggleDown;
-        m_titleStatsToggleWasDownLastFrame = titleStatsToggleDown;
-        m_menuUpWasDownLastFrame = menuUpDown;
-        m_menuDownWasDownLastFrame = menuDownDown;
-        m_menuConfirmWasDownLastFrame = menuConfirmDown;
+        latchInputEdges();
     }
 
     Entity Application::findCueBall() const
@@ -1132,6 +1347,7 @@ namespace BilliardsSaloon
     {
         if (m_shellState != ApplicationShellState::Gameplay)
         {
+            updateCameraRig(deltaTimeSeconds);
             return;
         }
 
@@ -1153,6 +1369,8 @@ namespace BilliardsSaloon
 
             m_currentShotResult.clear();
         }
+
+        updateCameraRig(deltaTimeSeconds);
     }
 
     void Application::render(double alpha)
@@ -1577,6 +1795,8 @@ namespace BilliardsSaloon
                 playerTargetGroupLabel(m_matchState.players[activePlayerIndex].targetGroup);
             const std::string qualityLine =
                 std::string("QUALITY ") + renderQualityLabel(m_renderQuality);
+            const std::string cameraLine =
+                std::string("CAMERA ") + cameraViewModeLabel(m_cameraRigState.mode);
 
             std::string statusLine = "STATUS READY";
             if (m_matchState.foulCommittedThisTurn)
@@ -1682,6 +1902,15 @@ namespace BilliardsSaloon
                 hintStyle
             );
 
+            renderUiOverlayText(
+                *m_basicShader,
+                *m_cubeMesh,
+                overlayFrame,
+                cameraLine,
+                hudLeft + cameraRight * 0.52f - cameraUp * 0.11f + cameraForward * 0.020f,
+                hintStyle
+            );
+
             const glm::vec3 chargeTrackCenter =
                 hudLeft + cameraRight * 0.35f - cameraUp * 0.37f + cameraForward * 0.020f;
 
@@ -1748,8 +1977,22 @@ namespace BilliardsSaloon
                 *m_basicShader,
                 *m_cubeMesh,
                 overlayFrame,
-                "ESC PAUSE   F2 QUALITY",
+                "TAB CYCLE 1 2 3 4",
                 hudLeft + cameraRight * 0.24f - cameraUp * 0.53f + cameraForward * 0.020f,
+                hintStyle
+            );
+
+            const char* cameraControlHint =
+                (m_cameraRigState.mode == CameraViewMode::FreeLook)
+                ? "J L ORBIT   I K TILT   U O ZOOM"
+                : "ESC PAUSE   F2 QUALITY";
+
+            renderUiOverlayText(
+                *m_basicShader,
+                *m_cubeMesh,
+                overlayFrame,
+                cameraControlHint,
+                hudLeft - cameraUp * 0.60f + cameraForward * 0.020f,
                 hintStyle
             );
 
@@ -2073,6 +2316,8 @@ namespace BilliardsSaloon
         title += shellStateLabel(m_shellState);
         title += " | Q:";
         title += renderQualityLabel(m_renderQuality);
+        title += " | Cam:";
+        title += cameraViewModeLabel(m_cameraRigState.mode);
 
         if (m_shellState == ApplicationShellState::MainMenu)
         {
@@ -2102,7 +2347,7 @@ namespace BilliardsSaloon
         }
         else
         {
-            title += " | Esc Pause";
+            title += " | Tab Cycle Camera | 1 Aim | 2 Overview | 3 Follow | 4 Free";
         }
 
         if (m_showPerformanceStatsInTitle && (m_titleUpdateFrameTimeSum > 0.0))
