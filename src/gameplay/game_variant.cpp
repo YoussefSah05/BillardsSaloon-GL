@@ -1,5 +1,7 @@
 #include "gameplay/game_variant.h"
 
+#include <cmath>
+
 namespace BilliardsSaloon
 {
     namespace
@@ -20,6 +22,72 @@ namespace BilliardsSaloon
             ball.shininess = 128.0f;
             ball.isCueBall = isCueBall;
             return ball;
+        }
+
+        std::vector<glm::vec3> buildTriangleRackPositions(
+            std::size_t ballCount,
+            float ballRadius,
+            const glm::vec3& apexPosition,
+            float spacingScale)
+        {
+            std::vector<glm::vec3> positions;
+            positions.reserve(ballCount);
+
+            const float diameter = 2.0f * ballRadius;
+            const float rowSpacing = std::sqrt(3.0f) * ballRadius * spacingScale;
+
+            std::size_t placed = 0;
+            for (int row = 0; placed < ballCount; ++row)
+            {
+                const int rowCount = row + 1;
+                const float z = apexPosition.z - static_cast<float>(row) * rowSpacing;
+
+                for (int col = 0; (col < rowCount) && (placed < ballCount); ++col)
+                {
+                    const float x =
+                        apexPosition.x +
+                        (static_cast<float>(col) - 0.5f * static_cast<float>(row)) * diameter * spacingScale;
+
+                    positions.push_back(glm::vec3(x, apexPosition.y, z));
+                    ++placed;
+                }
+            }
+
+            return positions;
+        }
+
+        std::vector<glm::vec3> buildDiamondRackPositions(
+            std::size_t ballCount,
+            float ballRadius,
+            const glm::vec3& apexPosition,
+            float spacingScale)
+        {
+            std::vector<glm::vec3> positions;
+            positions.reserve(ballCount);
+
+            const float diameter = 2.0f * ballRadius;
+            const float rowSpacing = std::sqrt(3.0f) * ballRadius * spacingScale;
+
+            const int rowCounts[5] = {1, 2, 3, 2, 1};
+
+            std::size_t placed = 0;
+            for (int row = 0; (row < 5) && (placed < ballCount); ++row)
+            {
+                const int rowCount = rowCounts[row];
+                const float z = apexPosition.z - static_cast<float>(row) * rowSpacing;
+
+                for (int col = 0; (col < rowCount) && (placed < ballCount); ++col)
+                {
+                    const float x =
+                        apexPosition.x +
+                        (static_cast<float>(col) - 0.5f * static_cast<float>(rowCount - 1)) * diameter * spacingScale;
+
+                    positions.push_back(glm::vec3(x, apexPosition.y, z));
+                    ++placed;
+                }
+            }
+
+            return positions;
         }
     }
 
@@ -132,5 +200,29 @@ namespace BilliardsSaloon
         }();
 
         return variant;
+    }
+
+    std::vector<glm::vec3> buildRackPositions(const GameVariantDefinition& variant)
+    {
+        switch (variant.rack.pattern)
+        {
+            case RackPattern::Triangle:
+                return buildTriangleRackPositions(
+                    variant.objectBalls.size(),
+                    variant.table.ballRadius,
+                    variant.rack.apexPosition,
+                    variant.rack.spacingScale
+                );
+
+            case RackPattern::Diamond:
+                return buildDiamondRackPositions(
+                    variant.objectBalls.size(),
+                    variant.table.ballRadius,
+                    variant.rack.apexPosition,
+                    variant.rack.spacingScale
+                );
+        }
+
+        return {};
     }
 }

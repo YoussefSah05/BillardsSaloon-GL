@@ -56,6 +56,7 @@ add_library(bs_game STATIC
     src/core/asset_paths.cpp
     src/gameplay/shot_state.cpp
     src/gameplay/game_variant.cpp
+    src/gameplay/match_session.cpp
     src/gameplay/match_state.cpp
     src/gameplay/shot_result.cpp
     src/gameplay/turn_rules.cpp
@@ -72,8 +73,12 @@ bs_set_warnings(bs_game)
 add_executable(BilliardsSaloon
     src/app/main.cpp
     src/app/application.cpp
+    src/app/overlay_screens.cpp
+    src/app/saloon_scene.cpp
+    src/platform/input.cpp
     src/platform/window.cpp
     src/platform/timer.cpp
+    src/render/scene_renderer.cpp
     src/render/shader.cpp
     src/render/mesh.cpp
     src/render/camera.cpp
@@ -122,6 +127,8 @@ if(BS_BUILD_TESTS)
         tests/test_main.cpp
         tests/test_registry.cpp
         tests/test_turn_rules.cpp
+        tests/test_match_session.cpp
+        tests/test_game_variant.cpp
         tests/test_physics.cpp
         tests/test_asset_paths.cpp
     )

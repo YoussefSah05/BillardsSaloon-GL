@@ -64,4 +64,7 @@ namespace BilliardsSaloon
 
     const GameVariantDefinition& eightBallVariant();
     const GameVariantDefinition& nineBallVariant();
+
+    // Rest positions of the object balls, in the order of variant.objectBalls.
+    [[nodiscard]] std::vector<glm::vec3> buildRackPositions(const GameVariantDefinition& variant);
 }

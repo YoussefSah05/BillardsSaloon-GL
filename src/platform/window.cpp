@@ -47,9 +47,9 @@ namespace BilliardsSaloon
 
         glfwMakeContextCurrent(m_handle);
 
-        // Disable VSync initially so render rate is not forced to 60 Hz.
-        // Physics will be fixed-rate independently.
-        glfwSwapInterval(0);
+        // VSync on: an uncapped frame rate only burns GPU time, and physics
+        // already runs at its own fixed rate. A settings toggle comes later.
+        glfwSwapInterval(1);
 
         glfwSetWindowUserPointer(m_handle, this);
         glfwSetFramebufferSizeCallback(m_handle, &Window::framebufferSizeCallback);
