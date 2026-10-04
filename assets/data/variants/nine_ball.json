@@ -1,0 +1,117 @@
+{
+  "discipline": "nine_ball",
+  "displayName": "9-Ball",
+  "table": "table_10ft",
+  "rack": {
+    "pattern": "diamond",
+    "apex": [
+      0.0,
+      -0.18
+    ],
+    "spacingScale": 1.0
+  },
+  "cueBall": {
+    "name": "Cue Ball",
+    "number": 0,
+    "rule": "cue",
+    "color": [
+      0.93,
+      0.93,
+      0.91
+    ],
+    "specularStrength": 0.95,
+    "shininess": 128.0
+  },
+  "objectBalls": [
+    {
+      "name": "1 Ball",
+      "number": 1,
+      "rule": "numbered",
+      "color": [
+        0.86,
+        0.72,
+        0.1
+      ]
+    },
+    {
+      "name": "2 Ball",
+      "number": 2,
+      "rule": "numbered",
+      "color": [
+        0.1,
+        0.28,
+        0.78
+      ]
+    },
+    {
+      "name": "3 Ball",
+      "number": 3,
+      "rule": "numbered",
+      "color": [
+        0.78,
+        0.1,
+        0.1
+      ]
+    },
+    {
+      "name": "4 Ball",
+      "number": 4,
+      "rule": "numbered",
+      "color": [
+        0.42,
+        0.12,
+        0.55
+      ]
+    },
+    {
+      "name": "9 Ball",
+      "number": 9,
+      "rule": "numbered",
+      "color": [
+        0.86,
+        0.72,
+        0.1
+      ]
+    },
+    {
+      "name": "5 Ball",
+      "number": 5,
+      "rule": "numbered",
+      "color": [
+        0.88,
+        0.42,
+        0.08
+      ]
+    },
+    {
+      "name": "6 Ball",
+      "number": 6,
+      "rule": "numbered",
+      "color": [
+        0.08,
+        0.45,
+        0.2
+      ]
+    },
+    {
+      "name": "7 Ball",
+      "number": 7,
+      "rule": "numbered",
+      "color": [
+        0.45,
+        0.06,
+        0.06
+      ]
+    },
+    {
+      "name": "8 Ball",
+      "number": 8,
+      "rule": "numbered",
+      "color": [
+        0.05,
+        0.05,
+        0.06
+      ]
+    }
+  ]
+}

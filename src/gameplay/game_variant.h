@@ -4,6 +4,7 @@
 
 #include <glm/glm.hpp>
 
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -21,12 +22,30 @@ namespace BilliardsSaloon
         Diamond
     };
 
+    // Contact and cloth coefficients. Gameplay-tuned, guided by common
+    // pool-physics references (see TableBoundsComponent for ranges).
+    struct TablePhysicsSpecification
+    {
+        float cushionRestitution {0.92f};
+        float cushionFriction {0.14f};
+        float ballRestitution {0.96f};
+        float ballFriction {0.05f};
+        float slidingFriction {0.20f};
+        float rollingFriction {0.010f};
+        float spinningFriction {0.015f};
+        float stopSpeed {0.006f};
+    };
+
     struct TableSpecification
     {
+        std::string name {"10 ft table"};
         float clothWidth {2.84f};
         float clothDepth {1.42f};
         float ballRadius {0.028575f};
         float ballMassKg {0.17f};
+        float cornerPocketRadius {0.090f};
+        float sidePocketRadius {0.080f};
+        TablePhysicsSpecification physics {};
     };
 
     struct BallSpawnDefinition
@@ -62,6 +81,13 @@ namespace BilliardsSaloon
         RackSpecification rack;
     };
 
+    // Loads a variant from JSON. The "table" field names a file in the
+    // sibling tables/ directory (data/variants/x.json -> data/tables/<table>.json).
+    // Throws std::runtime_error naming the file and the problem on invalid data.
+    [[nodiscard]] GameVariantDefinition loadGameVariant(const std::filesystem::path& variantFile);
+    [[nodiscard]] TableSpecification loadTableSpecification(const std::filesystem::path& tableFile);
+
+    // Built-in variants from assets/data/variants, loaded once on first use.
     const GameVariantDefinition& eightBallVariant();
     const GameVariantDefinition& nineBallVariant();
 

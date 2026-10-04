@@ -34,6 +34,13 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(glm)
 
+FetchContent_Declare(
+    nlohmann_json
+    URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
+    URL_HASH SHA256=d6c65aca6b1ed68e7a182f4757257b107ae403032760ed6ef121c9d55e81757d
+)
+FetchContent_MakeAvailable(nlohmann_json)
+
 find_package(OpenGL REQUIRED)
 
 function(bs_set_warnings target)
@@ -64,7 +71,10 @@ add_library(bs_game STATIC
 )
 
 target_include_directories(bs_game PUBLIC src)
-target_link_libraries(bs_game PUBLIC glm::glm)
+target_link_libraries(bs_game
+    PUBLIC glm::glm
+    PRIVATE nlohmann_json::nlohmann_json
+)
 target_compile_definitions(bs_game PRIVATE
     BS_SOURCE_ASSET_DIR="${CMAKE_SOURCE_DIR}/assets"
 )
@@ -129,11 +139,15 @@ if(BS_BUILD_TESTS)
         tests/test_turn_rules.cpp
         tests/test_match_session.cpp
         tests/test_game_variant.cpp
+        tests/test_game_data.cpp
         tests/test_physics.cpp
         tests/test_asset_paths.cpp
     )
 
     target_link_libraries(bs_tests PRIVATE bs_game doctest::doctest)
+    target_compile_definitions(bs_tests PRIVATE
+        BS_TEST_SCRATCH_DIR="${CMAKE_CURRENT_BINARY_DIR}/test_scratch"
+    )
     bs_set_warnings(bs_tests)
 
     add_test(NAME bs_tests COMMAND bs_tests)

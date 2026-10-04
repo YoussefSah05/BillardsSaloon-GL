@@ -75,19 +75,21 @@ namespace BilliardsSaloon
     void MatchSession::spawnTable()
     {
         m_tableEntity = m_registry.createEntity();
+        const TableSpecification& table = m_variant->table;
+
         m_registry.emplace<TableBoundsComponent>(m_tableEntity, TableBoundsComponent{
-            .halfWidth = 0.5f * m_variant->table.clothWidth,
-            .halfDepth = 0.5f * m_variant->table.clothDepth,
-            .railRestitution = 0.92f,
-            .ballRestitution = 0.96f,
-            .railContactFrictionCoefficient = 0.14f,
-            .ballContactFrictionCoefficient = 0.05f,
-            .slidingFrictionCoefficient = 0.20f,
-            .rollingFrictionCoefficient = 0.010f,
-            .spinningFrictionCoefficient = 0.015f,
-            .stopSpeedThreshold = 0.006f,
-            .cornerPocketRadius = 0.090f,
-            .sidePocketRadius = 0.080f
+            .halfWidth = 0.5f * table.clothWidth,
+            .halfDepth = 0.5f * table.clothDepth,
+            .railRestitution = table.physics.cushionRestitution,
+            .ballRestitution = table.physics.ballRestitution,
+            .railContactFrictionCoefficient = table.physics.cushionFriction,
+            .ballContactFrictionCoefficient = table.physics.ballFriction,
+            .slidingFrictionCoefficient = table.physics.slidingFriction,
+            .rollingFrictionCoefficient = table.physics.rollingFriction,
+            .spinningFrictionCoefficient = table.physics.spinningFriction,
+            .stopSpeedThreshold = table.physics.stopSpeed,
+            .cornerPocketRadius = table.cornerPocketRadius,
+            .sidePocketRadius = table.sidePocketRadius
         });
     }
 

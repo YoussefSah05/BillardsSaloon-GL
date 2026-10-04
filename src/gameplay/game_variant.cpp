@@ -1,27 +1,122 @@
 #include "gameplay/game_variant.h"
 
+#include "core/asset_paths.h"
+
+#include <nlohmann/json.hpp>
+
 #include <cmath>
+#include <fstream>
+#include <set>
+#include <stdexcept>
 
 namespace BilliardsSaloon
 {
     namespace
     {
-        BallSpawnDefinition makeBall(
-            const std::string& name,
-            int number,
-            BallRuleTag ruleTag,
-            const glm::vec3& albedo,
-            bool isCueBall = false)
+        using Json = nlohmann::json;
+
+        [[noreturn]] void failData(const std::filesystem::path& file, const std::string& message)
+        {
+            throw std::runtime_error("Invalid game data in " + file.string() + ": " + message);
+        }
+
+        Json readJsonFile(const std::filesystem::path& file)
+        {
+            std::ifstream stream(file);
+            if (!stream)
+            {
+                throw std::runtime_error("Cannot open game data file: " + file.string());
+            }
+
+            try
+            {
+                return Json::parse(stream);
+            }
+            catch (const Json::parse_error& error)
+            {
+                failData(file, error.what());
+            }
+        }
+
+        glm::vec3 readColor(const Json& value)
+        {
+            if (!value.is_array() || (value.size() != 3))
+            {
+                throw std::invalid_argument("\"color\" must be an array of three numbers");
+            }
+
+            return glm::vec3(value[0].get<float>(), value[1].get<float>(), value[2].get<float>());
+        }
+
+        BallRuleTag readRuleTag(const std::string& rule)
+        {
+            if (rule == "cue") return BallRuleTag::Cue;
+            if (rule == "solid") return BallRuleTag::Solid;
+            if (rule == "stripe") return BallRuleTag::Stripe;
+            if (rule == "eight") return BallRuleTag::Eight;
+            if (rule == "numbered") return BallRuleTag::Numbered;
+            if (rule == "red") return BallRuleTag::Red;
+            if (rule == "color") return BallRuleTag::Color;
+            throw std::invalid_argument("unknown ball rule \"" + rule + "\"");
+        }
+
+        GameDiscipline readDiscipline(const std::string& discipline)
+        {
+            if (discipline == "eight_ball") return GameDiscipline::EightBall;
+            if (discipline == "nine_ball") return GameDiscipline::NineBall;
+            throw std::invalid_argument("unknown discipline \"" + discipline + "\"");
+        }
+
+        RackPattern readRackPattern(const std::string& pattern)
+        {
+            if (pattern == "triangle") return RackPattern::Triangle;
+            if (pattern == "diamond") return RackPattern::Diamond;
+            throw std::invalid_argument("unknown rack pattern \"" + pattern + "\"");
+        }
+
+        BallSpawnDefinition readBall(const Json& value)
         {
             BallSpawnDefinition ball;
-            ball.name = name;
-            ball.number = number;
-            ball.ruleTag = ruleTag;
-            ball.albedo = albedo;
-            ball.specularStrength = 0.92f;
-            ball.shininess = 128.0f;
-            ball.isCueBall = isCueBall;
+            ball.name = value.at("name").get<std::string>();
+            ball.number = value.at("number").get<int>();
+            ball.ruleTag = readRuleTag(value.at("rule").get<std::string>());
+            ball.albedo = readColor(value.at("color"));
+            ball.specularStrength = value.value("specularStrength", 0.92f);
+            ball.shininess = value.value("shininess", 128.0f);
+            ball.isCueBall = (ball.ruleTag == BallRuleTag::Cue);
             return ball;
+        }
+
+        void validateVariant(const GameVariantDefinition& variant)
+        {
+            if (!variant.cueBall.isCueBall)
+            {
+                throw std::invalid_argument("\"cueBall\" must use rule \"cue\"");
+            }
+
+            if (variant.objectBalls.empty())
+            {
+                throw std::invalid_argument("\"objectBalls\" must not be empty");
+            }
+
+            if ((variant.rack.pattern == RackPattern::Diamond) && (variant.objectBalls.size() > 9))
+            {
+                throw std::invalid_argument("a diamond rack holds at most 9 balls");
+            }
+
+            std::set<int> numbers {variant.cueBall.number};
+            for (const BallSpawnDefinition& ball : variant.objectBalls)
+            {
+                if (ball.isCueBall)
+                {
+                    throw std::invalid_argument("object ball \"" + ball.name + "\" uses rule \"cue\"");
+                }
+
+                if (!numbers.insert(ball.number).second)
+                {
+                    throw std::invalid_argument("ball number " + std::to_string(ball.number) + " is used twice");
+                }
+            }
         }
 
         std::vector<glm::vec3> buildTriangleRackPositions(
@@ -91,114 +186,108 @@ namespace BilliardsSaloon
         }
     }
 
+    TableSpecification loadTableSpecification(const std::filesystem::path& tableFile)
+    {
+        const Json json = readJsonFile(tableFile);
+
+        try
+        {
+            TableSpecification table;
+            table.name = json.at("name").get<std::string>();
+            table.clothWidth = json.at("clothWidth").get<float>();
+            table.clothDepth = json.at("clothDepth").get<float>();
+            table.ballRadius = json.at("ballRadius").get<float>();
+            table.ballMassKg = json.at("ballMassKg").get<float>();
+
+            const Json& pockets = json.at("pockets");
+            table.cornerPocketRadius = pockets.at("cornerRadius").get<float>();
+            table.sidePocketRadius = pockets.at("sideRadius").get<float>();
+
+            const Json& cushion = json.at("cushion");
+            table.physics.cushionRestitution = cushion.at("restitution").get<float>();
+            table.physics.cushionFriction = cushion.at("friction").get<float>();
+
+            const Json& ballContact = json.at("ballContact");
+            table.physics.ballRestitution = ballContact.at("restitution").get<float>();
+            table.physics.ballFriction = ballContact.at("friction").get<float>();
+
+            const Json& cloth = json.at("cloth");
+            table.physics.slidingFriction = cloth.at("slidingFriction").get<float>();
+            table.physics.rollingFriction = cloth.at("rollingFriction").get<float>();
+            table.physics.spinningFriction = cloth.at("spinningFriction").get<float>();
+            table.physics.stopSpeed = cloth.at("stopSpeed").get<float>();
+
+            if ((table.clothWidth <= 0.0f) || (table.clothDepth <= 0.0f) ||
+                (table.ballRadius <= 0.0f) || (table.ballMassKg <= 0.0f))
+            {
+                throw std::invalid_argument("table and ball dimensions must be positive");
+            }
+
+            return table;
+        }
+        catch (const std::exception& error)
+        {
+            failData(tableFile, error.what());
+        }
+    }
+
+    GameVariantDefinition loadGameVariant(const std::filesystem::path& variantFile)
+    {
+        const Json json = readJsonFile(variantFile);
+
+        GameVariantDefinition variant;
+        std::string tableName;
+
+        try
+        {
+            variant.discipline = readDiscipline(json.at("discipline").get<std::string>());
+            variant.displayName = json.at("displayName").get<std::string>();
+            tableName = json.at("table").get<std::string>();
+
+            const Json& rack = json.at("rack");
+            variant.rack.pattern = readRackPattern(rack.at("pattern").get<std::string>());
+            variant.rack.spacingScale = rack.value("spacingScale", 1.0f);
+
+            const Json& apex = rack.at("apex");
+            if (!apex.is_array() || (apex.size() != 2))
+            {
+                throw std::invalid_argument("\"rack.apex\" must be [x, z]");
+            }
+            variant.rack.apexPosition = glm::vec3(apex[0].get<float>(), 0.0f, apex[1].get<float>());
+
+            variant.cueBall = readBall(json.at("cueBall"));
+            for (const Json& ball : json.at("objectBalls"))
+            {
+                variant.objectBalls.push_back(readBall(ball));
+            }
+
+            validateVariant(variant);
+        }
+        catch (const std::exception& error)
+        {
+            failData(variantFile, error.what());
+        }
+
+        variant.table = loadTableSpecification(
+            variantFile.parent_path().parent_path() / "tables" / (tableName + ".json")
+        );
+
+        // Balls rest on the cloth.
+        variant.rack.apexPosition.y = variant.table.ballRadius;
+        return variant;
+    }
+
     const GameVariantDefinition& eightBallVariant()
     {
-        static const GameVariantDefinition variant = []()
-        {
-            GameVariantDefinition v;
-            v.discipline = GameDiscipline::EightBall;
-            v.displayName = "8-Ball";
-
-            v.table = TableSpecification{
-                .clothWidth = 2.84f,
-                .clothDepth = 1.42f,
-                .ballRadius = 0.028575f,
-                .ballMassKg = 0.17f
-            };
-
-            v.cueBall = BallSpawnDefinition{
-                .name = "Cue Ball",
-                .number = 0,
-                .ruleTag = BallRuleTag::Cue,
-                .albedo = glm::vec3(0.93f, 0.93f, 0.91f),
-                .specularStrength = 0.95f,
-                .shininess = 128.0f,
-                .isCueBall = true
-            };
-
-            v.rack = RackSpecification{
-                .pattern = RackPattern::Triangle,
-                .apexPosition = glm::vec3(0.0f, v.table.ballRadius, -0.18f),
-                .spacingScale = 1.0f
-            };
-
-            // Ordered in rack-fill order.
-            // Row fill order for triangle:
-            // 1, 2 3, 4 5 6, 7 8 9 10, 11 12 13 14 15
-            //
-            // This puts the 8-ball in the center of row 3 (index 4).
-            v.objectBalls = {
-                makeBall("1 Ball", 1, BallRuleTag::Solid,  glm::vec3(0.86f, 0.72f, 0.10f)),
-                makeBall("9 Ball", 9, BallRuleTag::Stripe, glm::vec3(0.86f, 0.72f, 0.10f)),
-                makeBall("2 Ball", 2, BallRuleTag::Solid,  glm::vec3(0.10f, 0.28f, 0.78f)),
-                makeBall("3 Ball", 3, BallRuleTag::Solid,  glm::vec3(0.78f, 0.10f, 0.10f)),
-                makeBall("8 Ball", 8, BallRuleTag::Eight,  glm::vec3(0.05f, 0.05f, 0.06f)),
-                makeBall("10 Ball",10, BallRuleTag::Stripe,glm::vec3(0.10f, 0.28f, 0.78f)),
-                makeBall("11 Ball",11, BallRuleTag::Stripe,glm::vec3(0.78f, 0.10f, 0.10f)),
-                makeBall("4 Ball", 4, BallRuleTag::Solid,  glm::vec3(0.42f, 0.12f, 0.55f)),
-                makeBall("5 Ball", 5, BallRuleTag::Solid,  glm::vec3(0.88f, 0.42f, 0.08f)),
-                makeBall("12 Ball",12, BallRuleTag::Stripe,glm::vec3(0.42f, 0.12f, 0.55f)),
-                makeBall("6 Ball", 6, BallRuleTag::Solid,  glm::vec3(0.08f, 0.45f, 0.20f)),
-                makeBall("13 Ball",13, BallRuleTag::Stripe,glm::vec3(0.88f, 0.42f, 0.08f)),
-                makeBall("14 Ball",14, BallRuleTag::Stripe,glm::vec3(0.08f, 0.45f, 0.20f)),
-                makeBall("7 Ball", 7, BallRuleTag::Solid,  glm::vec3(0.45f, 0.06f, 0.06f)),
-                makeBall("15 Ball",15, BallRuleTag::Stripe,glm::vec3(0.45f, 0.06f, 0.06f))
-            };
-
-            return v;
-        }();
-
+        static const GameVariantDefinition variant =
+            loadGameVariant(resolveAssetPath("data/variants/eight_ball.json"));
         return variant;
     }
 
     const GameVariantDefinition& nineBallVariant()
     {
-        static const GameVariantDefinition variant = []()
-        {
-            GameVariantDefinition v;
-            v.discipline = GameDiscipline::NineBall;
-            v.displayName = "9-Ball";
-
-            v.table = TableSpecification{
-                .clothWidth = 2.84f,
-                .clothDepth = 1.42f,
-                .ballRadius = 0.028575f,
-                .ballMassKg = 0.17f
-            };
-
-            v.cueBall = BallSpawnDefinition{
-                .name = "Cue Ball",
-                .number = 0,
-                .ruleTag = BallRuleTag::Cue,
-                .albedo = glm::vec3(0.93f, 0.93f, 0.91f),
-                .specularStrength = 0.95f,
-                .shininess = 128.0f,
-                .isCueBall = true
-            };
-
-            v.rack = RackSpecification{
-                .pattern = RackPattern::Diamond,
-                .apexPosition = glm::vec3(0.0f, v.table.ballRadius, -0.18f),
-                .spacingScale = 1.0f
-            };
-
-            // Diamond fill order: 1, 2 3, 4 5 6, 7 8, 9
-            // 1 at apex, 9 in center of the diamond.
-            v.objectBalls = {
-                makeBall("1 Ball", 1, BallRuleTag::Numbered, glm::vec3(0.86f, 0.72f, 0.10f)),
-                makeBall("2 Ball", 2, BallRuleTag::Numbered, glm::vec3(0.10f, 0.28f, 0.78f)),
-                makeBall("3 Ball", 3, BallRuleTag::Numbered, glm::vec3(0.78f, 0.10f, 0.10f)),
-                makeBall("4 Ball", 4, BallRuleTag::Numbered, glm::vec3(0.42f, 0.12f, 0.55f)),
-                makeBall("9 Ball", 9, BallRuleTag::Numbered, glm::vec3(0.86f, 0.72f, 0.10f)),
-                makeBall("5 Ball", 5, BallRuleTag::Numbered, glm::vec3(0.88f, 0.42f, 0.08f)),
-                makeBall("6 Ball", 6, BallRuleTag::Numbered, glm::vec3(0.08f, 0.45f, 0.20f)),
-                makeBall("7 Ball", 7, BallRuleTag::Numbered, glm::vec3(0.45f, 0.06f, 0.06f)),
-                makeBall("8 Ball", 8, BallRuleTag::Numbered, glm::vec3(0.05f, 0.05f, 0.06f))
-            };
-
-            return v;
-        }();
-
+        static const GameVariantDefinition variant =
+            loadGameVariant(resolveAssetPath("data/variants/nine_ball.json"));
         return variant;
     }
 
