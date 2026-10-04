@@ -12,6 +12,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(BS_BUILD_TESTS "Build the unit test executable" ON)
+option(BS_WARNINGS_AS_ERRORS "Treat compiler warnings in project code as errors" OFF)
 
 include(FetchContent)
 
@@ -38,8 +39,14 @@ find_package(OpenGL REQUIRED)
 function(bs_set_warnings target)
     if(MSVC)
         target_compile_options(${target} PRIVATE /W4 /permissive- /EHsc)
+        if(BS_WARNINGS_AS_ERRORS)
+            target_compile_options(${target} PRIVATE /WX)
+        endif()
     else()
         target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+        if(BS_WARNINGS_AS_ERRORS)
+            target_compile_options(${target} PRIVATE -Werror)
+        endif()
     endif()
 endfunction()
 
