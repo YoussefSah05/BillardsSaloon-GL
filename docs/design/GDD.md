@@ -13,7 +13,7 @@ tournament. Three pillars drive every decision:
 2. **Authentic rules** — WPA World Standardized Rules for 8-ball, 9-ball and
    10-ball, enforced by an on-screen referee.
 3. **Broadcast feel** — TV camera director, scorebug, shot clock, replays and
-   post-shot analysis.
+   post-shot analysis, in a frontend styled like a sports broadcast (see `UX.md`).
 
 ## Modes (all required for v1.0)
 
@@ -44,6 +44,9 @@ tournament. Three pillars drive every decision:
   predicted path (Practice only).
 
 ## Presentation
+
+Frontend flow, HUD, menus, design language and accessibility are specified
+in [`UX.md`](UX.md).
 
 - Director camera: aim view, overhead, follow-ball, and cut-to-pocket using the
   known future of the simulated shot.
