@@ -112,6 +112,7 @@ endfunction()
 # so it can be linked by unit tests, tools and (later) the AI.
 add_library(bs_game STATIC
     src/core/asset_paths.cpp
+    src/core/gamepad_math.cpp
     src/core/launch_options.cpp
     src/core/settings.cpp
     src/gameplay/shot_state.cpp
@@ -204,6 +205,7 @@ if(BS_BUILD_TESTS)
         tests/test_game_data.cpp
         tests/test_launch_options.cpp
         tests/test_settings.cpp
+        tests/test_gamepad_math.cpp
         tests/test_physics.cpp
         tests/test_asset_paths.cpp
     )

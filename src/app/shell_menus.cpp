@@ -38,6 +38,7 @@ namespace BilliardsSaloon
 
         m_version = "v" BS_VERSION;
         model.Bind("version", &m_version);
+        model.Bind("gamepad", &m_gamepad);
         model.Bind("frame_winner", &m_frameWinner);
         model.Bind("frame_detail", &m_frameDetail);
 
@@ -87,6 +88,12 @@ namespace BilliardsSaloon
         {
             m_frameOver->Show(Rml::ModalFlag::None, Rml::FocusFlag::Auto);
         }
+    }
+
+    void ShellMenus::setGamepadPrompts(bool gamepad)
+    {
+        m_gamepad = gamepad;
+        m_model.DirtyVariable("gamepad");
     }
 
     void ShellMenus::setFrameResult(const std::string& headline, const std::string& detail)

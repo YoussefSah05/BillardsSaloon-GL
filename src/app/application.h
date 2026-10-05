@@ -2,6 +2,7 @@
 
 #include "app/hud_screen.h"
 #include "app/settings_screen.h"
+#include "core/gamepad_math.h"
 #include "core/settings.h"
 #include "app/shell_menus.h"
 #include "core/launch_options.h"
@@ -41,6 +42,10 @@ namespace BilliardsSaloon
         void processInput(float frameTimeSeconds);
         void processGlobalShortcuts();
         void processGameplayInput(float frameTimeSeconds);
+
+        // D-pad / left stick / A / B drive the menus through the UI's own
+        // keyboard navigation. Returns true when B (back) was pressed.
+        bool processGamepadMenus(float frameTimeSeconds);
         void updateCursorCapture();
 
         void setShellState(ApplicationShellState state);
@@ -102,6 +107,12 @@ namespace BilliardsSaloon
         // Menu camera: slow orbit time and the sideways lens shift that puts
         // the table beside the menu on the main hub.
         double m_menuOrbitSeconds {0.0};
+
+        HoldRepeater m_navUp {0.35f, 0.11f};
+        HoldRepeater m_navDown {0.35f, 0.11f};
+        HoldRepeater m_navLeft {0.35f, 0.11f};
+        HoldRepeater m_navRight {0.35f, 0.11f};
+        bool m_showGamepadPrompts {false};
         float m_lensShift {0.0f};
 
         // A click or key that started the match (or resumed it) may still be

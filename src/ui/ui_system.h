@@ -44,6 +44,10 @@ namespace BilliardsSaloon
         // Adds the reduced-motion class to every document, which turns off transitions.
         void setReducedMotion(bool enabled);
 
+        // Sends a key press to the UI as if typed (gamepad menu navigation).
+        // key is an Rml::Input::KeyIdentifier.
+        void injectKey(int key);
+
         // True when the last key event was used by the UI (e.g. menu navigation).
         [[nodiscard]] bool consumedLastKey() const { return m_consumedLastKey; }
 

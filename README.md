@@ -45,19 +45,21 @@ ctest --test-dir build --output-on-failure   # unit tests
 
 ## Controls
 
-| Action | Mouse | Keyboard |
-|--------|-------|----------|
-| Aim | Move the mouse (hold Shift for fine aim) | A / D (Shift for fine aim) |
-| Shoot | Hold left button, drag back for power, release | Hold Space, release |
-| Cancel a shot | Push the mouse forward again and release | — |
-| Spin (cue tip offset) | Hold right button and move | Arrow keys, C to centre |
-| Camera views | — | Tab cycles, 1 aim, 2 overview, 3 follow, 4 free look |
-| Free look | Right-drag to orbit, wheel to zoom | J/L orbit, I/K tilt, U/O zoom |
-| Menus | Point and click | Up/Down, Enter |
-| Pause | — | Esc |
-| Fullscreen | Settings | F11, Alt+Enter, or Cmd+Ctrl+F on macOS |
-| Settings | Main or pause menu | Left/Right change a value, Esc goes back |
-| Graphics quality / FPS in title | — | F2 / F1 |
+| Action | Mouse | Keyboard | Gamepad |
+|--------|-------|----------|---------|
+| Aim | Move the mouse (Shift: fine) | A / D (Shift: fine) | Left stick (LB: fine) |
+| Shoot | Hold left button, drag back, release | Hold Space, release | Hold A, release |
+| Cancel a shot | Push forward again and release | — | — |
+| Spin (cue tip offset) | Hold right button and move | Arrow keys, C to centre | Right stick, X to centre |
+| Camera views | — | Tab cycles; 1 aim, 2 overview, 3 follow, 4 free look | Y cycles |
+| Free look | Right-drag to orbit, wheel to zoom | J/L orbit, I/K tilt, U/O zoom | Right stick orbit, triggers zoom |
+| Menus | Point and click | Up/Down, Enter, Esc | D-pad or left stick, A, B |
+| Pause | — | Esc | Start |
+| Settings | Main or pause menu | Left/Right change a value | D-pad Left/Right |
+| Fullscreen | Settings | F11, Alt+Enter, or Cmd+Ctrl+F on macOS | Settings |
+
+On-screen prompts switch between keyboard/mouse and gamepad wording
+depending on the device used last.
 
 ## Developer options
 

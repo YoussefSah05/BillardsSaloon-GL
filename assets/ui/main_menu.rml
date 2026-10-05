@@ -43,10 +43,14 @@
             <button class="menu-item" id="quit" data-event-click="quit"><span class="label">QUIT</span></button>
         </div>
     </div>
-    <div class="hints">
+    <div class="hints" data-visible="!gamepad">
         <span class="hint"><span class="key">UP / DOWN</span>Select</span>
         <span class="hint"><span class="key">ENTER</span>or click to confirm</span>
         <span class="hint"><span class="key">ESC</span>Quit</span>
+    </div>
+    <div class="hints" data-visible="gamepad">
+        <span class="hint"><span class="key">D-PAD</span>Select</span>
+        <span class="hint"><span class="key pad">A</span>Confirm</span>
     </div>
 </body>
 </rml>

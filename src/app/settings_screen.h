@@ -37,11 +37,14 @@ namespace BilliardsSaloon
         void setSettings(const GameSettings& settings);
         [[nodiscard]] const GameSettings& settings() const { return m_settings; }
 
+        void setGamepadPrompts(bool gamepad);
+
     private:
         void change(int row, int direction);
         void refreshAll();
 
         GameSettings m_settings;
+        bool m_gamepad {false};
         SettingsScreenActions m_actions;
         Rml::DataModelHandle m_model;
         Rml::ElementDocument* m_document {nullptr};

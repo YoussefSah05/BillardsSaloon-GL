@@ -44,6 +44,9 @@ namespace BilliardsSaloon
         void show(MenuScreen screen);
         [[nodiscard]] MenuScreen shown() const { return m_shown; }
 
+        // Switch hint lines between keyboard/mouse and gamepad wording.
+        void setGamepadPrompts(bool gamepad);
+
         // Text for the frame-over card, e.g. "PLAYER 1 WINS THE FRAME".
         void setFrameResult(const std::string& headline, const std::string& detail);
 
@@ -57,6 +60,7 @@ namespace BilliardsSaloon
         std::string m_frameWinner;
         std::string m_frameDetail;
         std::string m_version;
+        bool m_gamepad {false};
         MenuScreen m_shown {MenuScreen::None};
     };
 }

@@ -5,6 +5,7 @@
 #include "scene/components.h"
 
 #include <GLFW/glfw3.h>
+#include <RmlUi/Core/Input.h>
 
 #include <algorithm>
 #include <cctype>
@@ -262,6 +263,10 @@ namespace BilliardsSaloon
 
         processGlobalShortcuts();
 
+        const bool backPressed =
+            (m_shellState != ApplicationShellState::Gameplay) && processGamepadMenus(frameTimeSeconds);
+        const bool startPressed = m_input.gamepadPressed(GLFW_GAMEPAD_BUTTON_START);
+
         switch (m_shellState)
         {
             case ApplicationShellState::Title:
@@ -280,7 +285,7 @@ namespace BilliardsSaloon
                 break;
 
             case ApplicationShellState::PauseMenu:
-                if (m_input.wasPressed(GLFW_KEY_ESCAPE))
+                if (m_input.wasPressed(GLFW_KEY_ESCAPE) || backPressed || startPressed)
                 {
                     setShellState(ApplicationShellState::Gameplay);
                 }
@@ -294,7 +299,7 @@ namespace BilliardsSaloon
                 break;
 
             case ApplicationShellState::Settings:
-                if (m_input.wasPressed(GLFW_KEY_ESCAPE))
+                if (m_input.wasPressed(GLFW_KEY_ESCAPE) || backPressed)
                 {
                     closeSettings();
                 }
@@ -306,6 +311,47 @@ namespace BilliardsSaloon
         }
 
         updateCursorCapture();
+
+        // Prompts follow the device used last; tell every screen when it changes.
+        const bool gamepadPrompts = m_input.lastDevice() == InputDevice::Gamepad;
+        if (gamepadPrompts != m_showGamepadPrompts)
+        {
+            m_showGamepadPrompts = gamepadPrompts;
+            m_menus->setGamepadPrompts(gamepadPrompts);
+            m_settingsScreen->setGamepadPrompts(gamepadPrompts);
+        }
+    }
+
+    bool Application::processGamepadMenus(float frameTimeSeconds)
+    {
+        if (!m_input.hasGamepad())
+        {
+            return false;
+        }
+
+        const float stickX = m_input.gamepadAxis(GLFW_GAMEPAD_AXIS_LEFT_X);
+        const float stickY = m_input.gamepadAxis(GLFW_GAMEPAD_AXIS_LEFT_Y);
+        constexpr float STICK_AS_DPAD = 0.5f;
+
+        const auto send = [this](int steps, Rml::Input::KeyIdentifier key)
+        {
+            for (int i = 0; i < steps; ++i)
+            {
+                m_ui->injectKey(key);
+            }
+        };
+
+        send(m_navUp.update(m_input.gamepadDown(GLFW_GAMEPAD_BUTTON_DPAD_UP) || (stickY < -STICK_AS_DPAD), frameTimeSeconds), Rml::Input::KI_UP);
+        send(m_navDown.update(m_input.gamepadDown(GLFW_GAMEPAD_BUTTON_DPAD_DOWN) || (stickY > STICK_AS_DPAD), frameTimeSeconds), Rml::Input::KI_DOWN);
+        send(m_navLeft.update(m_input.gamepadDown(GLFW_GAMEPAD_BUTTON_DPAD_LEFT) || (stickX < -STICK_AS_DPAD), frameTimeSeconds), Rml::Input::KI_LEFT);
+        send(m_navRight.update(m_input.gamepadDown(GLFW_GAMEPAD_BUTTON_DPAD_RIGHT) || (stickX > STICK_AS_DPAD), frameTimeSeconds), Rml::Input::KI_RIGHT);
+
+        if (m_input.gamepadPressed(GLFW_GAMEPAD_BUTTON_A))
+        {
+            m_ui->injectKey(Rml::Input::KI_RETURN);
+        }
+
+        return m_input.gamepadPressed(GLFW_GAMEPAD_BUTTON_B);
     }
 
     void Application::updateCursorCapture()
@@ -358,13 +404,13 @@ namespace BilliardsSaloon
 
     void Application::processGameplayInput(float frameTimeSeconds)
     {
-        if (m_input.wasPressed(GLFW_KEY_ESCAPE))
+        if (m_input.wasPressed(GLFW_KEY_ESCAPE) || m_input.gamepadPressed(GLFW_GAMEPAD_BUTTON_START))
         {
             setShellState(ApplicationShellState::PauseMenu);
             return;
         }
 
-        if (m_input.wasPressed(GLFW_KEY_TAB))
+        if (m_input.wasPressed(GLFW_KEY_TAB) || m_input.gamepadPressed(GLFW_GAMEPAD_BUTTON_Y))
         {
             setCameraViewMode(nextCameraViewMode(m_cameraRigState.mode));
         }
@@ -422,7 +468,8 @@ namespace BilliardsSaloon
         if (m_waitForShotRelease)
         {
             const bool anyShotInputHeld =
-                leftHeld || rightHeld || m_input.isDown(GLFW_KEY_SPACE) || m_input.isDown(GLFW_KEY_ENTER);
+                leftHeld || rightHeld || m_input.isDown(GLFW_KEY_SPACE) || m_input.isDown(GLFW_KEY_ENTER) ||
+                m_input.gamepadDown(GLFW_GAMEPAD_BUTTON_A);
             if (anyShotInputHeld)
             {
                 return;
@@ -453,6 +500,33 @@ namespace BilliardsSaloon
             // Moving the mouse right turns the aim to the right.
             controls.aimDeltaRadians =
                 -mouse.x * MOUSE_AIM_RADIANS_PER_POINT * (fineAim ? FINE_AIM_SCALE : 1.0f);
+        }
+
+        if (m_input.hasGamepad())
+        {
+            // Left stick aims (LB for fine aim); right stick moves the cue tip,
+            // or orbits the camera in free look; hold A to charge, release to shoot.
+            const bool padFine = m_input.gamepadDown(GLFW_GAMEPAD_BUTTON_LEFT_BUMPER);
+            const float rightX = m_input.gamepadAxis(GLFW_GAMEPAD_AXIS_RIGHT_X);
+            const float rightY = m_input.gamepadAxis(GLFW_GAMEPAD_AXIS_RIGHT_Y);
+
+            controls.aimAxis -= m_input.gamepadAxis(GLFW_GAMEPAD_AXIS_LEFT_X) * (padFine ? FINE_AIM_SCALE : 1.0f);
+
+            if (freeLook)
+            {
+                m_cameraInput.orbitYaw += rightX;
+                m_cameraInput.orbitPitch -= rightY;
+                m_cameraInput.zoom +=
+                    m_input.gamepadAxis(GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER) - m_input.gamepadAxis(GLFW_GAMEPAD_AXIS_LEFT_TRIGGER);
+            }
+            else
+            {
+                controls.strikeRightAxis += rightX;
+                controls.strikeForwardAxis -= rightY;
+            }
+
+            controls.centerStrike = controls.centerStrike || m_input.gamepadDown(GLFW_GAMEPAD_BUTTON_X);
+            controls.shootHeld = controls.shootHeld || m_input.gamepadDown(GLFW_GAMEPAD_BUTTON_A);
         }
 
         m_session.applyShotControls(controls, frameTimeSeconds);
@@ -709,6 +783,7 @@ namespace BilliardsSaloon
         snapshot.power01 = shot.charge01;
         snapshot.strikeRight01 = shot.strikeRight01;
         snapshot.strikeForward01 = shot.strikeForward01;
+        snapshot.gamepadPrompts = m_showGamepadPrompts;
 
         std::string camera = cameraViewModeLabel(m_cameraRigState.mode);
         std::transform(camera.begin(), camera.end(), camera.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
