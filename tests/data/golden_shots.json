@@ -1,0 +1,1151 @@
+{
+ "generator": "tools/golden/generate_golden_shots.py",
+ "pooltool": "0.6.0",
+ "table": {
+  "length": 2.54,
+  "width": 1.27
+ },
+ "shots": [
+  {
+   "name": "straight stop",
+   "balls": [
+    [
+     0.635,
+     0.6
+    ],
+    [
+     0.635,
+     1.2
+    ]
+   ],
+   "strike": {
+    "speed": 2.0,
+    "phi": 90.0,
+    "a": 0.0,
+    "b": -0.1
+   },
+   "duration": 4.103671189067179,
+   "events": [
+    {
+     "type": "strike",
+     "time": 0.0,
+     "ball": 0
+    },
+    {
+     "type": "ball_ball",
+     "time": 0.19176863026369917,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "linear_cushion",
+     "time": 0.8337636062577618,
+     "ball": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.1440357040601254,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.283103785445709,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.283106839454904,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.2988423221587104,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.2988456098790326,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.314049049370754,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.314052588717674,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.328734704448497,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.3287385147183737,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.34290915771694,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.3429132596953295,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.3565815796149194,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.356585995693833,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.369760597095943,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.3697653514009236,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.382454438689081,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.382459557217045,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.3946710676019025,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.3946765783708406,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.4064183022599077,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.406424235471687,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.417703923733891,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.4177103119515557,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.4285357696055416,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.428542647946775,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.438921813957836,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.4389292203064303,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.4488702333438557,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 2.448878208581427,
+     "ball": 0,
+     "other": 1
+    }
+   ],
+   "valid_events": 4,
+   "final_valid": false,
+   "final": [
+    {
+     "position": [
+      0.6349999999999999,
+      0.9396944518193714,
+      0.028575
+     ],
+     "pocketed": false
+    },
+    {
+     "position": [
+      0.635,
+      1.123077386266963,
+      0.028575
+     ],
+     "pocketed": false
+    }
+   ]
+  },
+  {
+   "name": "follow",
+   "balls": [
+    [
+     0.635,
+     0.6
+    ],
+    [
+     0.635,
+     1.2
+    ]
+   ],
+   "strike": {
+    "speed": 2.0,
+    "phi": 90.0,
+    "a": 0.0,
+    "b": 0.4
+   },
+   "duration": 5.48546854568061,
+   "events": [
+    {
+     "type": "strike",
+     "time": 0.0,
+     "ball": 0
+    },
+    {
+     "type": "ball_ball",
+     "time": 0.23183092218106222,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "linear_cushion",
+     "time": 0.9863299276303068,
+     "ball": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.588802853086566,
+     "ball": 0,
+     "other": 1
+    }
+   ],
+   "valid_events": 4,
+   "final_valid": true,
+   "final": [
+    {
+     "position": [
+      0.6350000000002632,
+      1.1269343852835036,
+      0.028575
+     ],
+     "pocketed": false
+    },
+    {
+     "position": [
+      0.634999999999849,
+      2.201250761112808,
+      0.028575
+     ],
+     "pocketed": false
+    }
+   ]
+  },
+  {
+   "name": "draw",
+   "balls": [
+    [
+     0.635,
+     0.6
+    ],
+    [
+     0.635,
+     1.2
+    ]
+   ],
+   "strike": {
+    "speed": 2.5,
+    "phi": 90.0,
+    "a": 0.0,
+    "b": -0.5
+   },
+   "duration": 6.161933424277298,
+   "events": [
+    {
+     "type": "strike",
+     "time": 0.0,
+     "ball": 0
+    },
+    {
+     "type": "ball_ball",
+     "time": 0.2287615799480615,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "linear_cushion",
+     "time": 1.0427900747567076,
+     "ball": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.2396332161145007,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.2909214498444648,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.2909294871606267,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.2952089953026633,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.2952176504635196,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.2992229517368665,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.2992322727964905,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3029789306569686,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3029889695463412,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3064918322076644,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3065026450821826,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3097758579021503,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3097875055287735,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3128445247933271,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3128570729838605,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.315710681023591,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3157242011219932,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3183865226513332,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3184010920848004,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.320883611620836,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3208993145267545,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3232128947207928,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3232298226646224,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3253847233637437,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3254029761668318,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3274088740129384,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.327428560714398,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3292945690831368,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.329315809066545,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3310504981463533,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.331073422471079,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3326848392816937,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3327095922707575,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3342052804191555,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3342320215717731,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3356190405398127,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3356479468596762,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.336932890609052,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3369641594709052,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3381531741347754,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3381870268570162,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3392858272593688,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3393225136155649,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3403363983132448,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.340376202311663,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3413100667807591,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3413533141858662,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3422116616595252,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3422587299535367,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.343045679238324,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.343097011076468,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3438163003890387,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3438724221852587,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3445274075890274,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 1.3445889558595059,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "linear_cushion",
+     "time": 5.235290567571858,
+     "ball": 0
+    },
+    {
+     "type": "ball_ball",
+     "time": 5.513983071789102,
+     "ball": 0,
+     "other": 1
+    }
+   ],
+   "valid_events": 3,
+   "final_valid": false,
+   "final": [
+    {
+     "position": [
+      0.6349999999999989,
+      0.029697851360271747,
+      0.028575
+     ],
+     "pocketed": false
+    },
+    {
+     "position": [
+      0.6349999999999997,
+      0.11016682158768676,
+      0.028575
+     ],
+     "pocketed": false
+    }
+   ]
+  },
+  {
+   "name": "thin cut",
+   "balls": [
+    [
+     0.635,
+     0.8
+    ],
+    [
+     0.735,
+     1.6
+    ]
+   ],
+   "strike": {
+    "speed": 2.2,
+    "phi": 86.11843049222081,
+    "a": 0.0,
+    "b": 0.0
+   },
+   "duration": 7.30888157137133,
+   "events": [
+    {
+     "type": "strike",
+     "time": 0.0,
+     "ball": 0
+    },
+    {
+     "type": "ball_ball",
+     "time": 0.24505348326435464,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "linear_cushion",
+     "time": 0.7000331335095634,
+     "ball": 1
+    },
+    {
+     "type": "linear_cushion",
+     "time": 0.7805300502991241,
+     "ball": 0
+    },
+    {
+     "type": "linear_cushion",
+     "time": 1.0650678652426282,
+     "ball": 0
+    },
+    {
+     "type": "linear_cushion",
+     "time": 1.952184120520441,
+     "ball": 1
+    },
+    {
+     "type": "linear_cushion",
+     "time": 4.807890455047458,
+     "ball": 0
+    }
+   ],
+   "valid_events": 7,
+   "final_valid": true,
+   "final": [
+    {
+     "position": [
+      0.998119594774088,
+      0.30563067785425535,
+      0.028575
+     ],
+     "pocketed": false
+    },
+    {
+     "position": [
+      0.03190697137721306,
+      2.128904471995619,
+      0.028575
+     ],
+     "pocketed": false
+    }
+   ]
+  },
+  {
+   "name": "side spin into the side cushion",
+   "balls": [
+    [
+     0.635,
+     0.7
+    ]
+   ],
+   "strike": {
+    "speed": 1.6,
+    "phi": 10.0,
+    "a": 0.4,
+    "b": 0.0
+   },
+   "duration": 5.716083570912977,
+   "events": [
+    {
+     "type": "strike",
+     "time": 0.0,
+     "ball": 0
+    },
+    {
+     "type": "linear_cushion",
+     "time": 0.40170504704948773,
+     "ball": 0
+    },
+    {
+     "type": "linear_cushion",
+     "time": 2.545549883781993,
+     "ball": 0
+    }
+   ],
+   "valid_events": 3,
+   "final_valid": true,
+   "final": [
+    {
+     "position": [
+      0.3444777536256469,
+      2.076909470517128,
+      0.028575
+     ],
+     "pocketed": false
+    }
+   ]
+  },
+  {
+   "name": "running english bank",
+   "balls": [
+    [
+     0.4,
+     0.5
+    ]
+   ],
+   "strike": {
+    "speed": 2.4,
+    "phi": 60.0,
+    "a": -0.3,
+    "b": 0.2
+   },
+   "duration": 7.577663035972819,
+   "events": [
+    {
+     "type": "strike",
+     "time": 0.0,
+     "ball": 0
+    },
+    {
+     "type": "linear_cushion",
+     "time": 0.6730234507481869,
+     "ball": 0
+    },
+    {
+     "type": "linear_cushion",
+     "time": 0.9468512995598862,
+     "ball": 0
+    },
+    {
+     "type": "linear_cushion",
+     "time": 4.101248867865734,
+     "ball": 0
+    }
+   ],
+   "valid_events": 4,
+   "final_valid": true,
+   "final": [
+    {
+     "position": [
+      0.7922371001491575,
+      0.623894966188423,
+      0.028575
+     ],
+     "pocketed": false
+    }
+   ]
+  },
+  {
+   "name": "pot into the corner",
+   "balls": [
+    [
+     0.810380592228744,
+     2.080380592228744
+    ],
+    [
+     1.093223304703363,
+     2.363223304703363
+    ]
+   ],
+   "strike": {
+    "speed": 1.5,
+    "phi": 45.0,
+    "a": 0.0,
+    "b": 0.0
+   },
+   "duration": 2.092972781290964,
+   "events": [
+    {
+     "type": "strike",
+     "time": 0.0,
+     "ball": 0
+    },
+    {
+     "type": "ball_ball",
+     "time": 0.15936388469554164,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "pocket",
+     "time": 0.28547281764806787,
+     "ball": 1
+    }
+   ],
+   "valid_events": 3,
+   "final_valid": true,
+   "final": [
+    {
+     "position": [
+      1.179133265846497,
+      2.449133265846502,
+      0.028575
+     ],
+     "pocketed": false
+    },
+    {
+     "position": [
+      1.299486352775479,
+      2.569486352775479,
+      -0.08
+     ],
+     "pocketed": true
+    }
+   ]
+  },
+  {
+   "name": "jaw hit",
+   "balls": [
+    [
+     0.3,
+     1.9
+    ]
+   ],
+   "strike": {
+    "speed": 1.8,
+    "phi": 108.97040780848654,
+    "a": 0.0,
+    "b": 0.0
+   },
+   "duration": 7.778151197005297,
+   "events": [
+    {
+     "type": "strike",
+     "time": 0.0,
+     "ball": 0
+    },
+    {
+     "type": "circular_cushion",
+     "time": 0.2568475435933979,
+     "ball": 0
+    },
+    {
+     "type": "linear_cushion",
+     "time": 0.3692552824582566,
+     "ball": 0
+    },
+    {
+     "type": "linear_cushion",
+     "time": 2.848290477443079,
+     "ball": 0
+    }
+   ],
+   "valid_events": 4,
+   "final_valid": true,
+   "final": [
+    {
+     "position": [
+      1.007883137583321,
+      1.1451354416518398,
+      0.028575
+     ],
+     "pocketed": false
+    }
+   ]
+  },
+  {
+   "name": "three-ball cluster",
+   "balls": [
+    [
+     0.637,
+     0.5
+    ],
+    [
+     0.635,
+     1.4
+    ],
+    [
+     0.6635778575,
+     1.4494983011614633
+    ],
+    [
+     0.6064221425,
+     1.4494983011614633
+    ]
+   ],
+   "strike": {
+    "speed": 3.0,
+    "phi": 90.0,
+    "a": 0.0,
+    "b": 0.0
+   },
+   "duration": 6.358940842361262,
+   "events": [
+    {
+     "type": "strike",
+     "time": 0.0,
+     "ball": 0
+    },
+    {
+     "type": "ball_ball",
+     "time": 0.19032351752071514,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "ball_ball",
+     "time": 0.1903250876801928,
+     "ball": 1,
+     "other": 3
+    },
+    {
+     "type": "ball_ball",
+     "time": 0.19032578079787776,
+     "ball": 1,
+     "other": 2
+    },
+    {
+     "type": "ball_ball",
+     "time": 0.1903386937594287,
+     "ball": 0,
+     "other": 1
+    },
+    {
+     "type": "pocket",
+     "time": 0.5780831759552226,
+     "ball": 3
+    },
+    {
+     "type": "linear_cushion",
+     "time": 1.054190418973482,
+     "ball": 2
+    },
+    {
+     "type": "linear_cushion",
+     "time": 1.2763626324254391,
+     "ball": 2
+    },
+    {
+     "type": "linear_cushion",
+     "time": 1.6047060992517097,
+     "ball": 1
+    }
+   ],
+   "valid_events": 9,
+   "final_valid": true,
+   "final": [
+    {
+     "position": [
+      0.7421924900875486,
+      1.2465407255174674,
+      0.028575
+     ],
+     "pocketed": false
+    },
+    {
+     "position": [
+      1.042758225968607,
+      1.4317647137177096,
+      0.028575
+     ],
+     "pocketed": false
+    },
+    {
+     "position": [
+      0.5199179356142367,
+      1.4167807280684388,
+      0.028575
+     ],
+     "pocketed": false
+    },
+    {
+     "position": [
+      -0.029486352775479032,
+      2.569486352775479,
+      -0.08
+     ],
+     "pocketed": true
+    }
+   ]
+  },
+  {
+   "name": "length of the table with draw",
+   "balls": [
+    [
+     0.635,
+     0.3
+    ]
+   ],
+   "strike": {
+    "speed": 3.0,
+    "phi": 88.0,
+    "a": 0.0,
+    "b": -0.3
+   },
+   "duration": 8.736784610761461,
+   "events": [
+    {
+     "type": "strike",
+     "time": 0.0,
+     "ball": 0
+    },
+    {
+     "type": "linear_cushion",
+     "time": 0.6765311608145663,
+     "ball": 0
+    },
+    {
+     "type": "linear_cushion",
+     "time": 2.379369583082593,
+     "ball": 0
+    },
+    {
+     "type": "linear_cushion",
+     "time": 7.1335037845720635,
+     "ball": 0
+    }
+   ],
+   "valid_events": 4,
+   "final_valid": true,
+   "final": [
+    {
+     "position": [
+      0.8815207175921198,
+      2.3841419161017567,
+      0.028575
+     ],
+     "pocketed": false
+    }
+   ]
+  }
+ ]
+}

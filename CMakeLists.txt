@@ -230,13 +230,15 @@ if(BS_BUILD_TESTS)
         tests/test_sim_motion.cpp
         tests/test_sim_events.cpp
         tests/test_sim_shots.cpp
+        tests/test_sim_golden.cpp
         tests/test_physics.cpp
         tests/test_asset_paths.cpp
     )
 
-    target_link_libraries(bs_tests PRIVATE bs_game doctest::doctest)
+    target_link_libraries(bs_tests PRIVATE bs_game doctest::doctest nlohmann_json::nlohmann_json)
     target_compile_definitions(bs_tests PRIVATE
         BS_TEST_SCRATCH_DIR="${CMAKE_CURRENT_BINARY_DIR}/test_scratch"
+        BS_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/data"
     )
     bs_set_warnings(bs_tests)
 
