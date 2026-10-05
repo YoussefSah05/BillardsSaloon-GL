@@ -8,6 +8,7 @@
 #include <glm/glm.hpp>
 
 #include <cstdint>
+#include <functional>
 #include <random>
 #include <string>
 
@@ -24,20 +25,27 @@ namespace BilliardsSaloon::Ai
         std::string description;   // e.g. "4 to FOOT LEFT, follow" (for logs and tests)
     };
 
+    // A learned evaluation: the probability that `player` wins the frame from
+    // this table. When given, it replaces the geometric position heuristic.
+    using ValueFunction = std::function<double(const AiTable& table, int player)>;
+
     // Plans the best shot for the shooter in table.frame: candidate pots,
     // safeties and (when snookered) kicks, each tried on the simulator and
     // judged by the referee; the finalists are re-run with this player's
     // execution error and the best average wins. Deterministic per seed.
-    [[nodiscard]] AiShot planShot(const AiTable& table, const AiProfile& profile, std::uint32_t seed);
+    [[nodiscard]] AiShot planShot(const AiTable& table, const AiProfile& profile, std::uint32_t seed,
+                                  const ValueFunction& value = {});
 
     // The break: firm into the head ball of the rack.
     [[nodiscard]] AiShot planBreak(const AiTable& table, const AiProfile& profile);
 
     // With ball in hand: a legal spot that leaves the best shot.
-    [[nodiscard]] glm::vec2 planCueBallPlacement(const AiTable& table, const AiProfile& profile, std::uint32_t seed);
+    [[nodiscard]] glm::vec2 planCueBallPlacement(const AiTable& table, const AiProfile& profile, std::uint32_t seed,
+                                                 const ValueFunction& value = {});
 
     // The answer to a referee's choice put to this player (table.frame.chooser).
-    [[nodiscard]] Rules::Option planChoice(const AiTable& table, const AiProfile& profile, std::uint32_t seed);
+    [[nodiscard]] Rules::Option planChoice(const AiTable& table, const AiProfile& profile, std::uint32_t seed,
+                                           const ValueFunction& value = {});
 
     // The shot as this player actually plays it: the plan plus their error.
     [[nodiscard]] ShotInput withExecutionError(ShotInput input, const AiProfile& profile, std::mt19937& random);

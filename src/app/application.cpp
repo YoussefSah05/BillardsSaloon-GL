@@ -1,6 +1,10 @@
 #include "app/application.h"
 
 #include "app/saloon_scene.h"
+#include "core/asset_paths.h"
+#if defined(BS_HAS_ONNXRUNTIME)
+#include "ai/value_model.h"
+#endif
 #include "gameplay/equipment.h"
 #include "render/screenshot.h"
 #include "scene/components.h"
@@ -179,6 +183,14 @@ namespace BilliardsSaloon
             variant.table.ballRadius
         );
 
+#if defined(BS_HAS_ONNXRUNTIME)
+        // The learned value network, if shipped; without it the AI is classical.
+        if (std::shared_ptr<Ai::ValueModel> model = Ai::ValueModel::load(resolveAssetPathOrEmpty("models/value.onnx")))
+        {
+            m_aiValue = model->function();
+            m_valueModel = model;
+        }
+#endif
         m_audio = std::make_unique<AudioEngine>(!options.mute && options.capturePath.empty());
         m_audio->setVolumes(m_settings.masterVolume, m_settings.effectsVolume, m_settings.crowdVolume);
         m_ui = std::make_unique<UiSystem>(m_window);
@@ -1520,29 +1532,30 @@ namespace BilliardsSaloon
                 // Plan on a worker thread, from a copy of the table.
                 const Ai::AiTable table = m_session->aiView();
                 const Ai::AiProfile profile = m_aiProfile;
+                const Ai::ValueFunction value = profile.learnedValue ? m_aiValue : Ai::ValueFunction{};
                 const std::uint32_t seed = m_aiRandom();
                 const bool choosing = m_session->pendingChoice() != Rules::Choice::None;
                 const bool placing = m_session->placingCueBall() ||
                     (m_session->canPlaceCueBall() && (table.frame.phase != Rules::Phase::Break));
-                m_aiFuture = std::async(std::launch::async, [table, profile, seed, choosing, placing]()
+                m_aiFuture = std::async(std::launch::async, [table, profile, value, seed, choosing, placing]()
                 {
                     AiPlan plan;
                     if (choosing)
                     {
                         plan.choice = true;
-                        plan.option = Ai::planChoice(table, profile, seed);
+                        plan.option = Ai::planChoice(table, profile, seed, value);
                         return plan;
                     }
                     Ai::AiTable view = table;
                     if (placing)
                     {
                         plan.place = true;
-                        plan.spot = Ai::planCueBallPlacement(table, profile, seed);
+                        plan.spot = Ai::planCueBallPlacement(table, profile, seed, value);
                         view.positions.front() = plan.spot;
                         view.pocketed.front() = false;
                         view.frame.ballInHand = Rules::BallInHand::None;
                     }
-                    plan.shot = (view.frame.phase == Rules::Phase::Break) ? Ai::planBreak(view, profile) : Ai::planShot(view, profile, seed);
+                    plan.shot = (view.frame.phase == Rules::Phase::Break) ? Ai::planBreak(view, profile) : Ai::planShot(view, profile, seed, value);
                     return plan;
                 });
                 m_aiStage = AiStage::Thinking;

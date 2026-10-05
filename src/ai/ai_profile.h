@@ -25,6 +25,7 @@ namespace BilliardsSaloon::Ai
         float breakPower {0.9f};
         float thinkSeconds {1.2f};
         int samples {8};               // noisy simulations per finalist (more = steadier choices)
+        bool learnedValue {false};     // judge positions with the learned value network when it is available
     };
 
     [[nodiscard]] std::vector<AiProfile> loadAiProfiles(const std::filesystem::path& file);

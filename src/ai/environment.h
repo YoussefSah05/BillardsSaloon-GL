@@ -2,6 +2,7 @@
 
 #include "ai/ai_profile.h"
 #include "ai/ai_table.h"
+#include "ai/planner.h"
 #include "gameplay/game_variant.h"
 #include "gameplay/shot_input.h"
 #include "rules/referee.h"
@@ -65,7 +66,8 @@ namespace BilliardsSaloon::Ai
 
         // Plays the classical AI's move for whoever is to act (any decision).
         // Returns the shot result for shots, or a default result otherwise.
-        StepResult playClassical(const AiProfile& profile, std::uint32_t seed, bool withError = true);
+        StepResult playClassical(const AiProfile& profile, std::uint32_t seed, bool withError = true,
+                                 const ValueFunction& value = {});
 
         [[nodiscard]] int shotsPlayed() const { return m_shots; }
 

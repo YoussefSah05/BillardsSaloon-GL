@@ -90,20 +90,20 @@ namespace BilliardsSaloon::Ai
         return m_session->choose(option);
     }
 
-    StepResult Environment::playClassical(const AiProfile& profile, std::uint32_t seed, bool withError)
+    StepResult Environment::playClassical(const AiProfile& profile, std::uint32_t seed, bool withError, const ValueFunction& value)
     {
         std::mt19937 random(seed);
         switch (decision())
         {
             case Decision::Choice:
-                (void)choose(planChoice(observe(), profile, seed));
+                (void)choose(planChoice(observe(), profile, seed, value));
                 return StepResult{};
             case Decision::Place:
-                (void)place(planCueBallPlacement(observe(), profile, seed));
+                (void)place(planCueBallPlacement(observe(), profile, seed, value));
                 [[fallthrough]];
             case Decision::Shot:
             {
-                const AiShot plan = planShot(observe(), profile, seed);
+                const AiShot plan = planShot(observe(), profile, seed, value);
                 return shoot(withError ? withExecutionError(plan.input, profile, random) : plan.input);
             }
             case Decision::Break:

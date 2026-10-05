@@ -192,7 +192,7 @@ namespace BilliardsSaloon::Ai
         }
 
         // How good a shot's result is for the player who took it.
-        double score(const AiTable& before, const Outcome& outcome)
+        double score(const AiTable& before, const Outcome& outcome, const ValueFunction& value)
         {
             const Rules::Verdict& v = outcome.verdict;
             const int me = before.frame.shooter;
@@ -201,28 +201,34 @@ namespace BilliardsSaloon::Ai
             {
                 return (v.winner == me) ? 100.0 : -100.0;
             }
+            if (value)
+            {
+                // The learned value already knows what a foul, ball in hand or a
+                // lost turn is worth: the expected result of the frame, -100..100.
+                return 100.0 * (2.0 * value(outcome.after, me) - 1.0);
+            }
             if (v.foul != Rules::Foul::None)
             {
                 const bool threeFoulRisk = (before.discipline != GameDiscipline::EightBall) && (v.foulsInRow >= 2);
                 return threeFoulRisk ? -70.0 : -40.0;
             }
 
-            double value = 0.0;
+            double total = 0.0;
             // A little credit for clearing balls of my own (8-ball) or any (rotation).
-            value += 2.0 * static_cast<double>(v.objectPots.size());
+            total += 2.0 * static_cast<double>(v.objectPots.size());
 
             if (outcome.after.frame.shooter == me && (outcome.after.frame.choice == Rules::Choice::None))
             {
-                value += 20.0 + 12.0 * positionValue(outcome.after);
+                total += 20.0 + 12.0 * positionValue(outcome.after);
             }
             else
             {
                 // The opponent's turn: how hard is their next shot?
                 AiTable theirs = outcome.after;
                 theirs.frame.shooter = Rules::otherPlayer(me);
-                value -= 18.0 * positionValue(theirs);
+                total -= 18.0 * positionValue(theirs);
             }
-            return value;
+            return total;
         }
 
         // ---- Candidates ---------------------------------------------------------------------
@@ -373,7 +379,7 @@ namespace BilliardsSaloon::Ai
         return input;
     }
 
-    AiShot planShot(const AiTable& table, const AiProfile& profile, std::uint32_t seed)
+    AiShot planShot(const AiTable& table, const AiProfile& profile, std::uint32_t seed, const ValueFunction& value)
     {
         std::vector<Candidate> candidates;
         addPots(table, profile, candidates);
@@ -395,7 +401,7 @@ namespace BilliardsSaloon::Ai
                 c.safety = false;
                 c.description += " (pots)";
             }
-            c.quick = score(table, outcome) + intent(c, profile);
+            c.quick = score(table, outcome, value) + intent(c, profile);
         }
         std::sort(candidates.begin(), candidates.end(), [](const Candidate& a, const Candidate& b) { return a.quick > b.quick; });
 
@@ -407,7 +413,7 @@ namespace BilliardsSaloon::Ai
             double sum = 0.0;
             for (int s = 0; s < profile.samples; ++s)
             {
-                sum += score(table, play(table, withExecutionError(candidates[i].input, profile, random)));
+                sum += score(table, play(table, withExecutionError(candidates[i].input, profile, random)), value);
             }
             candidates[i].expected = sum / std::max(profile.samples, 1) + intent(candidates[i], profile);
         }
@@ -461,7 +467,7 @@ namespace BilliardsSaloon::Ai
         return shot;
     }
 
-    glm::vec2 planCueBallPlacement(const AiTable& table, const AiProfile& profile, std::uint32_t seed)
+    glm::vec2 planCueBallPlacement(const AiTable& table, const AiProfile& profile, std::uint32_t seed, const ValueFunction& value)
     {
         const float r = table.radius;
         const float maxX = (table.frame.ballInHand == Rules::BallInHand::BehindHeadString) ? table.headStringX : 0.5f * table.length - r;
@@ -537,7 +543,7 @@ namespace BilliardsSaloon::Ai
             trial.positions.front() = spots[i].second;
             trial.pocketed.front() = false;
             trial.frame.ballInHand = Rules::BallInHand::None;
-            const double s = planShot(trial, quick, seed + static_cast<std::uint32_t>(i)).score;
+            const double s = planShot(trial, quick, seed + static_cast<std::uint32_t>(i), value).score;
             if (s > bestScore)
             {
                 bestScore = s;
@@ -547,7 +553,7 @@ namespace BilliardsSaloon::Ai
         return best;
     }
 
-    Rules::Option planChoice(const AiTable& table, const AiProfile& profile, std::uint32_t seed)
+    Rules::Option planChoice(const AiTable& table, const AiProfile& profile, std::uint32_t seed, const ValueFunction& value)
     {
         AiTable mine = table;
         mine.frame.shooter = table.frame.chooser;
@@ -560,10 +566,10 @@ namespace BilliardsSaloon::Ai
             case Rules::Choice::EightOnBreak:
                 return Rules::Option::Play;
             case Rules::Choice::IllegalBreak:
-                return (planShot(mine, quick, seed).score > 5.0) ? Rules::Option::Play : Rules::Option::Rerack;
+                return (planShot(mine, quick, seed, value).score > 5.0) ? Rules::Option::Play : Rules::Option::Rerack;
             case Rules::Choice::AfterPushOut:
             case Rules::Choice::AfterUncalledPot:
-                return (planShot(mine, quick, seed).score > 5.0) ? Rules::Option::Play : Rules::Option::PassBack;
+                return (planShot(mine, quick, seed, value).score > 5.0) ? Rules::Option::Play : Rules::Option::PassBack;
             case Rules::Choice::None:
                 break;
         }

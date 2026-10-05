@@ -184,6 +184,8 @@ namespace BilliardsSaloon
         enum class AiStage { Idle, Thinking, Aiming };
         int m_aiSeat {-1};
         Ai::AiProfile m_aiProfile;
+        Ai::ValueFunction m_aiValue;          // the learned evaluation, when a model is loaded
+        std::shared_ptr<void> m_valueModel;   // keeps it alive (type hidden without ONNX Runtime)
         AiStage m_aiStage {AiStage::Idle};
         std::future<AiPlan> m_aiFuture;
         float m_aiElapsed {0.0f};
