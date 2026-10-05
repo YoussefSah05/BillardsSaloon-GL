@@ -136,6 +136,8 @@ add_library(bs_game STATIC
     src/gameplay/shot_result.cpp
     src/gameplay/turn_rules.cpp
     src/physics/billiards_physics.cpp
+    src/rules/referee.cpp
+    src/rules/shot_record.cpp
 )
 
 target_include_directories(bs_game PUBLIC src)
@@ -214,6 +216,9 @@ if(BS_BUILD_TESTS)
         tests/test_main.cpp
         tests/test_registry.cpp
         tests/test_turn_rules.cpp
+        tests/test_rules_eight_ball.cpp
+        tests/test_rules_rotation.cpp
+        tests/test_shot_record.cpp
         tests/test_match_session.cpp
         tests/test_game_variant.cpp
         tests/test_game_data.cpp

@@ -234,6 +234,7 @@ namespace BilliardsSaloon
                     break;
 
                 case GameDiscipline::NineBall:
+                case GameDiscipline::TenBall:
                     resolveEightBallShot(matchState, registry, shotResult);
                     break;
             }

@@ -64,6 +64,7 @@ namespace BilliardsSaloon
         {
             if (discipline == "eight_ball") return GameDiscipline::EightBall;
             if (discipline == "nine_ball") return GameDiscipline::NineBall;
+            if (discipline == "ten_ball") return GameDiscipline::TenBall;
             throw std::invalid_argument("unknown discipline \"" + discipline + "\"");
         }
 

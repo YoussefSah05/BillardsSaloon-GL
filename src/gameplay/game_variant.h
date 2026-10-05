@@ -15,7 +15,8 @@ namespace BilliardsSaloon
     enum class GameDiscipline
     {
         EightBall,
-        NineBall
+        NineBall,
+        TenBall
     };
 
     enum class RackPattern
