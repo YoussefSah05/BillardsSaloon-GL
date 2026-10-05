@@ -24,6 +24,9 @@ namespace BilliardsSaloon
         [[nodiscard]] bool wasMousePressed(int button) const;
         [[nodiscard]] bool wasMouseReleased(int button) const;
 
+        // Any key or mouse button went down this frame.
+        [[nodiscard]] bool anyPressed() const;
+
         // Cursor position in window coordinates (origin top-left).
         [[nodiscard]] glm::vec2 cursorPosition() const { return m_cursor; }
 

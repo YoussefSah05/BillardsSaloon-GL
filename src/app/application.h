@@ -21,6 +21,7 @@ namespace BilliardsSaloon
 {
     enum class ApplicationShellState
     {
+        Title,
         MainMenu,
         Gameplay,
         PauseMenu,
@@ -43,6 +44,7 @@ namespace BilliardsSaloon
         void updateCursorCapture();
 
         void setShellState(ApplicationShellState state);
+        [[nodiscard]] bool isInMatch() const;
         void toggleFullscreen();
 
         // Applies settings to the window, renderer, input and UI, then saves them.
@@ -96,6 +98,11 @@ namespace BilliardsSaloon
 
         CameraRigState m_cameraRigState {};
         CameraRigInputAxes m_cameraInput {};
+
+        // Menu camera: slow orbit time and the sideways lens shift that puts
+        // the table beside the menu on the main hub.
+        double m_menuOrbitSeconds {0.0};
+        float m_lensShift {0.0f};
 
         // A click or key that started the match (or resumed it) may still be
         // held; ignore shot input until it is released.

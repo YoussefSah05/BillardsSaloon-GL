@@ -128,12 +128,14 @@ namespace BilliardsSaloon
             static_cast<float>(settings.viewportWidth) / static_cast<float>(std::max(settings.viewportHeight, 1));
 
         const glm::mat4 viewMatrix = Camera::viewMatrix(outView.position, outView.forward, outView.up);
-        const glm::mat4 projectionMatrix = Camera::projectionMatrix(
+        glm::mat4 projectionMatrix = Camera::projectionMatrix(
             cameraLens.verticalFieldOfViewRadians,
             aspectRatio,
             cameraLens.nearPlane,
             cameraLens.farPlane
         );
+        // Off-axis projection: clip.x gains -shift * z_view, i.e. +shift in NDC.
+        projectionMatrix[2][0] -= settings.lensShiftX;
         outView.viewProjection = projectionMatrix * viewMatrix;
 
         m_shader->bind();

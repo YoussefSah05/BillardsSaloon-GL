@@ -75,6 +75,25 @@ namespace BilliardsSaloon
                m_mousePrevious[static_cast<std::size_t>(button)];
     }
 
+    bool Input::anyPressed() const
+    {
+        for (std::size_t i = 0; i < m_down.size(); ++i)
+        {
+            if (m_down[i] && !m_previous[i])
+            {
+                return true;
+            }
+        }
+        for (std::size_t i = 0; i < m_mouseDown.size(); ++i)
+        {
+            if (m_mouseDown[i] && !m_mousePrevious[i])
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     bool Input::keyInRange(int key)
     {
         return (key >= 0) && (key < KEY_COUNT);

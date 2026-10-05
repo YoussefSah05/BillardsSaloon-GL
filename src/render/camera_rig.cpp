@@ -116,6 +116,11 @@ namespace BilliardsSaloon
         state.freeLookDistance = std::clamp(state.freeLookDistance, 1.30f, 4.40f);
     }
 
+    CameraPose lookAtPose(const glm::vec3& position, const glm::vec3& target)
+    {
+        return makeLookAtPose(position, target, glm::vec3(0.0f, 1.0f, 0.0f));
+    }
+
     CameraPose desiredCameraPose(
         const CameraRigState& state,
         const CameraRigContext& context)

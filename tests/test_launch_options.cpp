@@ -20,7 +20,7 @@ TEST_CASE("no arguments starts windowed on the main menu")
 {
     const LaunchOptions options = parse({});
     CHECK_FALSE(options.fullscreen);
-    CHECK(options.startScreen == StartScreen::MainMenu);
+    CHECK(options.startScreen == StartScreen::Title);
     CHECK(options.capturePath.empty());
 }
 

@@ -36,6 +36,8 @@ namespace BilliardsSaloon
             throw std::runtime_error("Could not create the shell UI data model.");
         }
 
+        m_version = "v" BS_VERSION;
+        model.Bind("version", &m_version);
         model.Bind("frame_winner", &m_frameWinner);
         model.Bind("frame_detail", &m_frameDetail);
 
@@ -48,6 +50,7 @@ namespace BilliardsSaloon
 
         m_model = model.GetModelHandle();
 
+        m_title = &ui.loadDocument("ui/title.rml");
         m_mainMenu = &ui.loadDocument("ui/main_menu.rml");
         m_pauseMenu = &ui.loadDocument("ui/pause_menu.rml");
         m_frameOver = &ui.loadDocument("ui/frame_over.rml");
@@ -61,13 +64,18 @@ namespace BilliardsSaloon
         }
 
         m_shown = screen;
+        m_title->Hide();
         m_mainMenu->Hide();
         m_pauseMenu->Hide();
         m_frameOver->Hide();
 
         // FocusFlag::Auto focuses the element marked autofocus, so the
         // keyboard and gamepad can navigate straight away.
-        if (screen == MenuScreen::Main)
+        if (screen == MenuScreen::Title)
+        {
+            m_title->Show(Rml::ModalFlag::None, Rml::FocusFlag::None);
+        }
+        else if (screen == MenuScreen::Main)
         {
             m_mainMenu->Show(Rml::ModalFlag::None, Rml::FocusFlag::Auto);
         }
