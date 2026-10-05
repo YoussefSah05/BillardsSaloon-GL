@@ -244,7 +244,6 @@ TEST_CASE("the opening aim points from the head spot at the rack")
 TEST_CASE("an event-simulated break plays back, syncs pots and records first contact")
 {
     MatchSession session(eightBallVariant());
-    REQUIRE(session.backend() == PhysicsBackend::EventBased);
 
     chargeAndRelease(session, 1.0f, 60.0f);
     REQUIRE(session.activeTrajectory() != nullptr);
@@ -273,13 +272,4 @@ TEST_CASE("an event-simulated break plays back, syncs pots and records first con
     const bool cuePotted = session.registry().get<BallComponent>(session.cueBallEntity()).pocketed ||
                            session.lastOutcome().verdict.foul == Rules::Foul::CueBallPocketed;
     CHECK(pocketedOnTable + (cuePotted ? 1U : 0U) == potted);
-}
-
-TEST_CASE("the legacy solver still plays a frame")
-{
-    MatchSession session(eightBallVariant(), ShotInputTuning{}, PhysicsBackend::Legacy);
-    chargeAndRelease(session, 1.0f, 60.0f);
-    CHECK(session.activeTrajectory() == nullptr);
-    stepUntilSettled(session);
-    CHECK(session.resolvedShotCount() == 1);
 }

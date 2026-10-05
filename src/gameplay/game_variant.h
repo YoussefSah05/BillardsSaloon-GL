@@ -25,20 +25,6 @@ namespace BilliardsSaloon
         Diamond
     };
 
-    // Contact and cloth coefficients. Gameplay-tuned, guided by common
-    // pool-physics references (see TableBoundsComponent for ranges).
-    struct TablePhysicsSpecification
-    {
-        float cushionRestitution {0.92f};
-        float cushionFriction {0.14f};
-        float ballRestitution {0.96f};
-        float ballFriction {0.05f};
-        float slidingFriction {0.20f};
-        float rollingFriction {0.010f};
-        float spinningFriction {0.015f};
-        float stopSpeed {0.006f};
-    };
-
     struct TableSpecification
     {
         std::string name {"10 ft table"};
@@ -46,12 +32,9 @@ namespace BilliardsSaloon
         float clothDepth {1.42f};
         float ballRadius {0.028575f};
         float ballMassKg {0.17f};
-        float cornerPocketRadius {0.090f};
-        float sidePocketRadius {0.080f};
-        TablePhysicsSpecification physics {};
 
-        // Event-based simulator: pocket and cushion geometry and ball
-        // coefficients (lengths, ball size and mass come from the fields above).
+        // Simulator: pocket and cushion geometry and ball coefficients
+        // (lengths, ball size and mass come from the fields above).
         Sim::PocketTableSpec pocketGeometry {};
         Sim::BallParams simBall {};
     };

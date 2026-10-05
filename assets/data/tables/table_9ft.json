@@ -4,24 +4,6 @@
   "clothDepth": 1.27,
   "ballRadius": 0.028575,
   "ballMassKg": 0.170097,
-  "pockets": {
-    "cornerRadius": 0.09,
-    "sideRadius": 0.08
-  },
-  "cushion": {
-    "restitution": 0.92,
-    "friction": 0.14
-  },
-  "ballContact": {
-    "restitution": 0.96,
-    "friction": 0.05
-  },
-  "cloth": {
-    "slidingFriction": 0.2,
-    "rollingFriction": 0.01,
-    "spinningFriction": 0.015,
-    "stopSpeed": 0.006
-  },
   "simulation": {
     "cushionWidth": 0.0508,
     "cushionHeight": 0.036576,

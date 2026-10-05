@@ -59,15 +59,6 @@ namespace BilliardsSaloon
             {
                 options.capturePath = std::filesystem::path(std::string(nextValue()));
             }
-            else if (argument == "--physics")
-            {
-                const std::string_view value = nextValue();
-                if ((value != "event") && (value != "legacy"))
-                {
-                    throw std::invalid_argument("--physics needs 'event' or 'legacy'.");
-                }
-                options.legacyPhysics = (value == "legacy");
-            }
             else if (argument == "--scenario")
             {
                 const std::string_view value = nextValue();
@@ -98,7 +89,6 @@ namespace BilliardsSaloon
             "  --screen title|main|setup|game|pause|settings  start on this screen\n"
             "  --scenario foul|choice|call  (development) script a state: ball in hand, a referee choice, a called shot\n"
             "  --capture FILE.png      save a screenshot after a few frames, then quit\n"
-            "  --capture-frames N      frames to render before capturing (default 90)\n"
-            "  --physics event|legacy  event-based simulator (default) or the prototype solver\n";
+            "  --capture-frames N      frames to render before capturing (default 90)\n";
     }
 }

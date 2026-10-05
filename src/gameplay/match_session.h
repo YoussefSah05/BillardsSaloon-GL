@@ -3,7 +3,6 @@
 #include "ecs/entity.h"
 #include "ecs/registry.h"
 #include "gameplay/game_variant.h"
-#include "gameplay/shot_result.h"
 #include "gameplay/shot_state.h"
 #include "rules/match_score.h"
 #include "rules/referee.h"
@@ -27,11 +26,9 @@ namespace BilliardsSaloon
         float strikeOffsetPerSecond {0.9f};
         float chargePerSecond {0.9f};
         float maxStrikeRadius01 {0.75f};
-        float minShotSpeed {0.4f};        // legacy solver: ball speed, m/s
-        float maxShotSpeed {3.8f};
 
-        // Event-based simulator: cue speed at impact (the ball leaves at about
-        // 1.5x this) and how far the tip can move from centre, as a fraction of R.
+        // Cue speed at impact (the ball leaves at about 1.5x this) and how far
+        // the tip can move from centre, as a fraction of R.
         float minCueSpeed {0.5f};
         float maxCueSpeed {7.0f};
         float tipOffsetPerStrikeUnit {0.7f};
@@ -62,12 +59,6 @@ namespace BilliardsSaloon
 
     [[nodiscard]] glm::vec3 aimDirectionFromAngle(float angleRadians);
 
-    enum class PhysicsBackend
-    {
-        Legacy,       // fixed-step impulse solver (prototype)
-        EventBased    // exact event simulation of the whole shot (bs_sim)
-    };
-
     struct MatchSettings
     {
         int raceTo {1};
@@ -86,7 +77,7 @@ namespace BilliardsSaloon
     };
 
     // Headless owner of a match: the ECS world with table and balls, the shot
-    // state machine, physics playback, the referee and the match score.
+    // state machine, playback of simulated shots, the referee and the match score.
     // Presentation layers attach meshes and materials to its entities.
     class MatchSession
     {
@@ -94,12 +85,9 @@ namespace BilliardsSaloon
         explicit MatchSession(
             const GameVariantDefinition& variant,
             ShotInputTuning tuning = {},
-            PhysicsBackend backend = PhysicsBackend::EventBased,
             MatchSettings settings = {});
 
-        [[nodiscard]] PhysicsBackend backend() const { return m_backend; }
-
-        // The shot being played back (event-based backend only).
+        // The shot being played back, if any.
         [[nodiscard]] const Sim::ShotTrajectory* activeTrajectory() const
         {
             return m_trajectory ? &*m_trajectory : nullptr;
@@ -215,7 +203,6 @@ namespace BilliardsSaloon
         void updateAutoCall();
 
         bool fireShot();
-        bool fireSimulatedShot();
         void playBack(double deltaTimeSeconds);
         void applySimStates(const std::vector<Sim::BallState>& states, double deltaTimeSeconds);
 
@@ -246,9 +233,7 @@ namespace BilliardsSaloon
         std::optional<Rules::Call> m_callAtStrike;
         bool m_pushOutAtStrike {false};
         Rules::ShotRecord m_record {};
-        ShotResult m_legacyResult {};
 
-        PhysicsBackend m_backend {PhysicsBackend::EventBased};
         Sim::Table m_simTable;
         std::vector<Entity> m_simBalls;   // simulator ball index -> entity (cue first)
         std::vector<int> m_simNumbers;    // simulator ball index -> ball number

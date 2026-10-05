@@ -1,8 +1,8 @@
 # Billiards Saloon — Physics
 
-Status: the event-based simulator (Part 2) is the game's default physics
-since milestone M3; the prototype solver (Part 1) remains behind
-`--physics legacy` for comparison until it is removed. Last revised 2026-10-05. Companion to `GDD.md` and
+Status: the event-based simulator (Part 2) is the game's physics. The
+prototype solver (Part 1) was removed in 0.4.0, once the simulator matched
+pooltool's golden shots and passed play-testing. Last revised 2026-10-05. Companion to `GDD.md` and
 `INTELLIGENCE.md`.
 
 ## Conventions
@@ -17,92 +17,13 @@ since milestone M3; the prototype solver (Part 1) remains behind
   `u = v + ω × (−R·ŷ)`. In components: `u = (v_x + R·ω_z, 0, v_z − R·ω_x)`.
   A ball rolls without slipping when `u = 0`, i.e. `ω = (ŷ × v) / R`.
 
-## Part 1 — The prototype solver (shipping now)
+## Part 1 — The prototype solver (removed in 0.4.0)
 
-Source: `src/physics/billiards_physics.cpp`. Fixed time step of 1/120 s,
-called from `MatchSession::step` (`src/gameplay/match_session.cpp`).
-
-### Step order
-
-Each step:
-
-1. Integrate positions: `x += v · Δt`.
-2. Pocket capture, cushion contacts, then four solver passes of
-   ball–ball → pocket → cushion.
-3. Cloth friction (the motion-state model below), in up to four sub-intervals
-   so a ball can change state mid-step.
-4. Visual rotation: each ball's orientation turns by `|ω|·Δt` about `ω̂`.
-
-### Cloth contact: motion states
-
-| State | Condition | Equations |
-|-------|-----------|-----------|
-| **Sliding** | `|u| > 0.0015 m/s` | `v̇ = −μ_s·g·û`; `ω̇ = (5·μ_s·g / 2R) · (ŷ × û)`; the slip shrinks as `u̇ = −(7/2)·μ_s·g·û`, so the ball starts rolling after `τ_s = 2·|u₀| / (7·μ_s·g)`. |
-| **Rolling** | slip ≈ 0, speed > stop threshold | `v̇ = −μ_r·g·v̂`; `ω` stays locked to `(ŷ × v)/R`; stops after `τ_r = |v| / (μ_r·g)`. |
-| **Spinning** | no translation, `|ω_y| > 0.01 rad/s` | `ω̇_y = −sign(ω_y)·μ_sp·g / R` (see note). |
-| **Stationary** | otherwise | `v = ω = 0`. |
-
-Vertical spin (`ω_y`) also decays at `μ_sp·g/R` while sliding or rolling.
-
-Note: physically, a spinning ball decelerates at `ω̇_y = −(5/2)·μ_sp·g / R`
-(pooltool's model). The prototype omits the 5/2 factor; the event-based
-simulator uses the physical form.
-
-These formulas are checked by unit tests (`tests/test_physics.cpp`): a stun
-shot settles at 5/7 of its speed, a rolling ball stops after
-`v² / (2·μ_r·g)`, and kinetic energy never increases.
-
-### Ball–ball collisions
-
-- Detection: centres closer than `2R` (no swept test).
-- Penetration is pushed apart by 80% of the overlap beyond 0.1 mm.
-- **Normal impulse:** `J_n = −(1 + e_b) · (v_rel · n) / (1/m_a + 1/m_b)`, with
-  `v_rel` the relative velocity of the contact points.
-- **Friction impulse:** opposes the remaining tangential contact velocity,
-  sized to stop it but capped at `μ_b · J_n` (Coulomb). This produces throw
-  and transfers spin between balls.
-- The first object ball the cue ball touches is recorded for the rules.
-
-### Cushions
-
-- The playable area is a box `[−X + R, X − R] × [−Z + R, Z − R]`; a ball past it
-  is clamped back to the boundary.
-- Contact at the ball's equator, normal impulse with restitution `e_c`,
-  tangential friction capped at `μ_c · J_n` (so side spin changes the rebound angle).
-
-### Pockets
-
-- A ball is captured when its centre comes within the pocket radius of a pocket
-  centre (four corners, two sides). Captured balls leave the simulation.
-
-### Cue strike
-
-`MatchSession::fireShot`: speed `V = 0.4 + 3.4 · power` m/s along the aim
-line; tip offset sets spin directly:
-
-- side spin: `ω_y = 0.85 · s_right · V / R`
-- top/back spin: `ω_⊥ = s_forward · V / R` about the horizontal axis
-  perpendicular to the aim
-
-`s_right` and `s_forward` lie inside a disc of radius 0.75.
-
-### Parameters
-
-All in `assets/data/tables/table_10ft.json` (loaded by `loadTableSpecification`):
-
-| Parameter | Value | Meaning |
-|-----------|-------|---------|
-| Cloth | 2.84 × 1.42 m | playing surface (a 10 ft table; WPA 9 ft is 2.54 × 1.27 m) |
-| `ballRadius`, `ballMassKg` | 0.028575 m, 0.17 kg | 2¼ in pool balls |
-| `cloth.slidingFriction` μ_s | 0.20 | typical 0.2 |
-| `cloth.rollingFriction` μ_r | 0.010 | typical 0.005–0.015 |
-| `cloth.spinningFriction` μ_sp | 0.015 | |
-| `cloth.stopSpeed` | 0.006 m/s | below this a rolling ball stops |
-| `ballContact.restitution` e_b, `friction` μ_b | 0.96, 0.05 | gameplay-tuned |
-| `cushion.restitution` e_c, `friction` μ_c | 0.92, 0.14 | gameplay-tuned |
-| `pockets.cornerRadius`, `sideRadius` | 0.090, 0.080 m | capture radius |
-
-### Known limitations (why M3 exists)
+Up to 0.3.0 the game stepped a fixed-step impulse solver at 120 Hz: a
+sliding→rolling cloth model, ball-ball and flat-rail impulses with friction,
+and radius-based pocket capture. It lives in git history
+(`src/physics/billiards_physics.*` before 0.4.0). Its limitations are the
+reason the event-based simulator exists:
 
 - At full power a ball moves 3.2 cm per step, more than its radius: fast balls
   can pass through cushions or pocket edges (tunnelling).
@@ -213,8 +134,8 @@ Not yet modelled: cue elevation (jump and massé shots) and airborne balls.
 - Golden shots (stop, follow and draw shots, banks, a break) compared with
   pooltool's output within tolerance; stored as JSON fixtures.
 - Kinetic energy never increases; identical inputs give identical trajectories.
-- The old solver stays behind `--physics legacy` until the new one passes
-  play-tests, then is removed.
+- The old solver was kept behind a switch until the new one passed the golden
+  shots and play-tests, then removed (0.4.0).
 - Done: closed-form checks, randomised root-finder tests, determinism, energy
   monotonicity, a break with no overlaps at rest, and golden shots.
 
