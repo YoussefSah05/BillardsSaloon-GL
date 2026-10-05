@@ -19,6 +19,7 @@ tests link, and the `BilliardsSaloon` executable.
 | `src/gameplay/match_session.*` | bs_game | A match: ECS world, shot state machine (place, aim, tip offset, elevation, charge, fire), playback, shot preview, replays, shot clock, referee, ball in hand, spotting, calls, push-outs, race to N. |
 | `src/rules/` | bs_game | WPA referee for 8-, 9- and 10-ball as pure functions (`judgeShot`, `applyChoice`), shot records from simulator events, racking, match score. See design/RULES.md. |
 | `src/sim/` | bs_sim | Event-based simulator: roots, motion, table geometry, event detection, collision models, `simulateShot` → `ShotTrajectory`. The game's physics. See design/PHYSICS.md. |
+| `src/ai/` | bs_game | Classical AI: `planner` (candidate pots, safeties, kicks; simulate, judge, re-run with execution error; placement, break, choices), `ai_profile` (players from `assets/data/ai/players.json`), `ai_table` (a thread-safe copy of the table). |
 | `src/audio/` | bs_game | Headless sound synthesis (`sound_synth`) and the shot-sound planner (`shot_sounds`: simulator events to timed, weighted, positioned cues). |
 | `src/app/audio_engine.*` | app | miniaudio playback: voice pool, effects/crowd/interface buses, stereo placement from the camera. |
 | `src/gameplay/equipment.*` | bs_game | Equipment catalogue (cloth, rails, trim, pockets, ball sets, cues, halls) loaded from `assets/data/equipment/catalog.json`. |
@@ -91,7 +92,7 @@ Following Leckie & Greenspan (2006) and pooltool (Kiefl, JOSS 2024):
 M0 housekeeping ✅ · M1 foundation ✅ · M2 UX foundation and broadcast
 frontend ✅ · M3 event-based physics ✅ · M4 WPA rules and referee ✅ · M5 shot input
 and presentation ✅ · M6 hall visuals, realism and customization ✅ · M7 audio ✅ ·
-M8 AI v1 (classical search) · M9 intelligence (self-play learning, starts
+M8 AI v1 (classical search) ✅ · M9 intelligence (self-play learning, starts
 after M3 and runs in parallel) · M10 modes · M11 ship.
 UX comes before physics because every later milestone presents itself
 through it (referee banners, ball in hand, opponent cards, season hub).
