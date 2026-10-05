@@ -65,6 +65,9 @@ namespace BilliardsSaloon
         const CameraRigState& state,
         const CameraRigContext& context);
 
+    // A camera at position looking at target, with world up kept upright.
+    [[nodiscard]] CameraPose lookAtPose(const glm::vec3& position, const glm::vec3& target);
+
     [[nodiscard]] CameraPose blendCameraPose(
         const CameraPose& current,
         const CameraPose& target,

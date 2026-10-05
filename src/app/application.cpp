@@ -23,6 +23,9 @@ namespace BilliardsSaloon
         {
             switch (shellState)
             {
+                case ApplicationShellState::Title:
+                    return "Title";
+
                 case ApplicationShellState::MainMenu:
                     return "Main Menu";
 
@@ -175,7 +178,8 @@ namespace BilliardsSaloon
         m_renderQuality = toRenderQuality(m_settings.quality);
         m_ui->setUiScale(m_settings.uiScale);
         m_ui->setReducedMotion(m_settings.reducedMotion);
-        m_menus->show(MenuScreen::Main);
+        setShellState(
+            (options.startScreen == StartScreen::Title) ? ApplicationShellState::Title : ApplicationShellState::MainMenu);
 
         if ((options.startScreen == StartScreen::Gameplay) || (options.startScreen == StartScreen::Pause))
         {
@@ -260,6 +264,13 @@ namespace BilliardsSaloon
 
         switch (m_shellState)
         {
+            case ApplicationShellState::Title:
+                if (m_input.anyPressed())
+                {
+                    setShellState(ApplicationShellState::MainMenu);
+                }
+                break;
+
             case ApplicationShellState::MainMenu:
                 // Navigation and clicks are handled by the UI documents.
                 if (m_input.wasPressed(GLFW_KEY_ESCAPE))
@@ -456,6 +467,10 @@ namespace BilliardsSaloon
 
         switch (state)
         {
+            case ApplicationShellState::Title:
+                m_menus->show(MenuScreen::Title);
+                break;
+
             case ApplicationShellState::MainMenu:
                 m_menus->show(MenuScreen::Main);
                 break;
@@ -539,11 +554,22 @@ namespace BilliardsSaloon
         refreshTitleSoon();
     }
 
+    bool Application::isInMatch() const
+    {
+        const ApplicationShellState state =
+            (m_shellState == ApplicationShellState::Settings) ? m_settingsReturnState : m_shellState;
+        return (state != ApplicationShellState::Title) && (state != ApplicationShellState::MainMenu);
+    }
+
     void Application::updateFixed(double deltaTimeSeconds)
     {
         if (m_shellState == ApplicationShellState::Gameplay)
         {
             m_session.step(deltaTimeSeconds);
+        }
+        else if (!isInMatch() && !m_settings.reducedMotion)
+        {
+            m_menuOrbitSeconds += deltaTimeSeconds;
         }
 
         updateCameraRig(deltaTimeSeconds);
@@ -618,26 +644,32 @@ namespace BilliardsSaloon
 
             targetPose = desiredCameraPose(m_cameraRigState, buildGameplayCameraContext());
         }
+        else if (isInMatch())
+        {
+            // Pause, frame over and in-match settings keep the match view.
+            cameraTransform->syncPrevious();
+            return;
+        }
         else
         {
-            const glm::vec3 cueSpot = m_session.cueBallStartPosition();
-
-            CameraRigState menuRigState;
-            menuRigState.mode = CameraViewMode::TableOverview;
-            targetPose = desiredCameraPose(
-                menuRigState,
-                CameraRigContext{
-                    .tableCenter = glm::vec3(0.0f, cueSpot.y, 0.0f),
-                    .cueBallPosition = cueSpot,
-                    .trackedBallPosition = cueSpot,
-                    .trackedBallVelocity = glm::vec3(0.0f),
-                    .aimDirection = glm::vec3(0.0f, 0.0f, -1.0f),
-                    .cueBallAvailable = true,
-                    .trackedBallAvailable = true,
-                    .ballsInMotion = false
-                }
+            // Title and hub: a slow crane move over the table. The title sits
+            // higher and wider; the hub comes closer.
+            const bool title = m_shellState == ApplicationShellState::Title;
+            // Sway in an arc on the open side of the room rather than circling it.
+            const float angle = 0.75f + 0.35f * std::sin(0.07f * static_cast<float>(m_menuOrbitSeconds));
+            const float radius = title ? 3.6f : 3.0f;
+            const float height = title ? 1.6f : 1.2f;
+            const glm::vec3 target(0.0f, -0.05f, 0.0f);
+            targetPose = lookAtPose(
+                target + glm::vec3(std::cos(angle) * radius, height, std::sin(angle) * radius),
+                target
             );
         }
+
+        // On the hub the table sits to the right of the menu (wide windows only).
+        const float wantedShift =
+            ((m_shellState == ApplicationShellState::MainMenu) && (m_window.aspectRatio() > 1.3f)) ? 0.32f : 0.0f;
+        m_lensShift += (wantedShift - m_lensShift) * (1.0f - std::exp(-4.0f * static_cast<float>(deltaTimeSeconds)));
 
         const float blendRate =
             (m_shellState == ApplicationShellState::Gameplay) ? 10.0f : 7.0f;
@@ -707,11 +739,7 @@ namespace BilliardsSaloon
 
     void Application::updateHud(float frameTimeSeconds)
     {
-        const bool inMatch =
-            (m_shellState == ApplicationShellState::Settings)
-                ? (m_settingsReturnState != ApplicationShellState::MainMenu)
-                : (m_shellState != ApplicationShellState::MainMenu);
-        m_hud->setVisible(inMatch);
+        m_hud->setVisible(isInMatch());
 
         const HudSnapshot snapshot = buildHudSnapshot();
 
@@ -769,9 +797,11 @@ namespace BilliardsSaloon
         settings.lights = saloonLightRig();
         settings.viewportWidth = m_window.width();
         settings.viewportHeight = m_window.height();
+        settings.lensShiftX = m_lensShift;
 
         switch (m_shellState)
         {
+            case ApplicationShellState::Title:
             case ApplicationShellState::MainMenu:
                 settings.clearColor = glm::vec3(0.025f, 0.020f, 0.022f);
                 break;

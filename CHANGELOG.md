@@ -20,7 +20,11 @@ All notable changes to Billiards Saloon. The format follows
   motion. Changes apply immediately and are saved to the user's settings
   file (`~/Library/Application Support/Billiards Saloon/settings.json` on
   macOS, `%APPDATA%` on Windows, `~/.config` on Linux).
-- `--screen main|game|pause|settings`, `--fullscreen` and `--capture FILE.png`
+- Title screen over the live hall ("Press any key", build version), then
+  the main hub with the table framed beside the menu. The menu camera moves
+  slowly over the table (still with Reduced Motion); pause and frame-over
+  keep the match view.
+- `--screen title|main|game|pause|settings`, `--fullscreen` and `--capture FILE.png`
   launch options; capture renders a screen, saves a PNG and quits.
 
 ### Changed

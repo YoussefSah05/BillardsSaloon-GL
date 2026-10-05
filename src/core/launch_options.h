@@ -9,6 +9,7 @@ namespace BilliardsSaloon
 {
     enum class StartScreen
     {
+        Title,
         MainMenu,
         Gameplay,
         Pause,
@@ -20,7 +21,7 @@ namespace BilliardsSaloon
     struct LaunchOptions
     {
         bool fullscreen {false};
-        StartScreen startScreen {StartScreen::MainMenu};
+        StartScreen startScreen {StartScreen::Title};
         std::filesystem::path capturePath;   // empty = no capture
         int captureAfterFrames {90};
     };

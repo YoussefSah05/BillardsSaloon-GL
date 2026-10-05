@@ -1,0 +1,64 @@
+<rml>
+<head>
+    <title>Title</title>
+    <link type="text/rcss" href="theme.rcss"/>
+    <style>
+        @keyframes breathe {
+            from { opacity: 0.35; }
+            to   { opacity: 1; }
+        }
+        body {
+            z-index: 10;
+        }
+        .scrim {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 55%;
+            decorator: vertical-gradient(rgba(8, 9, 11, 0) rgba(8, 9, 11, 235));
+        }
+        .center {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 120dp;
+            text-align: center;
+        }
+        .wordmark .rule {
+            margin: 0 auto;
+        }
+        .press {
+            margin-top: 34dp;
+            font-family: "Barlow Condensed";
+            font-weight: 600;
+            font-size: 20dp;
+            letter-spacing: 6dp;
+            color: #F2EEE6;
+            animation: 1.4s cubic-in-out infinite alternate breathe;
+        }
+        body.reduced-motion .press {
+            animation: none;
+        }
+        .version {
+            position: absolute;
+            right: 40dp;
+            bottom: 28dp;
+            font-size: 13dp;
+            color: #A9A39A;
+        }
+    </style>
+</head>
+<body class="screen" data-model="shell">
+    <div class="scrim"></div>
+    <div class="center">
+        <div class="wordmark">
+            <div class="tag">THE TOURNAMENT HALL</div>
+            <h1>BILLIARDS SALOON</h1>
+            <div class="rule"></div>
+        </div>
+        <div class="press">PRESS ANY KEY</div>
+    </div>
+    <div class="version">{{ version }}</div>
+</body>
+</rml>

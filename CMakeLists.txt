@@ -169,6 +169,7 @@ target_link_libraries(BilliardsSaloon PRIVATE
 bs_set_warnings(BilliardsSaloon)
 
 target_compile_definitions(BilliardsSaloon PRIVATE
+    BS_VERSION="${PROJECT_VERSION}"
     GLFW_INCLUDE_NONE
     $<$<CONFIG:Debug>:BS_DEBUG=1>
 )

@@ -17,6 +17,7 @@ namespace BilliardsSaloon
     enum class MenuScreen
     {
         None,
+        Title,
         Main,
         Pause,
         FrameOver
@@ -49,11 +50,13 @@ namespace BilliardsSaloon
     private:
         ShellMenuActions m_actions;
         Rml::DataModelHandle m_model;
+        Rml::ElementDocument* m_title {nullptr};
         Rml::ElementDocument* m_mainMenu {nullptr};
         Rml::ElementDocument* m_pauseMenu {nullptr};
         Rml::ElementDocument* m_frameOver {nullptr};
         std::string m_frameWinner;
         std::string m_frameDetail;
+        std::string m_version;
         MenuScreen m_shown {MenuScreen::None};
     };
 }

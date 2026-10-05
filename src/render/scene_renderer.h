@@ -55,6 +55,10 @@ namespace BilliardsSaloon
         PointLightRig lights {};
         int viewportWidth {1};
         int viewportHeight {1};
+
+        // Moves the image sideways without turning the camera, in normalized
+        // device units (+0.3 puts the scene 15% of the width to the right).
+        float lensShiftX {0.0f};
     };
 
     // Optional emphasis on one ball (the cue ball while aiming).
