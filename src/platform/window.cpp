@@ -106,6 +106,12 @@ namespace BilliardsSaloon
         glfwSetWindowUserPointer(m_handle, this);
         glfwSetFramebufferSizeCallback(m_handle, &Window::framebufferSizeCallback);
         glfwSetScrollCallback(m_handle, &Window::scrollCallback);
+        glfwSetKeyCallback(m_handle, &Window::keyCallback);
+        glfwSetCharCallback(m_handle, &Window::charCallback);
+        glfwSetCursorPosCallback(m_handle, &Window::cursorPosCallback);
+        glfwSetCursorEnterCallback(m_handle, &Window::cursorEnterCallback);
+        glfwSetMouseButtonCallback(m_handle, &Window::mouseButtonCallback);
+        glfwSetWindowContentScaleCallback(m_handle, &Window::contentScaleCallback);
 
         initializeOpenGL();
 
@@ -264,6 +270,19 @@ namespace BilliardsSaloon
         return delta;
     }
 
+    float Window::contentScale() const
+    {
+        float xScale = 1.0f;
+        float yScale = 1.0f;
+        glfwGetWindowContentScale(m_handle, &xScale, &yScale);
+        return std::max(xScale, 1.0f);
+    }
+
+    void Window::setEventSink(WindowEventSink* sink)
+    {
+        m_sink = sink;
+    }
+
     GLFWwindow* Window::nativeHandle() const
     {
         return m_handle;
@@ -292,14 +311,92 @@ namespace BilliardsSaloon
         self->m_height = std::max(height, 1);
 
         glViewport(0, 0, self->m_width, self->m_height);
+
+        if (self->m_sink != nullptr)
+        {
+            self->m_sink->onFramebufferSize(self->m_width, self->m_height);
+        }
     }
 
     void Window::scrollCallback(GLFWwindow* window, double, double yOffset)
     {
         auto* self = static_cast<Window*>(glfwGetWindowUserPointer(window));
-        if (self != nullptr)
+        if (self == nullptr)
         {
-            self->m_scrollDelta += static_cast<float>(yOffset);
+            return;
+        }
+
+        self->m_scrollDelta += static_cast<float>(yOffset);
+
+        if (self->m_sink != nullptr)
+        {
+            self->m_sink->onScroll(yOffset, self->m_currentMods);
+        }
+    }
+
+    void Window::keyCallback(GLFWwindow* window, int key, int, int action, int mods)
+    {
+        auto* self = static_cast<Window*>(glfwGetWindowUserPointer(window));
+        if (self == nullptr)
+        {
+            return;
+        }
+
+        self->m_currentMods = mods;
+        if (self->m_sink != nullptr)
+        {
+            self->m_sink->onKey(key, action, mods);
+        }
+    }
+
+    void Window::charCallback(GLFWwindow* window, unsigned int codepoint)
+    {
+        auto* self = static_cast<Window*>(glfwGetWindowUserPointer(window));
+        if ((self != nullptr) && (self->m_sink != nullptr))
+        {
+            self->m_sink->onChar(codepoint);
+        }
+    }
+
+    void Window::cursorPosCallback(GLFWwindow* window, double x, double y)
+    {
+        auto* self = static_cast<Window*>(glfwGetWindowUserPointer(window));
+        if ((self != nullptr) && (self->m_sink != nullptr))
+        {
+            self->m_sink->onCursorPos(x, y, self->m_currentMods);
+        }
+    }
+
+    void Window::cursorEnterCallback(GLFWwindow* window, int entered)
+    {
+        auto* self = static_cast<Window*>(glfwGetWindowUserPointer(window));
+        if ((self != nullptr) && (self->m_sink != nullptr))
+        {
+            self->m_sink->onCursorEnter(entered == GLFW_TRUE);
+        }
+    }
+
+    void Window::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
+    {
+        auto* self = static_cast<Window*>(glfwGetWindowUserPointer(window));
+        if (self == nullptr)
+        {
+            return;
+        }
+
+        self->m_currentMods = mods;
+        if (self->m_sink != nullptr)
+        {
+            self->m_sink->onMouseButton(button, action, mods);
+        }
+    }
+
+    void Window::contentScaleCallback(GLFWwindow* window, float xScale, float)
+    {
+        auto* self = static_cast<Window*>(glfwGetWindowUserPointer(window));
+        if ((self != nullptr) && (self->m_sink != nullptr))
+        {
+            self->m_sink->onContentScale(std::max(xScale, 1.0f));
         }
     }
 

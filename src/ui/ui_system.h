@@ -1,0 +1,66 @@
+#pragma once
+
+#include "platform/window.h"
+
+#include <memory>
+#include <string_view>
+
+namespace Rml
+{
+    class Context;
+    class ElementDocument;
+}
+
+class SystemInterface_GLFW;
+class RenderInterface_GL3;
+
+namespace BilliardsSaloon
+{
+    // Owns RmlUi for the lifetime of the game: interfaces, fonts and the one
+    // UI context. Draws after the 3D scene each frame. Only one may exist.
+    class UiSystem final : public WindowEventSink
+    {
+    public:
+        explicit UiSystem(Window& window);
+        ~UiSystem() override;
+
+        UiSystem(const UiSystem&) = delete;
+        UiSystem& operator=(const UiSystem&) = delete;
+        UiSystem(UiSystem&&) = delete;
+        UiSystem& operator=(UiSystem&&) = delete;
+
+        [[nodiscard]] Rml::Context& context();
+
+        // Loads an .rml document from the assets folder (e.g. "ui/main_menu.rml").
+        // Throws std::runtime_error if it cannot be loaded.
+        [[nodiscard]] Rml::ElementDocument& loadDocument(std::string_view assetPath);
+
+        // While false (cursor captured for aiming), mouse events skip the UI.
+        void setPointerEnabled(bool enabled);
+
+        // True when the last key event was used by the UI (e.g. menu navigation).
+        [[nodiscard]] bool consumedLastKey() const { return m_consumedLastKey; }
+
+        void update();
+        void render();
+
+        void onKey(int key, int action, int mods) override;
+        void onChar(unsigned int codepoint) override;
+        void onCursorPos(double x, double y, int mods) override;
+        void onCursorEnter(bool entered) override;
+        void onMouseButton(int button, int action, int mods) override;
+        void onScroll(double yOffset, int mods) override;
+        void onFramebufferSize(int width, int height) override;
+        void onContentScale(float scale) override;
+
+    private:
+        void loadFonts();
+
+        Window& m_window;
+        std::unique_ptr<SystemInterface_GLFW> m_systemInterface;
+        std::unique_ptr<RenderInterface_GL3> m_renderInterface;
+        Rml::Context* m_context {nullptr};
+        bool m_pointerEnabled {true};
+        bool m_consumedLastKey {false};
+    };
+}

@@ -1,0 +1,148 @@
+/*
+ * Billiards Saloon — broadcast design language (see docs/design/UX.md).
+ * Shared by every screen. RmlUi has no default HTML stylesheet, so the basics
+ * are defined here too. Sizes use dp so they scale with the display.
+ *
+ * Palette
+ *   hall    #0B0D0F   panel  rgba(16,18,21,235)   chalk #F2EEE6
+ *   soft    #C9C3B9   muted  #A9A39A              gold  #D4A94A   ink #111214
+ *   foul    #C9443A   legal  #59B88A              info  #5B9BD5
+ */
+
+body, div, h1, h2, h3, p, section, nav, header, footer {
+    display: block;
+}
+
+body {
+    width: 100%;
+    height: 100%;
+    font-family: Barlow;
+    font-weight: 400;
+    font-size: 16dp;
+    color: #F2EEE6;
+}
+
+h1, h2, h3, .display {
+    font-family: "Barlow Condensed";
+}
+
+.screen {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.eyebrow {
+    font-family: "Barlow Condensed";
+    font-weight: 600;
+    font-size: 14dp;
+    letter-spacing: 4dp;
+    color: #A9A39A;
+}
+
+.gold {
+    color: #D4A94A;
+}
+
+/* ---- Wordmark ------------------------------------------------------- */
+
+.wordmark .tag {
+    font-family: "Barlow Condensed";
+    font-weight: 600;
+    font-size: 15dp;
+    letter-spacing: 5dp;
+    color: #D4A94A;
+}
+
+.wordmark h1 {
+    margin: 10dp 0 12dp;
+    font-weight: 800;
+    font-size: 88dp;
+    line-height: 80dp;
+    color: #F2EEE6;
+}
+
+.wordmark .rule {
+    width: 64dp;
+    height: 3dp;
+    background-color: #D4A94A;
+}
+
+/* ---- Broadcast menu buttons ----------------------------------------- */
+
+.menu-item {
+    display: block;
+    width: 400dp;
+    height: 56dp;
+    margin-bottom: 10dp;
+    padding: 0 28dp;
+    box-sizing: border-box;
+    background-color: rgba(16, 18, 21, 235);
+    font-family: "Barlow Condensed";
+    font-weight: 600;
+    font-size: 26dp;
+    line-height: 56dp;
+    letter-spacing: 1.5dp;
+    color: #F2EEE6;
+    tab-index: auto;
+    nav: auto;
+    focus: auto;
+    cursor: pointer;
+    transform: skewX(-12deg);
+    transition: background-color color 0.16s cubic-out;
+}
+
+/* Text inside a skewed bar stays upright. */
+.menu-item .label {
+    display: inline-block;
+    transform: skewX(12deg);
+}
+
+.menu-item .sub {
+    font-family: Barlow;
+    font-weight: 500;
+    font-size: 13dp;
+    letter-spacing: 0;
+    margin-left: 12dp;
+    color: #A9A39A;
+}
+
+.menu-item:hover,
+.menu-item:focus {
+    background-color: #D4A94A;
+    color: #111214;
+}
+
+.menu-item:hover .sub,
+.menu-item:focus .sub {
+    color: #3B2E12;
+}
+
+.menu-item:active {
+    background-color: #E9C46A;
+}
+
+/* ---- Input hints ---------------------------------------------------- */
+
+.hints {
+    font-size: 14dp;
+    color: #C9C3B9;
+}
+
+.hints .hint {
+    display: inline-block;
+    margin-right: 24dp;
+}
+
+.key {
+    display: inline-block;
+    padding: 1dp 7dp;
+    margin-right: 6dp;
+    border: 1dp rgba(242, 238, 230, 115);
+    border-radius: 4dp;
+    font-weight: 600;
+    font-size: 13dp;
+    color: #F2EEE6;
+}

@@ -16,6 +16,9 @@ option(BS_WARNINGS_AS_ERRORS "Treat compiler warnings in project code as errors"
 
 include(FetchContent)
 
+# Every dependency is linked statically into the game.
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -41,6 +44,54 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(nlohmann_json)
 
+# UI: FreeType for font rendering, RmlUi for HTML/CSS-style menus and HUD.
+set(FT_DISABLE_ZLIB ON CACHE BOOL "" FORCE)
+set(FT_DISABLE_BZIP2 ON CACHE BOOL "" FORCE)
+set(FT_DISABLE_PNG ON CACHE BOOL "" FORCE)
+set(FT_DISABLE_HARFBUZZ ON CACHE BOOL "" FORCE)
+set(FT_DISABLE_BROTLI ON CACHE BOOL "" FORCE)
+FetchContent_Declare(
+    freetype
+    GIT_REPOSITORY https://github.com/freetype/freetype.git
+    GIT_TAG VER-2-13-3
+    GIT_SHALLOW TRUE
+    SYSTEM
+)
+FetchContent_MakeAvailable(freetype)
+if(NOT TARGET Freetype::Freetype)
+    add_library(Freetype::Freetype ALIAS freetype)
+endif()
+
+# Use the FreeType built above, never a system copy, so builds are reproducible.
+set(CMAKE_DISABLE_FIND_PACKAGE_Freetype TRUE)
+set(RMLUI_SAMPLES OFF CACHE BOOL "" FORCE)
+set(RMLUI_FONT_ENGINE "freetype" CACHE STRING "" FORCE)
+set(RMLUI_LUA_BINDINGS OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(
+    rmlui
+    GIT_REPOSITORY https://github.com/mikke89/RmlUi.git
+    GIT_TAG 6.3
+    GIT_SHALLOW TRUE
+    SYSTEM
+)
+FetchContent_MakeAvailable(rmlui)
+
+# RmlUi ships its GLFW platform and OpenGL 3 renderer as sources; build them
+# against our GLAD loader instead of RmlUi's bundled one.
+add_library(bs_rmlui_backend STATIC
+    ${rmlui_SOURCE_DIR}/Backends/RmlUi_Platform_GLFW.cpp
+    ${rmlui_SOURCE_DIR}/Backends/RmlUi_Renderer_GL3.cpp
+)
+target_include_directories(bs_rmlui_backend SYSTEM
+    PUBLIC ${rmlui_SOURCE_DIR}/Backends
+    PRIVATE external/glad/include
+)
+target_compile_definitions(bs_rmlui_backend PRIVATE
+    GLFW_INCLUDE_NONE
+    "RMLUI_GL3_CUSTOM_LOADER=<glad/gl.h>"
+)
+target_link_libraries(bs_rmlui_backend PUBLIC RmlUi::RmlUi glfw)
+
 find_package(OpenGL REQUIRED)
 
 function(bs_set_warnings target)
@@ -61,6 +112,7 @@ endfunction()
 # so it can be linked by unit tests, tools and (later) the AI.
 add_library(bs_game STATIC
     src/core/asset_paths.cpp
+    src/core/launch_options.cpp
     src/gameplay/shot_state.cpp
     src/gameplay/game_variant.cpp
     src/gameplay/match_session.cpp
@@ -85,15 +137,18 @@ add_executable(BilliardsSaloon
     src/app/application.cpp
     src/app/overlay_screens.cpp
     src/app/saloon_scene.cpp
+    src/app/shell_menus.cpp
     src/platform/input.cpp
     src/platform/window.cpp
     src/platform/timer.cpp
     src/render/scene_renderer.cpp
+    src/render/screenshot.cpp
     src/render/shader.cpp
     src/render/mesh.cpp
     src/render/camera.cpp
     src/render/camera_rig.cpp
     src/render/ui_overlay.cpp
+    src/ui/ui_system.cpp
     external/glad/src/gl.c
 )
 
@@ -101,9 +156,11 @@ target_include_directories(BilliardsSaloon PRIVATE
     src
     external/glad/include
 )
+target_include_directories(BilliardsSaloon SYSTEM PRIVATE external/stb)
 
 target_link_libraries(BilliardsSaloon PRIVATE
     bs_game
+    bs_rmlui_backend
     glfw
     OpenGL::GL
 )
@@ -140,7 +197,7 @@ if(BS_BUILD_TESTS)
         tests/test_match_session.cpp
         tests/test_game_variant.cpp
         tests/test_game_data.cpp
-        tests/test_menu_layout.cpp
+        tests/test_launch_options.cpp
         tests/test_physics.cpp
         tests/test_asset_paths.cpp
     )
