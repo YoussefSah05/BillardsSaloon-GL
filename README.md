@@ -3,9 +3,10 @@
 A realism-first 3D pool game presented like a televised tournament.
 Built from scratch in C++20 and OpenGL 4.1 — no game engine.
 
-> **Status:** early development. `v0.4.0` has event-based physics and WPA
-> 8-, 9- and 10-ball for two local players. Work toward v1.0 (AI opponents,
-> broadcast presentation, career mode) is tracked in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+> **Status:** early development. `v0.5.0` has event-based physics, WPA 8-,
+> 9- and 10-ball for two local players, simulator aim guides and broadcast
+> presentation (director cuts, replays, shot clock). Work toward v1.0 (hall
+> visuals, audio, AI opponents, career mode) is tracked in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Screenshots
 
