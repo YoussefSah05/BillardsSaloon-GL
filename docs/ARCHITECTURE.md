@@ -3,21 +3,30 @@
 C++20, OpenGL 4.1 core (the macOS ceiling: no compute shaders, no DSA), GLFW,
 GLM, no game engine. See `docs/design/GDD.md` for what the game must do.
 
-## Current state (v0.1.0-prototype)
+## Current state
 
-| Path | Role |
-|------|------|
-| `src/app/application.*` | Main loop with fixed 120 Hz step and interpolated render. Also owns menus, input, camera, shot logic and all drawing (~2.4k lines — to be split). |
-| `src/ecs/` | Sparse-set `Registry` with `view<...>().each(...)`. Kept. |
-| `src/scene/components.h` | Transform (with previous state for interpolation), Ball, Material, TableBounds, Camera tags. |
-| `src/physics/billiards_physics.*` | Fixed-step impulse solver: sliding→rolling cloth model, ball-ball and rail impulses, radius-based pocket capture. To be replaced by `sim/`. |
-| `src/gameplay/` | `GameVariantDefinition` (racks, ball sets), `MatchState`, `ShotState`, `ShotResult`, and `Rules::resolveShot` (8-ball only; 9-ball currently reuses it). |
-| `src/render/` | `Shader`, `Mesh` (procedural cube/plane/sphere), `Camera`, `camera_rig` (aim/overview/follow/free-look), `ui_overlay` (voxel-font text from cubes). |
-| `assets/shaders/basic.*` | Single forward shader with procedural cloth/wood finishes and ball patterns. |
+Two CMake targets: `bs_game`, a headless static library (no OpenGL/GLFW) that
+tests link, and the `BilliardsSaloon` executable.
 
-Known limitations: shaders load from `../assets` (cwd-dependent); max shot
-speed 3.8 m/s with ~3.2 cm per step (tunneling risk); flat rails, no pocket
-jaws; no tests, CI, audio, AI, settings or saves.
+| Path | Target | Role |
+|------|--------|------|
+| `src/core/asset_paths.*` | bs_game | `resolveAssetPath`: exe-relative asset lookup (build tree, macOS bundle, source fallback). |
+| `src/ecs/` | bs_game | Sparse-set `Registry` with `view<...>().each(...)`. |
+| `src/scene/components.h` | bs_game | Transform (with previous state for interpolation), Ball, Material, TableBounds, Camera tags. |
+| `src/gameplay/game_variant.*` | bs_game | Variant/table types, JSON loaders, rack layouts. |
+| `src/gameplay/match_session.*` | bs_game | One rack of play: ECS world, shot state machine (aim, tip offset, charge, fire), physics step, rule resolution. |
+| `src/gameplay/turn_rules.*` | bs_game | `Rules::resolveShot` (8-ball only; 9-ball currently reuses it). |
+| `src/physics/billiards_physics.*` | bs_game | Fixed-step impulse solver: sliding→rolling cloth model, ball-ball and rail impulses, radius-based pocket capture. To be replaced by `sim/`. |
+| `src/platform/` | app | `Window` (GLFW, vsync on), `Input` (key edge detection), `Timer`. |
+| `src/render/` | app | `SceneRenderer` (frame setup, world, aim guide), `Shader`, `Mesh`, `Camera`, `camera_rig`, `ui_overlay` (voxel-font text). |
+| `src/app/` | app | `Application` (loop, screens, camera rig), `saloon_scene` (room, lamps, ball materials), `overlay_screens` (HUD and menus). |
+| `assets/data/` | — | Game data: `variants/*.json` (rules discipline, rack, balls) and `tables/*.json` (dimensions, pockets, physics coefficients). |
+| `assets/shaders/basic.*` | — | Single forward shader with procedural cloth/wood finishes and ball patterns. |
+| `tests/` | bs_tests | doctest suite: ECS, rules, physics characterization, session, data loading. |
+
+Known limitations: the table is 2.84 × 1.42 m (a 10 ft table; WPA 9 ft is
+2.54 × 1.27 m); max shot speed 3.8 m/s with ~3.2 cm per step (tunneling risk);
+flat rails, no pocket jaws; no audio, AI, settings or saves.
 
 ## Target architecture (v1.0)
 

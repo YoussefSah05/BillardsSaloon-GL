@@ -1,30 +1,18 @@
 #pragma once
 
 #include "ecs/entity.h"
-#include "ecs/registry.h"
-#include "gameplay/game_variant.h"
-#include "gameplay/match_state.h"
-#include "gameplay/shot_result.h"
-#include "gameplay/shot_state.h"
+#include "gameplay/match_session.h"
+#include "platform/input.h"
 #include "platform/timer.h"
 #include "platform/window.h"
 #include "render/camera_rig.h"
-#include "render/mesh.h"
-#include "render/shader.h"
+#include "render/scene_renderer.h"
 
 #include <cstdint>
 #include <memory>
-#include <vector>
 
 namespace BilliardsSaloon
 {
-    enum class RenderQualityPreset
-    {
-        Low,
-        Balanced,
-        High
-    };
-
     enum class ApplicationShellState
     {
         MainMenu,
@@ -45,6 +33,8 @@ namespace BilliardsSaloon
         ReturnToMainMenu
     };
 
+    // Owns the window and main loop, routes input to the active screen,
+    // and ties the match session, camera rig and renderer together.
     class Application
     {
     public:
@@ -52,69 +42,50 @@ namespace BilliardsSaloon
         int run();
 
     private:
-        void processPlatformInput();
+        void processInput(float frameTimeSeconds);
+        void processGlobalShortcuts();
+        void processMainMenuInput();
+        void processPauseMenuInput();
+        void processGameplayInput(float frameTimeSeconds);
+
         void updateFixed(double deltaTimeSeconds);
+        void updateCameraRig(double deltaTimeSeconds);
+        [[nodiscard]] CameraRigContext buildGameplayCameraContext() const;
+
         void render(double alpha);
         void updateWindowTitle(double frameTimeSeconds, std::uint32_t fixedStepsThisFrame);
-        void updateCameraRig(double deltaTimeSeconds);
-        void resetMatchToOpeningRack();
+        void refreshTitleSoon();
+
+        void enterPauseMenu();
         void applyMainMenuSelection();
         void applyPauseMenuSelection();
         void setCameraViewMode(CameraViewMode mode);
-        [[nodiscard]] CameraRigContext buildGameplayCameraContext() const;
-
-        Entity findCueBall() const;
-        void resetCueBall();
-        bool fireCurrentShot();
 
         static constexpr double FIXED_TIME_STEP = 1.0 / 120.0;
         static constexpr double MAX_FRAME_TIME = 0.25;
 
         Window m_window;
         Timer m_timer;
+        Input m_input;
 
-        Registry m_registry;
+        MatchSession m_session;
         Entity m_cameraEntity;
-        Entity m_cueBallEntity;
-        std::vector<Entity> m_objectBallEntities;
+        std::unique_ptr<SceneRenderer> m_renderer;
 
-        std::unique_ptr<Shader> m_basicShader;
-        std::unique_ptr<Mesh> m_cubeMesh;
-        std::unique_ptr<Mesh> m_planeMesh;
-        std::unique_ptr<Mesh> m_sphereMesh;
-
-        const GameVariantDefinition* m_variant {nullptr};
-        MatchState m_matchState {};
-        ShotState m_shotState {};
-        ShotResult m_currentShotResult {};
         ApplicationShellState m_shellState {ApplicationShellState::MainMenu};
         MainMenuSelection m_mainMenuSelection {MainMenuSelection::StartMatch};
         PauseMenuSelection m_pauseMenuSelection {PauseMenuSelection::Resume};
-        CameraRigState m_cameraRigState {};
-        bool m_spaceWasDownLastFrame {false};
-        bool m_escapeWasDownLastFrame {false};
-        bool m_qualityToggleWasDownLastFrame {false};
-        bool m_titleStatsToggleWasDownLastFrame {false};
-        bool m_menuUpWasDownLastFrame {false};
-        bool m_menuDownWasDownLastFrame {false};
-        bool m_menuConfirmWasDownLastFrame {false};
-        bool m_cameraCycleWasDownLastFrame {false};
-        bool m_cameraAimWasDownLastFrame {false};
-        bool m_cameraOverviewWasDownLastFrame {false};
-        bool m_cameraFollowWasDownLastFrame {false};
-        bool m_cameraFreeLookWasDownLastFrame {false};
-        bool m_showPerformanceStatsInTitle {true};
         RenderQualityPreset m_renderQuality {RenderQualityPreset::Balanced};
-        float m_cameraOrbitYawInput {0.0f};
-        float m_cameraOrbitPitchInput {0.0f};
-        float m_cameraZoomInput {0.0f};
+
+        CameraRigState m_cameraRigState {};
+        CameraRigInputAxes m_cameraInput {};
 
         double m_accumulator {0.0};
-        double m_simulationTime {0.0};
+
+        bool m_showPerformanceStatsInTitle {true};
         double m_titleUpdateAccumulator {0.0};
         double m_titleUpdateFrameTimeSum {0.0};
         std::uint32_t m_titleUpdateFrameCount {0};
         std::uint32_t m_titleUpdateFixedStepCount {0};
-        std::uint64_t m_fixedFrameIndex {0};
     };
 }

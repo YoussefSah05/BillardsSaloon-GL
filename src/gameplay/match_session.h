@@ -1,0 +1,101 @@
+#pragma once
+
+#include "ecs/entity.h"
+#include "ecs/registry.h"
+#include "gameplay/game_variant.h"
+#include "gameplay/match_state.h"
+#include "gameplay/shot_result.h"
+#include "gameplay/shot_state.h"
+
+#include <glm/glm.hpp>
+
+#include <vector>
+
+namespace BilliardsSaloon
+{
+    // Shot input rates are per second so aiming and charging feel identical at
+    // any frame rate. Values match the prototype's feel at 60 fps.
+    struct ShotInputTuning
+    {
+        float aimRadiansPerSecond {0.9f};
+        float strikeOffsetPerSecond {0.9f};
+        float chargePerSecond {0.9f};
+        float maxStrikeRadius01 {0.75f};
+        float minShotSpeed {0.4f};
+        float maxShotSpeed {3.8f};
+    };
+
+    // One frame of player intent, already mapped from devices to axes.
+    struct ShotControls
+    {
+        float aimAxis {0.0f};            // +1 rotates aim counter-clockwise (seen from above)
+        float strikeRightAxis {0.0f};    // +1 moves the tip toward right english
+        float strikeForwardAxis {0.0f};  // +1 moves the tip toward follow
+        bool centerStrike {false};
+        bool shootHeld {false};
+    };
+
+    [[nodiscard]] glm::vec3 aimDirectionFromAngle(float angleRadians);
+
+    // Headless owner of one rack of play: the ECS world with table and balls,
+    // the shot state machine, physics stepping and rule resolution.
+    // Presentation layers attach meshes and materials to its entities.
+    class MatchSession
+    {
+    public:
+        explicit MatchSession(const GameVariantDefinition& variant, ShotInputTuning tuning = {});
+
+        [[nodiscard]] Registry& registry() { return m_registry; }
+        [[nodiscard]] const Registry& registry() const { return m_registry; }
+
+        [[nodiscard]] const GameVariantDefinition& variant() const { return *m_variant; }
+        [[nodiscard]] const MatchState& matchState() const { return m_matchState; }
+        [[nodiscard]] const ShotState& shotState() const { return m_shotState; }
+
+        [[nodiscard]] Entity tableEntity() const { return m_tableEntity; }
+        [[nodiscard]] Entity cueBallEntity() const { return m_cueBallEntity; }
+        [[nodiscard]] const std::vector<Entity>& objectBallEntities() const { return m_objectBallEntities; }
+
+        [[nodiscard]] glm::vec3 aimDirection() const;
+        [[nodiscard]] glm::vec3 cueBallStartPosition() const;
+
+        // True while the player may aim and shoot.
+        [[nodiscard]] bool acceptsShotInput() const;
+        [[nodiscard]] bool ballsInMotion() const;
+
+        void resetRack();
+
+        // Applies aiming, tip offset and the hold-to-charge / release-to-shoot
+        // gesture for one frame of length deltaTimeSeconds.
+        void applyShotControls(const ShotControls& controls, float deltaTimeSeconds);
+
+        // Forget a held shoot button, e.g. when the game is paused, so the
+        // release after resuming does not fire a shot.
+        void cancelHeldShot();
+
+        // Development aid: put the cue ball back on its start spot mid-shot.
+        void debugRespotCueBall();
+
+        // Advances physics; resolves the shot by the rules once all balls stop.
+        void step(double deltaTimeSeconds);
+
+    private:
+        void spawnTable();
+        void spawnBalls();
+        void resetCueBall();
+        bool fireShot();
+
+        const GameVariantDefinition* m_variant {nullptr};
+        ShotInputTuning m_tuning;
+
+        Registry m_registry;
+        Entity m_tableEntity;
+        Entity m_cueBallEntity;
+        std::vector<Entity> m_objectBallEntities;
+
+        MatchState m_matchState {};
+        ShotState m_shotState {};
+        ShotResult m_currentShotResult {};
+        bool m_shootWasHeld {false};
+    };
+}

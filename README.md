@@ -19,13 +19,14 @@ Built from scratch in C++20 and OpenGL 4.1 — no game engine.
 
 ## Build
 
-Requires CMake ≥ 3.28, a C++20 compiler and OpenGL 4.1. GLFW and GLM are
+Requires CMake ≥ 3.28, a C++20 compiler and OpenGL 4.1. GLFW, GLM and doctest are
 fetched automatically; GLAD is bundled in `external/`.
 
 ```bash
 cmake -B build -DCMAKE_BUILD_TYPE=Debug
 cmake --build build -j8
-cd build && ./BilliardsSaloon
+./build/BilliardsSaloon
+ctest --test-dir build --output-on-failure   # unit tests
 ```
 
 ## Project layout
