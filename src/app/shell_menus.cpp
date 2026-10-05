@@ -36,17 +36,11 @@ namespace BilliardsSaloon
             throw std::runtime_error("Could not create the shell UI data model.");
         }
 
-        model.BindFunc("fullscreen_label", [this](Rml::Variant& value)
-        {
-            const bool fullscreen = m_actions.isFullscreen && m_actions.isFullscreen();
-            value = Rml::String(fullscreen ? "FULLSCREEN: ON" : "FULLSCREEN: OFF");
-        });
-
         model.Bind("frame_winner", &m_frameWinner);
         model.Bind("frame_detail", &m_frameDetail);
 
         model.BindEventCallback("start_match", callback(m_actions.startMatch));
-        model.BindEventCallback("toggle_fullscreen", callback(m_actions.toggleFullscreen));
+        model.BindEventCallback("open_settings", callback(m_actions.openSettings));
         model.BindEventCallback("quit", callback(m_actions.quit));
         model.BindEventCallback("resume", callback(m_actions.resume));
         model.BindEventCallback("restart_rack", callback(m_actions.restartRack));
@@ -85,11 +79,6 @@ namespace BilliardsSaloon
         {
             m_frameOver->Show(Rml::ModalFlag::None, Rml::FocusFlag::Auto);
         }
-    }
-
-    void ShellMenus::refresh()
-    {
-        m_model.DirtyVariable("fullscreen_label");
     }
 
     void ShellMenus::setFrameResult(const std::string& headline, const std::string& detail)

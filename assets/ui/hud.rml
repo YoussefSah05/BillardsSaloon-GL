@@ -55,12 +55,12 @@
         }
 
         /* ---- Power meter ------------------------------------------ */
-        .power { position: absolute; right: 64dp; top: 50%; margin-top: -205dp; width: 60dp; text-align: center; }
+        .power { position: absolute; right: 60dp; bottom: 180dp; width: 60dp; text-align: center; }
         .power .label { font-family: "Barlow Condensed"; font-size: 14dp; letter-spacing: 2dp; color: #A9A39A; margin-bottom: 10dp; }
         .power .track {
             position: relative;
             width: 22dp;
-            height: 340dp;
+            height: 260dp;
             margin: 0 auto;
             background-color: rgba(16, 18, 21, 235);
             border: 1dp rgba(242, 238, 230, 64);
@@ -96,19 +96,19 @@
         }
 
         /* ---- Prompts ---------------------------------------------- */
+        /* Spans from the left edge to just short of the spin widget, wrapping
+           when space is tight (large UI sizes, narrow windows). */
         .prompts {
             position: absolute;
-            left: 50%;
+            left: 40dp;
+            right: 400dp;
             bottom: 32dp;
-            width: 720dp;
-            margin-left: -360dp;
-            padding: 10dp 0;
-            text-align: center;
+            padding: 10dp 14dp;
             background-color: rgba(16, 18, 21, 200);
             font-size: 14dp;
             color: #C9C3B9;
         }
-        .prompts .hint { margin: 0 9dp; }
+        .prompts .hint { display: inline-block; margin: 0 9dp; }
         .prompts .hint .k { color: #F2EEE6; font-weight: 600; }
 
         /* ---- Referee banner and lower third ------------------------ */
@@ -144,7 +144,7 @@
         .lowerthird {
             position: absolute;
             left: 40dp;
-            bottom: 150dp;
+            bottom: 110dp;
             display: flex;
             height: 56dp;
             font-family: "Barlow Condensed";

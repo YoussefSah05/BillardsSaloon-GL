@@ -46,7 +46,7 @@
         <h2>PAUSED</h2>
         <button class="menu-item" id="resume" autofocus data-event-click="resume"><span class="label">RESUME</span></button>
         <button class="menu-item" id="restart" data-event-click="restart_rack"><span class="label">RESTART RACK</span></button>
-        <button class="menu-item" id="fullscreen" data-event-click="toggle_fullscreen"><span class="label">{{ fullscreen_label }}</span></button>
+        <button class="menu-item" id="settings" data-event-click="open_settings"><span class="label">SETTINGS</span></button>
         <button class="menu-item" id="mainmenu" data-event-click="main_menu"><span class="label">MAIN MENU</span></button>
     </div>
     <div class="hints">

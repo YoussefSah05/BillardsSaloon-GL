@@ -55,7 +55,8 @@ ctest --test-dir build --output-on-failure   # unit tests
 | Free look | Right-drag to orbit, wheel to zoom | J/L orbit, I/K tilt, U/O zoom |
 | Menus | Point and click | Up/Down, Enter |
 | Pause | — | Esc |
-| Fullscreen | Menu entry | F11, Alt+Enter, or Cmd+Ctrl+F on macOS |
+| Fullscreen | Settings | F11, Alt+Enter, or Cmd+Ctrl+F on macOS |
+| Settings | Main or pause menu | Left/Right change a value, Esc goes back |
 | Graphics quality / FPS in title | — | F2 / F1 |
 
 ## Developer options

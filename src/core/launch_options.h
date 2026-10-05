@@ -11,7 +11,8 @@ namespace BilliardsSaloon
     {
         MainMenu,
         Gameplay,
-        Pause
+        Pause,
+        Settings
     };
 
     // Command-line options. Capture options exist for development and

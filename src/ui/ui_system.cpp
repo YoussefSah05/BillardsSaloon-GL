@@ -71,8 +71,10 @@ namespace BilliardsSaloon
             throw std::runtime_error("RmlUi could not create its context.");
         }
 
-        // Stylesheets use dp units, which scale with the display (2x on Retina).
-        m_context->SetDensityIndependentPixelRatio(window.contentScale());
+        // Stylesheets use dp units, which scale with the display (2x on Retina)
+        // and the player's UI size setting.
+        m_contentScale = window.contentScale();
+        m_context->SetDensityIndependentPixelRatio(m_contentScale * m_uiScale);
 
         loadFonts();
         window.setEventSink(this);
@@ -116,6 +118,7 @@ namespace BilliardsSaloon
         {
             throw std::runtime_error("Could not load UI document: " + path);
         }
+        document->SetClass("reduced-motion", m_reducedMotion);
         return *document;
     }
 
@@ -131,6 +134,21 @@ namespace BilliardsSaloon
         {
             // Clear hover states so nothing stays highlighted under a hidden cursor.
             m_context->ProcessMouseLeave();
+        }
+    }
+
+    void UiSystem::setUiScale(float scale)
+    {
+        m_uiScale = scale;
+        m_context->SetDensityIndependentPixelRatio(m_contentScale * m_uiScale);
+    }
+
+    void UiSystem::setReducedMotion(bool enabled)
+    {
+        m_reducedMotion = enabled;
+        for (int i = 0; i < m_context->GetNumDocuments(); ++i)
+        {
+            m_context->GetDocument(i)->SetClass("reduced-motion", enabled);
         }
     }
 
@@ -198,6 +216,7 @@ namespace BilliardsSaloon
 
     void UiSystem::onContentScale(float scale)
     {
-        RmlGLFW::ProcessContentScaleCallback(m_context, scale);
+        m_contentScale = scale;
+        m_context->SetDensityIndependentPixelRatio(m_contentScale * m_uiScale);
     }
 }

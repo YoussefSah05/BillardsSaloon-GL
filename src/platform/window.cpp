@@ -99,9 +99,9 @@ namespace BilliardsSaloon
 
         glfwMakeContextCurrent(m_handle);
 
-        // VSync on: an uncapped frame rate only burns GPU time, and physics
-        // already runs at its own fixed rate. A settings toggle comes later.
-        glfwSwapInterval(1);
+        // VSync on by default: an uncapped frame rate only burns GPU time, and
+        // physics already runs at its own fixed rate.
+        setVsync(desc.vsync);
 
         glfwSetWindowUserPointer(m_handle, this);
         glfwSetFramebufferSizeCallback(m_handle, &Window::framebufferSizeCallback);
@@ -222,8 +222,14 @@ namespace BilliardsSaloon
         m_fullscreen = fullscreen;
 
         // Changing the monitor resets the swap interval on some platforms.
-        glfwSwapInterval(1);
+        glfwSwapInterval(m_vsync ? 1 : 0);
         refreshFramebufferSize();
+    }
+
+    void Window::setVsync(bool enabled)
+    {
+        m_vsync = enabled;
+        glfwSwapInterval(enabled ? 1 : 0);
     }
 
     void Window::toggleFullscreen()

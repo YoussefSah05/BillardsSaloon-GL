@@ -34,6 +34,9 @@ namespace BilliardsSaloon
 
                 case ApplicationShellState::FrameOver:
                     return "Frame over";
+
+                case ApplicationShellState::Settings:
+                    return "Settings";
             }
 
             return "Unknown";
@@ -71,9 +74,67 @@ namespace BilliardsSaloon
         }
     }
 
+    namespace
+    {
+        std::filesystem::path settingsFilePath()
+        {
+            const std::filesystem::path directory = userDataDirectory();
+            return directory.empty() ? std::filesystem::path{} : directory / "settings.json";
+        }
+
+        GameSettings loadStartupSettings(const std::filesystem::path& file, const LaunchOptions& options)
+        {
+            GameSettings settings;
+            if (!file.empty())
+            {
+                std::string warning;
+                settings = loadSettings(file, &warning);
+                if (!warning.empty())
+                {
+                    std::cerr << warning << '\n';
+                }
+            }
+            if (options.fullscreen)
+            {
+                settings.fullscreen = true;
+            }
+            return settings;
+        }
+
+        RenderQualityPreset toRenderQuality(QualityLevel quality)
+        {
+            switch (quality)
+            {
+                case QualityLevel::Low:
+                    return RenderQualityPreset::Low;
+                case QualityLevel::Balanced:
+                    return RenderQualityPreset::Balanced;
+                case QualityLevel::High:
+                    return RenderQualityPreset::High;
+            }
+            return RenderQualityPreset::Balanced;
+        }
+
+        QualityLevel toQualityLevel(RenderQualityPreset quality)
+        {
+            switch (quality)
+            {
+                case RenderQualityPreset::Low:
+                    return QualityLevel::Low;
+                case RenderQualityPreset::Balanced:
+                    return QualityLevel::Balanced;
+                case RenderQualityPreset::High:
+                    return QualityLevel::High;
+            }
+            return QualityLevel::Balanced;
+        }
+    }
+
     Application::Application(const LaunchOptions& options)
         : m_options(options)
-        , m_window(WindowDesc{.fullscreen = options.fullscreen})
+        , m_settingsFile(settingsFilePath())
+        , m_settings(loadStartupSettings(m_settingsFile, options))
+        , m_window(WindowDesc{.fullscreen = m_settings.fullscreen, .vsync = m_settings.vsync})
         , m_session(eightBallVariant())
     {
         const GameVariantDefinition& variant = m_session.variant();
@@ -95,7 +156,7 @@ namespace BilliardsSaloon
                 m_session.resetRack();
                 setShellState(ApplicationShellState::Gameplay);
             },
-            .toggleFullscreen = [this]() { toggleFullscreen(); },
+            .openSettings = [this]() { openSettings(); },
             .quit = [this]() { m_window.requestClose(); },
             .resume = [this]() { setShellState(ApplicationShellState::Gameplay); },
             .restartRack = [this]()
@@ -103,18 +164,30 @@ namespace BilliardsSaloon
                 m_session.resetRack();
                 setShellState(ApplicationShellState::Gameplay);
             },
-            .returnToMainMenu = [this]() { setShellState(ApplicationShellState::MainMenu); },
-            .isFullscreen = [this]() { return m_window.isFullscreen(); }
+            .returnToMainMenu = [this]() { setShellState(ApplicationShellState::MainMenu); }
         });
+        m_settingsScreen = std::make_unique<SettingsScreen>(*m_ui, m_settings, SettingsScreenActions{
+            .apply = [this](const GameSettings& settings) { applySettings(settings); },
+            .back = [this]() { closeSettings(); }
+        });
+
+        // Apply everything that is not already set by the window description.
+        m_renderQuality = toRenderQuality(m_settings.quality);
+        m_ui->setUiScale(m_settings.uiScale);
+        m_ui->setReducedMotion(m_settings.reducedMotion);
         m_menus->show(MenuScreen::Main);
 
-        if (options.startScreen != StartScreen::MainMenu)
+        if ((options.startScreen == StartScreen::Gameplay) || (options.startScreen == StartScreen::Pause))
         {
             setShellState(ApplicationShellState::Gameplay);
         }
         if (options.startScreen == StartScreen::Pause)
         {
             setShellState(ApplicationShellState::PauseMenu);
+        }
+        if (options.startScreen == StartScreen::Settings)
+        {
+            openSettings();
         }
 
         updateCameraRig(FIXED_TIME_STEP);
@@ -209,6 +282,13 @@ namespace BilliardsSaloon
                 }
                 break;
 
+            case ApplicationShellState::Settings:
+                if (m_input.wasPressed(GLFW_KEY_ESCAPE))
+                {
+                    closeSettings();
+                }
+                break;
+
             case ApplicationShellState::Gameplay:
                 processGameplayInput(frameTimeSeconds);
                 break;
@@ -252,8 +332,10 @@ namespace BilliardsSaloon
 
         if (m_input.wasPressed(GLFW_KEY_F2))
         {
-            m_renderQuality = nextRenderQuality(m_renderQuality);
-            refreshTitleSoon();
+            GameSettings settings = m_settings;
+            settings.quality = toQualityLevel(nextRenderQuality(m_renderQuality));
+            applySettings(settings);
+            m_settingsScreen->setSettings(m_settings);
         }
 
         if (m_input.wasPressed(GLFW_KEY_F1))
@@ -299,7 +381,8 @@ namespace BilliardsSaloon
         const bool freeLook = (m_cameraRigState.mode == CameraViewMode::FreeLook);
 
         // Mouse motion only counts while the cursor is captured by the game.
-        const glm::vec2 mouse = m_window.isCursorCaptured() ? m_input.mouseDelta() : glm::vec2(0.0f);
+        const glm::vec2 mouse =
+            m_window.isCursorCaptured() ? m_input.mouseDelta() * m_settings.mouseSensitivity : glm::vec2(0.0f);
         const bool leftHeld = m_input.isMouseDown(GLFW_MOUSE_BUTTON_LEFT);
         const bool rightHeld = m_input.isMouseDown(GLFW_MOUSE_BUTTON_RIGHT);
         const bool fineAim = m_input.isDown(GLFW_KEY_LEFT_SHIFT) || m_input.isDown(GLFW_KEY_RIGHT_SHIFT);
@@ -385,21 +468,69 @@ namespace BilliardsSaloon
                 m_menus->show(MenuScreen::FrameOver);
                 break;
 
+            case ApplicationShellState::Settings:
+                m_menus->show(MenuScreen::None);
+                break;
+
             case ApplicationShellState::Gameplay:
                 m_menus->show(MenuScreen::None);
                 m_waitForShotRelease = true;
                 break;
         }
 
+        m_settingsScreen->setVisible(state == ApplicationShellState::Settings);
         refreshTitleSoon();
     }
 
     void Application::toggleFullscreen()
     {
-        m_window.toggleFullscreen();
-        m_input.discardNextMouseDelta();
-        m_menus->refresh();
+        GameSettings settings = m_settings;
+        settings.fullscreen = !settings.fullscreen;
+        applySettings(settings);
+        m_settingsScreen->setSettings(m_settings);
+    }
+
+    void Application::applySettings(const GameSettings& settings)
+    {
+        const GameSettings previous = m_settings;
+        m_settings = sanitized(settings);
+
+        if (m_settings.fullscreen != m_window.isFullscreen())
+        {
+            m_window.setFullscreen(m_settings.fullscreen);
+            m_input.discardNextMouseDelta();
+        }
+        if (m_settings.vsync != m_window.vsyncEnabled())
+        {
+            m_window.setVsync(m_settings.vsync);
+        }
+        m_renderQuality = toRenderQuality(m_settings.quality);
+        if (m_settings.uiScale != previous.uiScale)
+        {
+            m_ui->setUiScale(m_settings.uiScale);
+        }
+        if (m_settings.reducedMotion != previous.reducedMotion)
+        {
+            m_ui->setReducedMotion(m_settings.reducedMotion);
+        }
+
+        if (!m_settingsFile.empty() && !saveSettings(m_settingsFile, m_settings))
+        {
+            std::cerr << "Could not save settings to " << m_settingsFile.string() << '\n';
+        }
         refreshTitleSoon();
+    }
+
+    void Application::openSettings()
+    {
+        m_settingsReturnState = m_shellState;
+        m_settingsScreen->setSettings(m_settings);
+        setShellState(ApplicationShellState::Settings);
+    }
+
+    void Application::closeSettings()
+    {
+        setShellState(m_settingsReturnState);
     }
 
     void Application::setCameraViewMode(CameraViewMode mode)
@@ -576,7 +707,11 @@ namespace BilliardsSaloon
 
     void Application::updateHud(float frameTimeSeconds)
     {
-        m_hud->setVisible(m_shellState != ApplicationShellState::MainMenu);
+        const bool inMatch =
+            (m_shellState == ApplicationShellState::Settings)
+                ? (m_settingsReturnState != ApplicationShellState::MainMenu)
+                : (m_shellState != ApplicationShellState::MainMenu);
+        m_hud->setVisible(inMatch);
 
         const HudSnapshot snapshot = buildHudSnapshot();
 
@@ -647,6 +782,7 @@ namespace BilliardsSaloon
 
             case ApplicationShellState::Gameplay:
             case ApplicationShellState::FrameOver:
+            case ApplicationShellState::Settings:
                 settings.clearColor = frameOver
                     ? glm::vec3(0.03f, 0.025f, 0.03f)
                     : glm::vec3(0.035f, 0.025f, 0.02f);
