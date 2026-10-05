@@ -63,6 +63,7 @@ namespace BilliardsSaloon
         float power01 {0.0f};
         float strikeRight01 {0.0f};
         float strikeForward01 {0.0f};
+        float elevationDegrees {0.0f};
         bool gamepadPrompts {false};
         bool showPrompts {true};
     };
@@ -137,6 +138,7 @@ namespace BilliardsSaloon
         float m_lastPower {0.0f};
         float m_strikeRight {0.0f};
         float m_strikeForward {0.0f};
+        std::string m_elevation;
 
         bool m_bannerVisible {false};
         bool m_bannerFoul {false};

@@ -61,6 +61,7 @@ namespace BilliardsSaloon
         constexpr float MOUSE_SPIN_PER_POINT = 1.0f / 250.0f;
         constexpr float MOUSE_ORBIT_RADIANS_PER_POINT = 0.005f;
         constexpr float WHEEL_ZOOM_METERS_PER_STEP = 0.15f;
+        constexpr float ELEVATION_DEGREES_PER_WHEEL_STEP = 3.0f;
         constexpr std::uint32_t PROMPT_SHOTS = 4;
 
         // Ball in hand: how fast the cue ball moves.
@@ -848,6 +849,12 @@ namespace BilliardsSaloon
         controls.strikeRightAxis = keyAxis(m_input, GLFW_KEY_LEFT, GLFW_KEY_RIGHT);
         controls.strikeForwardAxis = keyAxis(m_input, GLFW_KEY_DOWN, GLFW_KEY_UP);
         controls.centerStrike = m_input.isDown(GLFW_KEY_C);
+        // Cue elevation: W/S, or the wheel (which zooms only in free look).
+        controls.elevationAxis = keyAxis(m_input, GLFW_KEY_S, GLFW_KEY_W);
+        if (!freeLook)
+        {
+            controls.elevationDeltaDegrees = m_input.scrollDelta() * ELEVATION_DEGREES_PER_WHEEL_STEP;
+        }
         controls.shootHeld = m_input.isDown(GLFW_KEY_SPACE);
 
         if (leftHeld)
@@ -889,6 +896,8 @@ namespace BilliardsSaloon
             {
                 controls.strikeRightAxis += rightX;
                 controls.strikeForwardAxis -= rightY;
+                controls.elevationAxis +=
+                    m_input.gamepadAxis(GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER) - m_input.gamepadAxis(GLFW_GAMEPAD_AXIS_LEFT_TRIGGER);
             }
 
             controls.centerStrike = controls.centerStrike || m_input.gamepadDown(GLFW_GAMEPAD_BUTTON_X);
@@ -1273,6 +1282,7 @@ namespace BilliardsSaloon
         snapshot.power01 = shot.charge01;
         snapshot.strikeRight01 = shot.strikeRight01;
         snapshot.strikeForward01 = shot.strikeForward01;
+        snapshot.elevationDegrees = shot.elevationDegrees;
         snapshot.gamepadPrompts = m_showGamepadPrompts;
         // Control prompts teach the first few shots of a session, then step aside.
         snapshot.showPrompts = m_session->resolvedShotCount() < PROMPT_SHOTS;
@@ -1566,7 +1576,8 @@ namespace BilliardsSaloon
 
         // The cue: tip just behind the struck point, pulled back with power,
         // butt raised a few degrees as a player holds it.
-        constexpr float ELEVATION_RADIANS = 0.07f;
+        // At least a few degrees: even a "level" cue clears the rail.
+        const float elevation = glm::radians(std::max(4.0f, shot.elevationDegrees));
         const float tipReach = ShotInputTuning{}.tipOffsetPerStrikeUnit * ballRadius;
         const glm::vec3 strikePoint = cueBallPosition +
             right * (shot.strikeRight01 * tipReach) + up * (shot.strikeForward01 * tipReach);
@@ -1575,7 +1586,7 @@ namespace BilliardsSaloon
             (shot.strikeRight01 * shot.strikeRight01 + shot.strikeForward01 * shot.strikeForward01), 0.0f));
 
         CuePose pose;
-        pose.butt = glm::normalize(-aim * std::cos(ELEVATION_RADIANS) + up * std::sin(ELEVATION_RADIANS));
+        pose.butt = glm::normalize(-aim * std::cos(elevation) + up * std::sin(elevation));
         pose.tip = strikePoint - aim * alongBall + pose.butt * pullback;
         pose.pullback = pullback;
         m_cuePose = pose;

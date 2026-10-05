@@ -62,6 +62,7 @@ ctest --test-dir build --output-on-failure   # unit tests
 | Move the cue ball again (before shooting) | — | B | RB |
 | Called pocket / called ball | — | Q / E pocket, Z ball | D-pad left/right, D-pad up |
 | Push out (9- and 10-ball, after the break) | — | P | View |
+| Cue elevation (swerve, massé) | Wheel (outside free look) | W / S | RT / LT |
 | Spin (cue tip offset) | Hold right button and move | Arrow keys, C to centre | Right stick, X to centre |
 | Camera views | — | Tab cycles; 1 aim, 2 overview, 3 follow, 4 free look, 5 broadcast (default: director cuts during the shot) | Y cycles |
 | Replay the last shot / skip | — | R / Space | Left stick click / A |

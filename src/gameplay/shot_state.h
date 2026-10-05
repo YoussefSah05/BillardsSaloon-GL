@@ -21,5 +21,9 @@ namespace BilliardsSaloon
         // strikeForward01: -1 = draw, +1 = follow
         float strikeRight01 {0.0f};
         float strikeForward01 {0.0f};
+
+        // Cue elevation above the cloth: 0 = level; higher curves the cue
+        // ball when struck off centre (swerve, masse).
+        float elevationDegrees {0.0f};
     };
 }

@@ -114,6 +114,11 @@ def shots():
              V0=3.0, phi=90.0, a=0.0, b=0.0),
         dict(name="length of the table with draw", balls={"cue": (centre_x, 0.3)},
              V0=3.0, phi=88.0, a=0.0, b=-0.3),
+        # Elevated cue: the spin axis tilts and the cue ball curves (swerve, masse).
+        dict(name="swerve with an elevated cue", balls={"cue": (centre_x, 0.4)},
+             V0=2.0, phi=90.0, theta=15.0, a=0.3, b=0.0),
+        dict(name="masse", balls={"cue": (centre_x, 0.9)},
+             V0=1.5, phi=90.0, theta=50.0, a=0.4, b=-0.2),
     ]
 
 
@@ -121,7 +126,7 @@ def run(shot):
     ids = list(shot["balls"].keys())
     balls = {i: pt.Ball.create(i, xy=shot["balls"][i]) for i in ids}
     system = pt.System(
-        cue=pt.Cue(cue_ball_id="cue", V0=shot["V0"], phi=shot["phi"], theta=0.0, a=shot["a"], b=shot["b"]),
+        cue=pt.Cue(cue_ball_id="cue", V0=shot["V0"], phi=shot["phi"], theta=shot.get("theta", 0.0), a=shot["a"], b=shot["b"]),
         table=pt.Table.from_table_specs(SPECS),
         balls=balls,
     )
@@ -153,7 +158,7 @@ def run(shot):
     return {
         "name": shot["name"],
         "balls": [list(shot["balls"][i]) for i in ids],
-        "strike": {"speed": shot["V0"], "phi": shot["phi"], "a": shot["a"], "b": shot["b"]},
+        "strike": {"speed": shot["V0"], "phi": shot["phi"], "theta": shot.get("theta", 0.0), "a": shot["a"], "b": shot["b"]},
         "duration": float(system.t),
         "events": events,
         "valid_events": len(events) if valid_events is None else valid_events,

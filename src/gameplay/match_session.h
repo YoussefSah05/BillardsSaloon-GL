@@ -34,6 +34,9 @@ namespace BilliardsSaloon
         float maxCueSpeed {7.0f};
         float tipOffsetPerStrikeUnit {0.7f};
 
+        float elevationDegreesPerSecond {30.0f};
+        float maxElevationDegrees {60.0f};
+
         // Releasing a mouse stroke below this power cancels instead of shooting.
         float strokeCancelBelow {0.03f};
     };
@@ -49,6 +52,8 @@ namespace BilliardsSaloon
         float strikeForwardAxis {0.0f};   // +1 moves the tip toward follow
         glm::vec2 strikeDelta {0.0f};     // (right, forward) in tip-offset units
         bool centerStrike {false};
+        float elevationAxis {0.0f};           // +1 raises the butt of the cue
+        float elevationDeltaDegrees {0.0f};
 
         // Keyboard: hold to charge power over time, release to shoot.
         bool shootHeld {false};
@@ -314,6 +319,7 @@ namespace BilliardsSaloon
 
         ShotPreview m_preview;
         glm::vec4 m_previewKey {-1.0f};      // aim, tip right, tip forward, power
+        float m_previewElevation {-1.0f};
         glm::vec3 m_previewCue {0.0f};
         float m_lastShotPower {0.5f};
 
