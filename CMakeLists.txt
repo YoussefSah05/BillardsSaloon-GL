@@ -113,7 +113,9 @@ endfunction()
 add_library(bs_sim STATIC
     src/sim/events.cpp
     src/sim/motion.cpp
+    src/sim/resolve.cpp
     src/sim/roots.cpp
+    src/sim/simulate.cpp
     src/sim/table.cpp
 )
 target_include_directories(bs_sim PUBLIC src)
@@ -221,6 +223,7 @@ if(BS_BUILD_TESTS)
         tests/test_sim_roots.cpp
         tests/test_sim_motion.cpp
         tests/test_sim_events.cpp
+        tests/test_sim_shots.cpp
         tests/test_physics.cpp
         tests/test_asset_paths.cpp
     )
