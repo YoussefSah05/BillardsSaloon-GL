@@ -12,6 +12,7 @@ tests link, and the `BilliardsSaloon` executable.
 |------|--------|------|
 | `src/core/asset_paths.*` | bs_game | `resolveAssetPath`: exe-relative asset lookup (build tree, macOS bundle, source fallback). |
 | `src/ecs/` | bs_game | Sparse-set `Registry` with `view<...>().each(...)`. |
+| `src/scene/hall_geometry.*` | bs_game | Headless hall layouts (arena, saloon) and their lamp positions. |
 | `src/scene/table_geometry.*`, `mesh_data.h` | bs_game | Headless meshes for the table furniture (cushions from the simulator's segments, rails with pocket cut-outs, rims, drops, sights, trim, apron, legs); the renderer uploads `MeshData` on first draw. |
 | `src/scene/components.h` | bs_game | Transform (with previous state for interpolation), Ball, Material, TableBounds, Camera tags. |
 | `src/gameplay/game_variant.*` | bs_game | Variant/table types, JSON loaders, rack layouts. |
@@ -87,7 +88,7 @@ Following Leckie & Greenspan (2006) and pooltool (Kiefl, JOSS 2024):
 
 M0 housekeeping ✅ · M1 foundation ✅ · M2 UX foundation and broadcast
 frontend ✅ · M3 event-based physics ✅ · M4 WPA rules and referee ✅ · M5 shot input
-and presentation ✅ · M6 hall visuals, realism and customization · M7 audio ·
+and presentation ✅ · M6 hall visuals, realism and customization ✅ · M7 audio ·
 M8 AI v1 (classical search) · M9 intelligence (self-play learning, starts
 after M3 and runs in parallel) · M10 modes · M11 ship.
 UX comes before physics because every later milestone presents itself

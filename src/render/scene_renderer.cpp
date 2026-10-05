@@ -175,7 +175,7 @@ namespace BilliardsSaloon
 
         // Each lamp looks straight down over the whole table.
         m_lightMatrices.clear();
-        const glm::mat4 lightProjection = glm::perspective(glm::radians(125.0f), 1.0f, 0.15f, 3.5f);
+        const glm::mat4 lightProjection = glm::perspective(glm::radians(140.0f), 1.0f, 0.12f, 3.5f);
         for (const glm::vec3& lamp : settings.lights.positions)
         {
             const glm::mat4 lightView = glm::lookAt(lamp, lamp - glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f));
@@ -229,6 +229,7 @@ namespace BilliardsSaloon
         m_shader->setFloat("uReflectionScale", 0.45f);   // a dark hall: the lamps light the scene
         m_shader->setFloat("uEmissionScale", 1.0f);
         m_shader->setFloat("uLightIntensity", settings.lightIntensity);
+        m_shader->setFloat("uAmbientScale", settings.ambient);
         m_shader->setInt("uMeasleCueBall", m_measleCueBall ? 1 : 0);
         m_exposure = settings.exposure;
         m_shader->setFloat("uLightRadius", 0.05f);

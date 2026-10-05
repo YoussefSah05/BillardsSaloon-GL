@@ -303,7 +303,8 @@ namespace BilliardsSaloon
         for (std::size_t p = 0; p < pockets.size(); ++p)
         {
             const glm::vec2 c(pockets[p].x, pockets[p].z);
-            const float rIn = radii[p];
+            // The rim starts inside the cut so it covers the rail grid's steps.
+            const float rIn = radii[p] - 0.0125f;
             const float rOut = radii[p] + style.pocketRimWidth;
             const float y = style.railTop + 0.0012f;
             for (int i = 0; i < RIM_SEGMENTS; ++i)
@@ -336,8 +337,8 @@ namespace BilliardsSaloon
             {
                 const float a0 = 2.0f * PI * static_cast<float>(i) / RIM_SEGMENTS;
                 const float a1 = 2.0f * PI * static_cast<float>(i + 1) / RIM_SEGMENTS;
-                const glm::vec3 p0(c.x + std::cos(a0) * rIn, top, c.y + std::sin(a0) * rIn);
-                const glm::vec3 p1(c.x + std::cos(a1) * rIn, top, c.y + std::sin(a1) * rIn);
+                const glm::vec3 p0(c.x + std::cos(a0) * radii[p], top, c.y + std::sin(a0) * radii[p]);
+                const glm::vec3 p1(c.x + std::cos(a1) * radii[p], top, c.y + std::sin(a1) * radii[p]);
                 // `inside` placed far outside makes the wall face inward.
                 const glm::vec3 away(c.x + 10.0f * (std::cos(a0) + std::cos(a1)), 0.0f, c.y + 10.0f * (std::sin(a0) + std::sin(a1)));
                 wall(geometry.pocketCups, p0, p1, bottom, away, frame);

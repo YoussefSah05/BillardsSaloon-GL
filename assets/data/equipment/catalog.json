@@ -2,52 +2,380 @@
   "version": 1,
   "note": "Original designs in the style of tournament equipment; no brand names or logos.",
   "cloth": [
-    {"id": "tournament_green", "name": "Tournament Green", "color": [0.07, 0.36, 0.16]},
-    {"id": "tournament_blue", "name": "Tournament Blue", "color": [0.06, 0.22, 0.42]},
-    {"id": "charcoal", "name": "Charcoal", "color": [0.14, 0.15, 0.16]},
-    {"id": "burgundy", "name": "Burgundy", "color": [0.36, 0.06, 0.09]},
-    {"id": "camel", "name": "Camel", "color": [0.55, 0.42, 0.26]}
+    {
+      "id": "tournament_green",
+      "name": "Tournament Green",
+      "color": [
+        0.07,
+        0.36,
+        0.16
+      ]
+    },
+    {
+      "id": "tournament_blue",
+      "name": "Tournament Blue",
+      "color": [
+        0.06,
+        0.22,
+        0.42
+      ]
+    },
+    {
+      "id": "charcoal",
+      "name": "Charcoal",
+      "color": [
+        0.14,
+        0.15,
+        0.16
+      ]
+    },
+    {
+      "id": "burgundy",
+      "name": "Burgundy",
+      "color": [
+        0.36,
+        0.06,
+        0.09
+      ]
+    },
+    {
+      "id": "camel",
+      "name": "Camel",
+      "color": [
+        0.55,
+        0.42,
+        0.26
+      ]
+    }
   ],
   "rails": [
-    {"id": "espresso", "name": "Espresso", "color": [0.20, 0.10, 0.055], "roughness": 0.40, "clearcoat": 0.06},
-    {"id": "walnut", "name": "Walnut", "color": [0.34, 0.19, 0.10], "roughness": 0.36, "clearcoat": 0.10},
-    {"id": "maple", "name": "Natural Maple", "color": [0.72, 0.52, 0.32], "roughness": 0.38, "clearcoat": 0.10},
-    {"id": "black_lacquer", "name": "Black Lacquer", "color": [0.03, 0.03, 0.035], "roughness": 0.22, "clearcoat": 0.35}
+    {
+      "id": "espresso",
+      "name": "Espresso",
+      "color": [
+        0.2,
+        0.1,
+        0.055
+      ],
+      "roughness": 0.55,
+      "clearcoat": 0.06
+    },
+    {
+      "id": "walnut",
+      "name": "Walnut",
+      "color": [
+        0.34,
+        0.19,
+        0.1
+      ],
+      "roughness": 0.55,
+      "clearcoat": 0.1
+    },
+    {
+      "id": "maple",
+      "name": "Natural Maple",
+      "color": [
+        0.72,
+        0.52,
+        0.32
+      ],
+      "roughness": 0.55,
+      "clearcoat": 0.1
+    },
+    {
+      "id": "black_lacquer",
+      "name": "Black Lacquer",
+      "color": [
+        0.03,
+        0.03,
+        0.035
+      ],
+      "roughness": 0.22,
+      "clearcoat": 0.35
+    }
   ],
   "trim": [
-    {"id": "aluminium", "name": "Brushed Aluminium", "color": [0.78, 0.78, 0.80], "roughness": 0.28, "metal": 0.55},
-    {"id": "brass", "name": "Brass", "color": [0.80, 0.62, 0.32], "roughness": 0.24, "metal": 0.60},
-    {"id": "black_chrome", "name": "Black Chrome", "color": [0.12, 0.12, 0.13], "roughness": 0.18, "metal": 0.50}
+    {
+      "id": "aluminium",
+      "name": "Brushed Aluminium",
+      "color": [
+        0.78,
+        0.78,
+        0.8
+      ],
+      "roughness": 0.28,
+      "metal": 0.55
+    },
+    {
+      "id": "brass",
+      "name": "Brass",
+      "color": [
+        0.8,
+        0.62,
+        0.32
+      ],
+      "roughness": 0.24,
+      "metal": 0.6
+    },
+    {
+      "id": "black_chrome",
+      "name": "Black Chrome",
+      "color": [
+        0.12,
+        0.12,
+        0.13
+      ],
+      "roughness": 0.18,
+      "metal": 0.5
+    }
   ],
   "pockets": [
-    {"id": "black_leather", "name": "Black Leather", "color": [0.035, 0.032, 0.030]},
-    {"id": "oxblood", "name": "Oxblood Leather", "color": [0.20, 0.04, 0.04]},
-    {"id": "tan", "name": "Tan Leather", "color": [0.48, 0.30, 0.15]}
+    {
+      "id": "black_leather",
+      "name": "Black Leather",
+      "color": [
+        0.035,
+        0.032,
+        0.03
+      ]
+    },
+    {
+      "id": "oxblood",
+      "name": "Oxblood Leather",
+      "color": [
+        0.2,
+        0.04,
+        0.04
+      ]
+    },
+    {
+      "id": "tan",
+      "name": "Tan Leather",
+      "color": [
+        0.48,
+        0.3,
+        0.15
+      ]
+    }
   ],
   "balls": [
-    {"id": "classic", "name": "Classic", "cueBall": "plain", "colors": {}},
+    {
+      "id": "classic",
+      "name": "Classic",
+      "cueBall": "plain",
+      "colors": {}
+    },
     {
       "id": "broadcast",
       "name": "Broadcast",
       "cueBall": "measle",
       "colors": {
-        "1": [0.98, 0.78, 0.05], "2": [0.05, 0.25, 0.85], "3": [0.92, 0.10, 0.08],
-        "4": [0.50, 0.12, 0.68], "5": [1.00, 0.45, 0.05], "6": [0.04, 0.55, 0.24],
-        "7": [0.55, 0.06, 0.07], "8": [0.04, 0.04, 0.05],
-        "9": [0.98, 0.78, 0.05], "10": [0.05, 0.25, 0.85], "11": [0.92, 0.10, 0.08],
-        "12": [0.50, 0.12, 0.68], "13": [1.00, 0.45, 0.05], "14": [0.04, 0.55, 0.24],
-        "15": [0.55, 0.06, 0.07]
+        "1": [
+          0.98,
+          0.78,
+          0.05
+        ],
+        "2": [
+          0.05,
+          0.25,
+          0.85
+        ],
+        "3": [
+          0.92,
+          0.1,
+          0.08
+        ],
+        "4": [
+          0.5,
+          0.12,
+          0.68
+        ],
+        "5": [
+          1.0,
+          0.45,
+          0.05
+        ],
+        "6": [
+          0.04,
+          0.55,
+          0.24
+        ],
+        "7": [
+          0.55,
+          0.06,
+          0.07
+        ],
+        "8": [
+          0.04,
+          0.04,
+          0.05
+        ],
+        "9": [
+          0.98,
+          0.78,
+          0.05
+        ],
+        "10": [
+          0.05,
+          0.25,
+          0.85
+        ],
+        "11": [
+          0.92,
+          0.1,
+          0.08
+        ],
+        "12": [
+          0.5,
+          0.12,
+          0.68
+        ],
+        "13": [
+          1.0,
+          0.45,
+          0.05
+        ],
+        "14": [
+          0.04,
+          0.55,
+          0.24
+        ],
+        "15": [
+          0.55,
+          0.06,
+          0.07
+        ]
       }
     }
   ],
   "cues": [
-    {"id": "classic_maple", "name": "Classic Maple", "shaft": [0.86, 0.74, 0.55], "forearm": [0.24, 0.10, 0.05], "wrap": [0.05, 0.05, 0.06], "joint": [0.78, 0.78, 0.80]},
-    {"id": "carbon", "name": "Carbon", "shaft": [0.08, 0.08, 0.09], "forearm": [0.10, 0.10, 0.12], "wrap": [0.55, 0.08, 0.06], "joint": [0.70, 0.70, 0.72]},
-    {"id": "ebony_pearl", "name": "Ebony & Pearl", "shaft": [0.90, 0.80, 0.62], "forearm": [0.04, 0.03, 0.03], "wrap": [0.88, 0.86, 0.82], "joint": [0.82, 0.68, 0.36]}
+    {
+      "id": "classic_maple",
+      "name": "Classic Maple",
+      "shaft": [
+        0.86,
+        0.74,
+        0.55
+      ],
+      "forearm": [
+        0.24,
+        0.1,
+        0.05
+      ],
+      "wrap": [
+        0.05,
+        0.05,
+        0.06
+      ],
+      "joint": [
+        0.78,
+        0.78,
+        0.8
+      ]
+    },
+    {
+      "id": "carbon",
+      "name": "Carbon",
+      "shaft": [
+        0.08,
+        0.08,
+        0.09
+      ],
+      "forearm": [
+        0.1,
+        0.1,
+        0.12
+      ],
+      "wrap": [
+        0.55,
+        0.08,
+        0.06
+      ],
+      "joint": [
+        0.7,
+        0.7,
+        0.72
+      ]
+    },
+    {
+      "id": "ebony_pearl",
+      "name": "Ebony & Pearl",
+      "shaft": [
+        0.9,
+        0.8,
+        0.62
+      ],
+      "forearm": [
+        0.04,
+        0.03,
+        0.03
+      ],
+      "wrap": [
+        0.88,
+        0.86,
+        0.82
+      ],
+      "joint": [
+        0.82,
+        0.68,
+        0.36
+      ]
+    }
   ],
   "halls": [
-    {"id": "arena", "name": "Tournament Arena", "lamp": [1.00, 0.97, 0.92], "intensity": 4.6, "exposure": 0.95, "clear": [0.012, 0.013, 0.016]},
-    {"id": "saloon", "name": "Classic Saloon", "lamp": [1.00, 0.70, 0.39], "intensity": 4.4, "exposure": 1.0, "clear": [0.035, 0.025, 0.020]},
-    {"id": "night_final", "name": "Night Final", "lamp": [0.92, 0.94, 1.00], "intensity": 5.6, "exposure": 0.85, "clear": [0.004, 0.004, 0.006]}
+    {
+      "id": "arena",
+      "name": "Tournament Arena",
+      "lamp": [
+        1.0,
+        0.97,
+        0.92
+      ],
+      "intensity": 1.9,
+      "exposure": 0.95,
+      "clear": [
+        0.012,
+        0.013,
+        0.016
+      ],
+      "layout": "arena",
+      "ambient": 0.8
+    },
+    {
+      "id": "saloon",
+      "name": "Classic Saloon",
+      "lamp": [
+        1.0,
+        0.7,
+        0.39
+      ],
+      "intensity": 4.4,
+      "exposure": 1.0,
+      "clear": [
+        0.035,
+        0.025,
+        0.02
+      ],
+      "layout": "saloon",
+      "ambient": 1.0
+    },
+    {
+      "id": "night_final",
+      "name": "Night Final",
+      "lamp": [
+        0.92,
+        0.94,
+        1.0
+      ],
+      "intensity": 2.3,
+      "exposure": 0.85,
+      "clear": [
+        0.004,
+        0.004,
+        0.006
+      ],
+      "layout": "arena",
+      "ambient": 0.35
+    }
   ]
 }

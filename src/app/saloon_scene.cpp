@@ -6,6 +6,7 @@
 #include "gameplay/sim_bridge.h"
 #include "sim/table.h"
 #include "render/camera.h"
+#include "scene/hall_geometry.h"
 #include "scene/table_geometry.h"
 #include "scene/components.h"
 
@@ -91,14 +92,11 @@ namespace BilliardsSaloon
         }
     }
 
-    PointLightRig saloonLightRig(const glm::vec3& lampColor)
+    PointLightRig saloonLightRig(const glm::vec3& lampColor, HallLayout layout)
     {
         PointLightRig rig;
-        rig.positions = {
-            glm::vec3(-0.82f, 1.58f, -0.04f),
-            glm::vec3( 0.00f, 1.66f,  0.00f),
-            glm::vec3( 0.82f, 1.58f, -0.04f)
-        };
+        const std::array<glm::vec3, 3> lamps = hallLamps(layout);
+        rig.positions = {lamps[0], lamps[1], lamps[2]};
         // The centre lamp is a little stronger; the hall's intensity scales all three.
         rig.colors = {lampColor, lampColor * 1.18f, lampColor};
         return rig;
@@ -109,7 +107,6 @@ namespace BilliardsSaloon
         Registry& registry = session.registry();
         const GameVariantDefinition& variant = session.variant();
 
-        const PointLightRig lightRig = saloonLightRig();
 
         const MaterialComponent clothMaterial{
             .albedo = glm::vec3(0.07f, 0.36f, 0.16f),
@@ -121,42 +118,6 @@ namespace BilliardsSaloon
             .clearcoatStrength = 0.0f,
             .emissionColor = glm::vec3(0.0f),
             .emissionIntensity = 0.0f
-        };
-
-        const MaterialComponent floorMaterial{
-            .albedo = glm::vec3(0.26f, 0.16f, 0.09f),
-            .specularStrength = 0.28f,
-            .shininess = 32.0f,
-            .surfaceType = MaterialSurfaceType::Wood,
-            .roughness = 0.60f,
-            .reflectivity = 0.035f,
-            .clearcoatStrength = 0.08f,
-            .emissionColor = glm::vec3(0.0f),
-            .emissionIntensity = 0.0f
-        };
-
-        const MaterialComponent wallMaterial{
-            .albedo = glm::vec3(0.20f, 0.12f, 0.08f),
-            .specularStrength = 0.08f,
-            .shininess = 8.0f,
-            .surfaceType = MaterialSurfaceType::Generic,
-            .roughness = 0.92f,
-            .reflectivity = 0.02f,
-            .clearcoatStrength = 0.0f,
-            .emissionColor = glm::vec3(0.0f),
-            .emissionIntensity = 0.0f
-        };
-
-        const MaterialComponent lampMaterial{
-            .albedo = glm::vec3(0.98f, 0.86f, 0.62f),
-            .specularStrength = 0.35f,
-            .shininess = 96.0f,
-            .surfaceType = MaterialSurfaceType::LampGlass,
-            .roughness = 0.10f,
-            .reflectivity = 0.10f,
-            .clearcoatStrength = 0.18f,
-            .emissionColor = glm::vec3(1.00f, 0.68f, 0.28f),
-            .emissionIntensity = 1.80f
         };
 
         const TableStyle style;
@@ -173,7 +134,7 @@ namespace BilliardsSaloon
         // line, a slim apron and square legs. Original design, no brand.
         MaterialComponent cushionMaterial = clothMaterial;
         cushionMaterial.albedo *= 0.92f;
-        const MaterialComponent tableWood = material(glm::vec3(0.20f, 0.10f, 0.055f), MaterialSurfaceType::Wood, 0.40f, 0.035f, 0.06f);
+        const MaterialComponent tableWood = material(glm::vec3(0.20f, 0.10f, 0.055f), MaterialSurfaceType::Wood, 0.55f, 0.035f, 0.06f);
         const MaterialComponent leather = material(glm::vec3(0.035f, 0.032f, 0.030f), MaterialSurfaceType::Generic, 0.42f, 0.04f, 0.15f);
         const MaterialComponent pocketDark = material(glm::vec3(0.012f, 0.012f, 0.014f), MaterialSurfaceType::Generic, 0.9f, 0.02f, 0.0f);
         const MaterialComponent pearl = material(glm::vec3(0.93f, 0.91f, 0.86f), MaterialSurfaceType::Generic, 0.12f, 0.08f, 0.6f);
@@ -190,46 +151,61 @@ namespace BilliardsSaloon
         createSceneEntity(registry, "Apron", atOrigin, custom(table.apron), apronFinish);
         createSceneEntity(registry, "Legs", atOrigin, custom(table.legs), apronFinish);
 
-        createSceneEntity(
-            registry,
-            "Saloon Floor",
-            makeTransform(glm::vec3(0.0f, style.floorY, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), glm::vec3(4.8f, 1.0f, 4.8f)),
-            primitive(MeshPrimitive::Plane),
-            floorMaterial
-        );
-
-        createSceneEntity(
-            registry,
-            "Back Wall",
-            makeTransform(
-                glm::vec3(0.0f, style.floorY + 1.6f, -2.55f),
-                glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f)),
-                glm::vec3(5.6f, 1.0f, 2.6f)
-            ),
-            primitive(MeshPrimitive::Plane),
-            wallMaterial
-        );
-
-        for (std::size_t lightIndex = 0; lightIndex < lightRig.positions.size(); ++lightIndex)
-        {
-            createSceneEntity(
-                registry,
-                "Lamp Globe " + std::to_string(lightIndex + 1),
-                makeTransform(
-                    lightRig.positions[lightIndex],
-                    glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-                    glm::vec3(1.75f)
-                ),
-                primitive(MeshPrimitive::Sphere),
-                lampMaterial
-            );
-        }
+        rebuildHall(session, HallLayout::Saloon);
 
         attachBallVisual(registry, session.cueBallEntity(), variant.cueBall);
 
         for (std::size_t i = 0; i < session.objectBallEntities().size(); ++i)
         {
             attachBallVisual(registry, session.objectBallEntities()[i], variant.objectBalls[i]);
+        }
+    }
+
+    void rebuildHall(MatchSession& session, HallLayout layout)
+    {
+        Registry& registry = session.registry();
+        std::vector<Entity> old;
+        registry.view<HallTagComponent>().each([&](Entity entity, HallTagComponent&) { old.push_back(entity); });
+        for (const Entity entity : old)
+        {
+            registry.destroyEntity(entity);
+        }
+
+        const TableGeometry table = buildTableGeometry(Sim::buildPocketTable(session.variant().table.pocketGeometry));
+        HallGeometry hall = buildHall(layout, table.outerHalfExtent, TableStyle{}.floorY);
+
+        const auto materialFor = [](HallMaterial kind)
+        {
+            switch (kind)
+            {
+                case HallMaterial::Carpet: return material(glm::vec3(0.07f, 0.07f, 0.08f), MaterialSurfaceType::Generic, 0.95f, 0.02f, 0.0f);
+                case HallMaterial::PlayingCarpet: return material(glm::vec3(0.07f, 0.10f, 0.20f), MaterialSurfaceType::Generic, 0.95f, 0.02f, 0.0f);
+                case HallMaterial::Barrier: return material(glm::vec3(0.05f, 0.055f, 0.07f), MaterialSurfaceType::Generic, 0.45f, 0.04f, 0.2f);
+                case HallMaterial::GoldTrim: return material(glm::vec3(0.83f, 0.66f, 0.29f), MaterialSurfaceType::Generic, 0.30f, 0.55f, 0.0f);
+                case HallMaterial::Stand: return material(glm::vec3(0.06f, 0.06f, 0.07f), MaterialSurfaceType::Generic, 0.85f, 0.02f, 0.0f);
+                case HallMaterial::Seat: return material(glm::vec3(0.22f, 0.04f, 0.05f), MaterialSurfaceType::Generic, 0.60f, 0.03f, 0.0f);
+                case HallMaterial::Wall: return material(glm::vec3(0.09f, 0.075f, 0.065f), MaterialSurfaceType::Generic, 0.92f, 0.02f, 0.0f);
+                case HallMaterial::Furniture: return material(glm::vec3(0.05f, 0.05f, 0.055f), MaterialSurfaceType::Generic, 0.40f, 0.04f, 0.25f);
+                case HallMaterial::CanopyBody: return material(glm::vec3(0.04f, 0.04f, 0.045f), MaterialSurfaceType::Generic, 0.35f, 0.05f, 0.1f);
+                case HallMaterial::Cable: return material(glm::vec3(0.05f), MaterialSurfaceType::Generic, 0.5f, 0.04f, 0.0f);
+                case HallMaterial::WoodFloor: return material(glm::vec3(0.26f, 0.16f, 0.09f), MaterialSurfaceType::Wood, 0.55f, 0.035f, 0.08f);
+                case HallMaterial::WoodPanel: return material(glm::vec3(0.18f, 0.09f, 0.045f), MaterialSurfaceType::Wood, 0.45f, 0.035f, 0.10f);
+                case HallMaterial::LampPanel:
+                {
+                    MaterialComponent lamp = material(glm::vec3(0.98f, 0.92f, 0.82f), MaterialSurfaceType::LampGlass, 0.2f, 0.04f, 0.0f);
+                    lamp.emissionColor = glm::vec3(1.0f, 0.92f, 0.80f);
+                    lamp.emissionIntensity = 6.0f;
+                    return lamp;
+                }
+            }
+            return material(glm::vec3(0.1f), MaterialSurfaceType::Generic, 0.8f, 0.02f, 0.0f);
+        };
+
+        for (HallPart& part : hall.parts)
+        {
+            const Entity entity = createSceneEntity(registry, part.name, makeTransform(glm::vec3(0.0f)),
+                                                    custom(std::move(part.mesh), part.castsShadow), materialFor(part.material));
+            registry.emplace<HallTagComponent>(entity, HallTagComponent{static_cast<int>(layout)});
         }
     }
 
@@ -241,6 +217,16 @@ namespace BilliardsSaloon
         const FinishOption& trim = findOption(catalog.trim, choice.trim);
         const FinishOption& pockets = findOption(catalog.pockets, choice.pockets);
         const BallSetOption& balls = findOption(catalog.balls, choice.balls);
+        const HallOption& hallChoice = findOption(catalog.halls, choice.hall);
+
+        // A different hall layout means different scenery.
+        const HallLayout layout = hallLayoutFromName(hallChoice.layout);
+        int current = -1;
+        session.registry().view<HallTagComponent>().each([&](Entity, HallTagComponent& tag) { current = tag.layout; });
+        if (current != static_cast<int>(layout))
+        {
+            rebuildHall(session, layout);
+        }
 
         Registry& registry = session.registry();
         registry.view<NameComponent, MaterialComponent>().each(
@@ -269,6 +255,10 @@ namespace BilliardsSaloon
                 else if (name.value == "Pocket Rims")
                 {
                     material.albedo = pockets.color;
+                }
+                else if ((name.value == "Lamp Panels") || (name.value == "Lamp Globes"))
+                {
+                    material.emissionColor = hallChoice.lamp;
                 }
             });
 

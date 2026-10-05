@@ -48,6 +48,8 @@ namespace BilliardsSaloon
         float intensity {4.4f};
         float exposure {1.0f};
         glm::vec3 clear {0.03f};
+        std::string layout {"arena"};   // "arena" or "saloon" (scene/hall_geometry)
+        float ambient {1.0f};           // scale on the room's fill light
     };
 
     struct EquipmentCatalog

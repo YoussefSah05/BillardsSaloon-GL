@@ -97,6 +97,8 @@ namespace BilliardsSaloon
                 option.intensity = item.value("intensity", option.intensity);
                 option.exposure = item.value("exposure", option.exposure);
                 option.clear = readColor(item.at("clear"));
+                option.layout = item.value("layout", option.layout);
+                option.ambient = item.value("ambient", option.ambient);
                 catalog.halls.push_back(option);
             }
 
