@@ -6,6 +6,10 @@ All notable changes to Billiards Saloon. The format follows
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-06
+
+Hall visuals, realism and equipment customisation (M6).
+
 ### Added
 - New rendering pipeline (M6): the scene is lit physically (GGX specular,
   polished resin balls, a velvet sheen on the cloth) into an HDR buffer with
@@ -212,7 +216,8 @@ Playable 8-ball prototype: local two-player 8-ball with fouls and turn
 resolution, a fixed-step physics model with sliding and rolling, camera modes,
 and main and pause menus.
 
-[Unreleased]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.2.0...v0.3.0
