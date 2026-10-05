@@ -30,6 +30,9 @@ All notable changes to Billiards Saloon. The format follows
   hold A to charge, Y cycles cameras, Start pauses.
 - Prompts and hints switch between keyboard/mouse and gamepad wording
   depending on the device used last.
+- Leaving the match or restarting the rack from the pause menu asks for
+  confirmation first, with Cancel as the default.
+- Control prompts show for the first few shots, then step aside.
 - `--screen title|main|game|pause|settings`, `--fullscreen` and `--capture FILE.png`
   launch options; capture renders a screen, saves a PNG and quits.
 

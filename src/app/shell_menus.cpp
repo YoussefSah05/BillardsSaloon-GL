@@ -39,6 +39,22 @@ namespace BilliardsSaloon
         m_version = "v" BS_VERSION;
         model.Bind("version", &m_version);
         model.Bind("gamepad", &m_gamepad);
+        model.Bind("confirm_title", &m_confirmTitle);
+        model.Bind("confirm_detail", &m_confirmDetail);
+        model.Bind("confirm_action", &m_confirmAction);
+        model.BindEventCallback("confirm_no", [this](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&)
+        {
+            cancelConfirmation();
+        });
+        model.BindEventCallback("confirm_yes", [this](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList&)
+        {
+            std::function<void()> action = std::move(m_onConfirm);
+            cancelConfirmation();
+            if (action)
+            {
+                action();
+            }
+        });
         model.Bind("frame_winner", &m_frameWinner);
         model.Bind("frame_detail", &m_frameDetail);
 
@@ -55,6 +71,7 @@ namespace BilliardsSaloon
         m_mainMenu = &ui.loadDocument("ui/main_menu.rml");
         m_pauseMenu = &ui.loadDocument("ui/pause_menu.rml");
         m_frameOver = &ui.loadDocument("ui/frame_over.rml");
+        m_confirm = &ui.loadDocument("ui/confirm.rml");
     }
 
     void ShellMenus::show(MenuScreen screen)
@@ -65,6 +82,7 @@ namespace BilliardsSaloon
         }
 
         m_shown = screen;
+        cancelConfirmation();
         m_title->Hide();
         m_mainMenu->Hide();
         m_pauseMenu->Hide();
@@ -87,6 +105,44 @@ namespace BilliardsSaloon
         else if (screen == MenuScreen::FrameOver)
         {
             m_frameOver->Show(Rml::ModalFlag::None, Rml::FocusFlag::Auto);
+        }
+    }
+
+    void ShellMenus::askConfirmation(const std::string& title, const std::string& detail,
+                                     const std::string& action, std::function<void()> onConfirm)
+    {
+        m_confirmTitle = title;
+        m_confirmDetail = detail;
+        m_confirmAction = action;
+        m_onConfirm = std::move(onConfirm);
+        m_model.DirtyVariable("confirm_title");
+        m_model.DirtyVariable("confirm_detail");
+        m_model.DirtyVariable("confirm_action");
+        // Modal: keyboard and gamepad focus stay inside the question.
+        m_confirm->Show(Rml::ModalFlag::Modal, Rml::FocusFlag::Document);
+        // Cancel is the safe default for keyboard and gamepad players.
+        if (Rml::Element* cancel = m_confirm->GetElementById("confirmno"))
+        {
+            cancel->Focus(true);
+        }
+    }
+
+    bool ShellMenus::confirmationOpen() const
+    {
+        return m_confirm->IsVisible();
+    }
+
+    void ShellMenus::cancelConfirmation()
+    {
+        m_onConfirm = nullptr;
+        if (m_confirm->IsVisible())
+        {
+            m_confirm->Hide();
+            // Give focus back to the menu underneath.
+            if (m_shown == MenuScreen::Pause)
+            {
+                m_pauseMenu->Show(Rml::ModalFlag::None, Rml::FocusFlag::Auto);
+            }
         }
     }
 

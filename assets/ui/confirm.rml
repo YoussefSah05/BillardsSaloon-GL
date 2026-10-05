@@ -1,0 +1,56 @@
+<rml>
+<head>
+    <title>Confirm</title>
+    <link type="text/rcss" href="theme.rcss"/>
+    <style>
+        body {
+            z-index: 30;
+            background-color: rgba(8, 9, 11, 150);
+        }
+        .card {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 560dp;
+            margin-left: -280dp;
+            margin-top: -120dp;
+            padding: 28dp 36dp 24dp;
+            box-sizing: border-box;
+            background-color: rgba(16, 18, 21, 250);
+            border-top: 4dp #C9443A;
+            text-align: center;
+        }
+        .card h2 {
+            margin-bottom: 8dp;
+            font-weight: 800;
+            font-size: 34dp;
+            letter-spacing: 1dp;
+        }
+        .card .detail {
+            margin-bottom: 22dp;
+            font-size: 16dp;
+            color: #C9C3B9;
+        }
+        .card .menu-item {
+            display: inline-block;
+            width: 220dp;
+            margin: 0 6dp;
+            nav-up: none;
+            nav-down: none;
+            background-color: rgba(242, 238, 230, 30);
+        }
+        .card .menu-item:hover,
+        .card .menu-item:focus {
+            background-color: #D4A94A;
+        }
+    </style>
+</head>
+<body class="screen" data-model="shell">
+    <div class="card">
+        <h2>{{ confirm_title }}</h2>
+        <div class="detail">{{ confirm_detail }}</div>
+        <button class="menu-item" id="confirmno" autofocus data-event-click="confirm_no"><span class="label">CANCEL</span></button>
+        <button class="menu-item" id="confirmyes" data-event-click="confirm_yes"><span class="label">{{ confirm_action }}</span></button>
+    </div>
+</body>
+</rml>
