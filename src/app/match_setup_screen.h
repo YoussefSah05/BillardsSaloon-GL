@@ -6,6 +6,7 @@
 #include <RmlUi/Core/DataModelHandle.h>
 
 #include <functional>
+#include <string>
 
 namespace Rml
 {
@@ -22,6 +23,7 @@ namespace BilliardsSaloon
         int raceTo {3};
         Rules::BreakOrder breakOrder {Rules::BreakOrder::Alternate};
         int shotClock {0};   // seconds; 0 = off
+        std::string opponent;   // AI player id, empty for a second human
     };
 
     struct MatchSetupActions

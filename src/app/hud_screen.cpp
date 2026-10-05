@@ -169,6 +169,7 @@ namespace BilliardsSaloon
         model.Bind("ext2", &m_extension[1]);
         model.Bind("replay_slow", &m_replaySlow);
         model.Bind("can_replay", &m_canReplay);
+        model.Bind("ai_thinking", &m_aiThinking);
         model.Bind("active", &m_active);
         model.Bind("discipline", &m_discipline);
         model.Bind("camera_label", &m_cameraLabel);
@@ -334,6 +335,7 @@ namespace BilliardsSaloon
         }
         assign(m_model, m_replaySlow, snapshot.replaySlow, "replay_slow");
         assign(m_model, m_canReplay, snapshot.canReplay && snapshot.aiming, "can_replay");
+        assign(m_model, m_aiThinking, snapshot.aiThinking, "ai_thinking");
         assign(m_model, m_active, snapshot.activePlayer, "active");
         assign(m_model, m_discipline, snapshot.discipline, "discipline");
         assign(m_model, m_cameraLabel, snapshot.cameraLabel, "camera_label");

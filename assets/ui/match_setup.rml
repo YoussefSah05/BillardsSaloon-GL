@@ -13,7 +13,7 @@
             top: 50%;
             width: 600dp;
             margin-left: -300dp;
-            margin-top: -290dp;
+            margin-top: -340dp;
         }
         .panel h2 {
             margin-bottom: 6dp;
@@ -66,12 +66,16 @@
 </head>
 <body class="screen" data-model="setup">
     <div class="panel">
-        <div class="eyebrow">QUICK MATCH · TWO PLAYERS</div>
+        <div class="eyebrow">QUICK MATCH</div>
         <h2>MATCH SETUP</h2>
 
         <div class="eyebrow section">GAME</div>
         <button class="menu-item setting" id="game" autofocus data-event-click="cycle(0, 1)" data-event-keydown="key(0, ev.key_identifier)"><span class="label">DISCIPLINE<span class="value">{{ game }}</span></span></button>
         <div class="about">{{ about }}</div>
+
+        <div class="eyebrow section">OPPONENT</div>
+        <button class="menu-item setting" id="opponent" data-event-click="cycle(4, 1)" data-event-keydown="key(4, ev.key_identifier)"><span class="label">PLAYER 2<span class="value">{{ opponent }}</span></span></button>
+        <div class="about">{{ opponent_about }}</div>
 
         <div class="eyebrow section">MATCH</div>
         <button class="menu-item setting" id="race" data-event-click="cycle(1, 1)" data-event-keydown="key(1, ev.key_identifier)"><span class="label">RACE TO<span class="value">{{ race }}</span></span></button>

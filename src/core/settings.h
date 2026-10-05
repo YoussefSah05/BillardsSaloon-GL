@@ -55,6 +55,7 @@ namespace BilliardsSaloon
         int raceTo {3};
         bool winnerBreaks {false};
         int shotClock {0};               // seconds; 0 = off
+        std::string opponent;            // AI player id (assets/data/ai/players.json); empty = a second human
 
         EquipmentChoice equipment;
 

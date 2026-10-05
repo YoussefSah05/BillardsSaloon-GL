@@ -666,6 +666,23 @@ namespace BilliardsSaloon
         return fired;
     }
 
+    void MatchSession::previewInput(const ShotInput& input)
+    {
+        if (!acceptsShotInput())
+        {
+            return;
+        }
+        m_shotState.aimAngleRadians = input.aimRadians;
+        m_shotState.strikeRight01 = input.strikeRight01;
+        m_shotState.strikeForward01 = input.strikeForward01;
+        m_shotState.elevationDegrees = input.elevationDegrees;
+        m_shotState.charge01 = std::clamp(input.power01, 0.0f, 1.0f);
+        if (input.call)
+        {
+            m_call = input.call;
+        }
+    }
+
     bool MatchSession::placeCueBallAt(const glm::vec2& position)
     {
         if (!canPlaceCueBall())

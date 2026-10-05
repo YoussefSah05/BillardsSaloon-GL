@@ -3,11 +3,11 @@
 A realism-first 3D pool game presented like a televised tournament.
 Built from scratch in C++20 and OpenGL 4.1 — no game engine.
 
-> **Status:** early development. `v0.7.0` has event-based physics, WPA 8-,
+> **Status:** early development. `v0.8.0` has event-based physics, WPA 8-,
 > 9- and 10-ball for two local players, simulator aim guides, broadcast
 > presentation (director cuts, replays, shot clock), a physically based
 > tournament table and hall, a Locker for equipment, and simulator-driven
-> sound. Work toward v1.0 (AI opponents, career mode) is tracked in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+> sound, and computer opponents. Work toward v1.0 (learned AI, career mode) is tracked in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Screenshots
 
@@ -24,7 +24,9 @@ materials are scheduled for the hall-visuals milestone.
 
 ## What works today
 
-- 8-ball, 9-ball and 10-ball for two local players, refereed by WPA rules:
+- Computer opponents, club to champion, that plan shots on the simulator
+  (pots, safeties, kicks, position) and play with human-like error.
+- 8-ball, 9-ball and 10-ball for two local players or against the computer, refereed by WPA rules:
   legal-break checks, ball in hand with placement, push-outs, called shots,
   spotted balls, three-foul rule, and the referee's choices (re-rack, hand the
   shot back). Races to N frames from a match setup screen.
@@ -89,6 +91,7 @@ depending on the device used last.
 ./build/BilliardsSaloon --screen game                      # skip the main menu
 ./build/BilliardsSaloon --screen pause --capture pause.png # save a screenshot and quit
 ./build/BilliardsSaloon --scenario foul|choice|call|replay # script a shot: ball in hand, a referee choice, a called shot, a winning replay
+./build/BilliardsSaloon --opponent viktor_hale             # play against an AI player
 ./build/BilliardsSaloon --mute                             # no sound
 ./build/bs_sound_preview /tmp/sounds                       # write the game's sounds (and a mixed break) to WAV files
 ./build/BilliardsSaloon --camera overview                  # start with a camera view (broadcast, aim, overview, follow, free)

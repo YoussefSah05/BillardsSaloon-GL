@@ -357,6 +357,10 @@
             <div class="tag">PUSH OUT</div>
             <div class="text">NO CONTACT NEEDED · OPPONENT CHOOSES</div>
         </div>
+        <div class="callout info" data-if="ai_thinking != ''">
+            <div class="tag">THINKING</div>
+            <div class="text">{{ ai_thinking }}</div>
+        </div>
         <div class="callout" data-if="calling &amp;&amp; !placing">
             <div class="tag">CALLED</div>
             <div class="text">{{ call_text }}</div>

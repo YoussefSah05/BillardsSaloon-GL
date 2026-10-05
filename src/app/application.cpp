@@ -13,6 +13,7 @@
 #include <cmath>
 #include <iostream>
 #include <optional>
+#include <chrono>
 #include <random>
 #include <string>
 
@@ -193,6 +194,7 @@ namespace BilliardsSaloon
             {
                 const auto restart = [this]()
                 {
+                    resetAi();
                     m_session->restartFrame();
                     m_cardAfterReplay = false;
                     m_replayBeforeCard = false;
@@ -223,6 +225,7 @@ namespace BilliardsSaloon
             },
             .frameContinue = [this]()
             {
+                resetAi();
                 if (m_session->matchOver())
                 {
                     m_session->startMatch();   // rematch: same discipline and race
@@ -259,6 +262,7 @@ namespace BilliardsSaloon
                 settings.raceTo = setup.raceTo;
                 settings.winnerBreaks = setup.breakOrder == Rules::BreakOrder::WinnerBreaks;
                 settings.shotClock = setup.shotClock;
+                settings.opponent = setup.opponent;
                 applySettings(settings);
 
                 startMatch(setup);
@@ -373,6 +377,7 @@ namespace BilliardsSaloon
         setup.raceTo = m_settings.raceTo;
         setup.breakOrder = m_settings.winnerBreaks ? Rules::BreakOrder::WinnerBreaks : Rules::BreakOrder::Alternate;
         setup.shotClock = m_settings.shotClock;
+        setup.opponent = m_options.opponent.empty() ? m_settings.opponent : m_options.opponent;
         return setup;
     }
 
@@ -396,6 +401,12 @@ namespace BilliardsSaloon
         {
             m_hud->setVariant(m_session->variant());
             m_hud->clearAnnouncements();
+        }
+        resetAi();
+        m_aiSeat = setup.opponent.empty() ? -1 : 1;
+        if (m_aiSeat >= 0)
+        {
+            m_aiProfile = Ai::findAiProfile(setup.opponent);
         }
         m_announcedShots = 0;
         m_cardAfterReplay = false;
@@ -843,6 +854,11 @@ namespace BilliardsSaloon
                 return;
             }
             m_waitForShotRelease = false;
+        }
+
+        if (aiToAct())
+        {
+            return;   // the computer is at the table: camera, pause and replay only
         }
 
         if (m_session->placingCueBall())
@@ -1305,6 +1321,10 @@ namespace BilliardsSaloon
         const bool playing = m_shellState == ApplicationShellState::Gameplay;
 
         HudSnapshot snapshot;
+        if (m_aiSeat >= 0)
+        {
+            snapshot.playerNames[static_cast<std::size_t>(m_aiSeat)] = m_aiProfile.name;
+        }
         snapshot.game = m_session->variant().discipline;
         snapshot.activePlayer = std::clamp(frame.shooter, 0, 1);
         snapshot.groups = frame.groups;
@@ -1312,10 +1332,14 @@ namespace BilliardsSaloon
         snapshot.raceTo = m_session->score().raceTo;
         snapshot.fouls = frame.consecutiveFouls;
         snapshot.discipline = disciplineLabel(snapshot.game);
-        snapshot.aiming = playing && m_session->acceptsShotInput();
-        snapshot.placing = playing && m_session->placingCueBall();
+        snapshot.aiming = playing && m_session->acceptsShotInput() && !aiToAct();
+        snapshot.placing = playing && m_session->placingCueBall() && !aiToAct();
+        if (playing && aiToAct() && (m_aiStage == AiStage::Thinking))
+        {
+            snapshot.aiThinking = m_aiProfile.name;
+        }
         snapshot.placementValid = m_session->cueBallPlacementValid();
-        snapshot.canPlace = playing && m_session->canPlaceCueBall();
+        snapshot.canPlace = playing && m_session->canPlaceCueBall() && !aiToAct();
         snapshot.behindHeadString = frame.ballInHand == Rules::BallInHand::BehindHeadString;
         snapshot.pushOutAvailable = m_session->pushOutAvailable();
         snapshot.pushOutDeclared = m_session->pushOutDeclared();
@@ -1412,11 +1436,13 @@ namespace BilliardsSaloon
         }
 
         m_hud->update(snapshot, frameTimeSeconds);
+        updateAi(frameTimeSeconds);
         updateAudio();
 
         // The referee's question: after the banner, or straight away when the
         // game comes back from pause with a question still open.
-        if ((m_shellState == ApplicationShellState::Gameplay) && (m_session->pendingChoice() != Rules::Choice::None))
+        if ((m_shellState == ApplicationShellState::Gameplay) && (m_session->pendingChoice() != Rules::Choice::None) &&
+            (m_session->chooser() != m_aiSeat))
         {
             m_choiceDelay -= frameTimeSeconds;
             if (m_choiceDelay <= 0.0f)
@@ -1448,6 +1474,140 @@ namespace BilliardsSaloon
         {
             m_cardAfterReplay = false;
             setShellState(ApplicationShellState::FrameOver);
+        }
+    }
+
+    bool Application::aiToAct() const
+    {
+        if ((m_aiSeat < 0) || m_session->frameOver())
+        {
+            return false;
+        }
+        if (m_session->pendingChoice() != Rules::Choice::None)
+        {
+            return m_session->chooser() == m_aiSeat;
+        }
+        return m_session->frame().shooter == m_aiSeat;
+    }
+
+    void Application::resetAi()
+    {
+        if (m_aiFuture.valid())
+        {
+            m_aiFuture.wait();   // planning works on a copy; just let it finish
+            m_aiFuture = {};
+        }
+        m_aiStage = AiStage::Idle;
+        m_aiElapsed = 0.0f;
+    }
+
+    void Application::updateAi(float frameTimeSeconds)
+    {
+        const bool playing = m_shellState == ApplicationShellState::Gameplay;
+        if (!playing || !aiToAct() || m_session->replaying() || m_session->ballsInMotion() || (m_frameOverDelay > 0.0f))
+        {
+            if (!aiToAct())
+            {
+                resetAi();
+            }
+            return;
+        }
+
+        switch (m_aiStage)
+        {
+            case AiStage::Idle:
+            {
+                // Plan on a worker thread, from a copy of the table.
+                const Ai::AiTable table = m_session->aiView();
+                const Ai::AiProfile profile = m_aiProfile;
+                const std::uint32_t seed = m_aiRandom();
+                const bool choosing = m_session->pendingChoice() != Rules::Choice::None;
+                const bool placing = m_session->placingCueBall() ||
+                    (m_session->canPlaceCueBall() && (table.frame.phase != Rules::Phase::Break));
+                m_aiFuture = std::async(std::launch::async, [table, profile, seed, choosing, placing]()
+                {
+                    AiPlan plan;
+                    if (choosing)
+                    {
+                        plan.choice = true;
+                        plan.option = Ai::planChoice(table, profile, seed);
+                        return plan;
+                    }
+                    Ai::AiTable view = table;
+                    if (placing)
+                    {
+                        plan.place = true;
+                        plan.spot = Ai::planCueBallPlacement(table, profile, seed);
+                        view.positions.front() = plan.spot;
+                        view.pocketed.front() = false;
+                        view.frame.ballInHand = Rules::BallInHand::None;
+                    }
+                    plan.shot = (view.frame.phase == Rules::Phase::Break) ? Ai::planBreak(view, profile) : Ai::planShot(view, profile, seed);
+                    return plan;
+                });
+                m_aiStage = AiStage::Thinking;
+                m_aiElapsed = 0.0f;
+                break;
+            }
+
+            case AiStage::Thinking:
+            {
+                m_aiElapsed += frameTimeSeconds;
+                if ((m_aiElapsed < m_aiProfile.thinkSeconds) ||
+                    (m_aiFuture.wait_for(std::chrono::seconds(0)) != std::future_status::ready))
+                {
+                    break;
+                }
+                m_aiPlan = m_aiFuture.get();
+                if (m_aiPlan.choice)
+                {
+                    (void)m_session->choose(m_aiPlan.option);
+                    m_aiStage = AiStage::Idle;
+                    break;
+                }
+                if (m_aiPlan.place && !m_session->placeCueBallAt(m_aiPlan.spot))
+                {
+                    // The spot was refused (it should not be): place where the ball is.
+                    (void)m_session->confirmCueBallPlacement();
+                }
+                const ShotState& shot = m_session->shotState();
+                m_aiFrom.aimRadians = shot.aimAngleRadians;
+                m_aiFrom.strikeRight01 = shot.strikeRight01;
+                m_aiFrom.strikeForward01 = shot.strikeForward01;
+                m_aiFrom.elevationDegrees = shot.elevationDegrees;
+                m_aiFrom.power01 = 0.0f;
+                m_aiStage = AiStage::Aiming;
+                m_aiElapsed = 0.0f;
+                break;
+            }
+
+            case AiStage::Aiming:
+            {
+                // Swing onto the line, settle, then draw the cue back and strike.
+                constexpr float TURN = 0.9f;
+                constexpr float SETTLE = 0.35f;
+                constexpr float STROKE = 0.55f;
+                m_aiElapsed += frameTimeSeconds;
+                const ShotInput& target = m_aiPlan.shot.input;
+                const float t = glm::smoothstep(0.0f, 1.0f, std::min(m_aiElapsed / TURN, 1.0f));
+                float turn = target.aimRadians - m_aiFrom.aimRadians;
+                turn = std::remainder(turn, 2.0f * 3.14159265f);   // the short way round
+
+                ShotInput shown = target;
+                shown.aimRadians = m_aiFrom.aimRadians + turn * t;
+                shown.strikeRight01 = glm::mix(m_aiFrom.strikeRight01, target.strikeRight01, t);
+                shown.strikeForward01 = glm::mix(m_aiFrom.strikeForward01, target.strikeForward01, t);
+                shown.elevationDegrees = glm::mix(m_aiFrom.elevationDegrees, target.elevationDegrees, t);
+                shown.power01 = target.power01 * std::clamp((m_aiElapsed - TURN - SETTLE) / STROKE, 0.0f, 1.0f);
+                m_session->previewInput(shown);
+
+                if (m_aiElapsed >= TURN + SETTLE + STROKE)
+                {
+                    (void)m_session->playShot(Ai::withExecutionError(target, m_aiProfile, m_aiRandom));
+                    m_aiStage = AiStage::Idle;
+                }
+                break;
+            }
         }
     }
 
@@ -1628,7 +1788,7 @@ namespace BilliardsSaloon
         const glm::vec3 right = glm::normalize(glm::cross(aim, up));
 
         // Guides first, so the cue is drawn over them.
-        const int guide = m_settings.aimGuide;
+        const int guide = aiToAct() ? 0 : m_settings.aimGuide;   // never show the computer's plan
         if (guide > 0)
         {
             const ShotPreview& preview = m_session->shotPreview();

@@ -204,6 +204,9 @@ namespace BilliardsSaloon
         // Puts the cue ball at a spot (x, z) with ball in hand and confirms it.
         // False if the spot is not allowed.
         bool placeCueBallAt(const glm::vec2& position);
+        // Shows a shot being lined up (aim, spin, elevation, power on the meter)
+        // without striking, for the computer player's visible preparation.
+        void previewInput(const ShotInput& input);
 
         // Applies aiming, tip offset and the hold-to-charge / release-to-shoot
         // gesture for one frame of length deltaTimeSeconds.

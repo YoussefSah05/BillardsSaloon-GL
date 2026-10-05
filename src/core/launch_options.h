@@ -39,7 +39,8 @@ namespace BilliardsSaloon
         int captureAfterFrames {90};
         DevScenario scenario {DevScenario::None};
         int startCamera {-1};
-        bool mute {false};                    // --mute; captures are always silent                 // --camera: 0 aim, 1 overview, 2 follow, 3 free, 4 broadcast; -1 = default
+        bool mute {false};
+        std::string opponent;                 // --opponent ID: play against this AI player                    // --mute; captures are always silent                 // --camera: 0 aim, 1 overview, 2 follow, 3 free, 4 broadcast; -1 = default
     };
 
     // Parses arguments after the program name. Throws std::invalid_argument

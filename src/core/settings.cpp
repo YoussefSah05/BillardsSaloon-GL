@@ -142,6 +142,7 @@ namespace BilliardsSaloon
                 settings.raceTo = match.value("raceTo", settings.raceTo);
                 settings.winnerBreaks = match.value("winnerBreaks", settings.winnerBreaks);
                 settings.shotClock = match.value("shotClock", settings.shotClock);
+                settings.opponent = match.value("opponent", settings.opponent);
             }
         }
         catch (const std::exception& exception)
@@ -185,7 +186,8 @@ namespace BilliardsSaloon
                 {"game", settings.matchGame},
                 {"raceTo", settings.raceTo},
                 {"winnerBreaks", settings.winnerBreaks},
-                {"shotClock", settings.shotClock}
+                {"shotClock", settings.shotClock},
+                {"opponent", settings.opponent}
             }}
         };
 
