@@ -24,6 +24,7 @@ namespace BilliardsSaloon
 
         // Controls
         float mouseSensitivity {1.0f};   // multiplies mouse aim, spin and stroke
+        int aimGuide {1};                // 0 off, 1 ghost ball and short lines, 2 full predicted paths
 
         // Accessibility
         float uiScale {1.0f};            // 1.0 to 1.5
@@ -42,6 +43,7 @@ namespace BilliardsSaloon
     inline constexpr float MIN_UI_SCALE = 1.0f;
     inline constexpr float MAX_UI_SCALE = 1.5f;
     inline constexpr int MATCH_GAME_COUNT = 3;
+    inline constexpr int AIM_GUIDE_COUNT = 3;
     inline constexpr int MAX_RACE_TO = 15;
 
     // Brings every value into its allowed range.

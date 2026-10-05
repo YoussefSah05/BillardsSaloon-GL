@@ -6,6 +6,19 @@ All notable changes to Billiards Saloon. The format follows
 
 ## [Unreleased]
 
+### Added
+- Aim guides from the simulator (M5): the shot is simulated as you aim, and
+  the guide shows the ghost ball at first contact, the object ball's line and
+  the cue ball's line after contact. Settings → Aim guide: off, ghost ball
+  (short lines, the default) or full path (both balls until they stop).
+- A modelled cue stick (tip, ferrule, tapered maple shaft, joint, forearm,
+  wrap, butt) that sits at the chosen tip offset, pulls back with power and
+  follows through on the strike.
+- `--camera aim|overview|follow|free` for captures.
+
+### Removed
+- The flat aim bar and tip marker, replaced by the cue and the guides.
+
 ## [0.4.0] - 2026-10-05
 
 Event-based physics (M3) and WPA rules (M4).

@@ -214,4 +214,57 @@ namespace BilliardsSaloon
 
         return std::make_unique<Mesh>(vertices, indices);
     }
+
+    std::unique_ptr<Mesh> Mesh::createFrustum(float bottomRadius, float topRadius, float length, std::uint32_t slices)
+    {
+        slices = (slices < 3U) ? 3U : slices;
+        constexpr float TWO_PI = 6.28318530717958647692f;
+
+        std::vector<Vertex> vertices;
+        std::vector<std::uint32_t> indices;
+
+        // Side: ring 0 at the top, ring 1 at the bottom, wound like the sphere.
+        const float slope = (bottomRadius - topRadius) / length;
+        for (std::uint32_t ring = 0; ring < 2U; ++ring)
+        {
+            const float y = (ring == 0U) ? length : 0.0f;
+            const float radius = (ring == 0U) ? topRadius : bottomRadius;
+            for (std::uint32_t slice = 0; slice <= slices; ++slice)
+            {
+                const float u = static_cast<float>(slice) / static_cast<float>(slices);
+                const float x = std::cos(u * TWO_PI);
+                const float z = std::sin(u * TWO_PI);
+                const float n = 1.0f / std::sqrt(1.0f + slope * slope);
+                vertices.push_back(Vertex{{radius * x, y, radius * z}, {x * n, slope * n, z * n}, {u, static_cast<float>(ring)}});
+            }
+        }
+        const std::uint32_t stride = slices + 1U;
+        for (std::uint32_t slice = 0; slice < slices; ++slice)
+        {
+            const std::uint32_t a = slice;
+            const std::uint32_t b = stride + slice;
+            indices.insert(indices.end(), {a, b, a + 1U, a + 1U, b, b + 1U});
+        }
+
+        // Caps (drawn without face culling, so their winding does not matter).
+        for (std::uint32_t cap = 0; cap < 2U; ++cap)
+        {
+            const float y = (cap == 0U) ? length : 0.0f;
+            const float radius = (cap == 0U) ? topRadius : bottomRadius;
+            const float ny = (cap == 0U) ? 1.0f : -1.0f;
+            const auto centre = static_cast<std::uint32_t>(vertices.size());
+            vertices.push_back(Vertex{{0.0f, y, 0.0f}, {0.0f, ny, 0.0f}, {0.5f, 0.5f}});
+            for (std::uint32_t slice = 0; slice <= slices; ++slice)
+            {
+                const float u = static_cast<float>(slice) / static_cast<float>(slices);
+                vertices.push_back(Vertex{{radius * std::cos(u * TWO_PI), y, radius * std::sin(u * TWO_PI)}, {0.0f, ny, 0.0f}, {u, 0.0f}});
+            }
+            for (std::uint32_t slice = 0; slice < slices; ++slice)
+            {
+                indices.insert(indices.end(), {centre, centre + 1U + slice, centre + 2U + slice});
+            }
+        }
+
+        return std::make_unique<Mesh>(vertices, indices);
+    }
 }

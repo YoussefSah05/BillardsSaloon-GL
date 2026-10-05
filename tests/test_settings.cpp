@@ -31,6 +31,7 @@ TEST_CASE("settings survive a save and load")
     settings.mouseSensitivity = 1.5f;
     settings.uiScale = 1.25f;
     settings.reducedMotion = true;
+    settings.aimGuide = 2;
     settings.matchGame = 2;
     settings.raceTo = 7;
     settings.winnerBreaks = true;

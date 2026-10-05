@@ -11,6 +11,7 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include <memory>
+#include <vector>
 
 namespace BilliardsSaloon
 {
@@ -86,15 +87,14 @@ namespace BilliardsSaloon
         // Draws every entity with a mesh and material; pocketed balls are skipped.
         void drawWorld(Registry& registry, float alpha, const BallHighlight& highlight);
 
-        // Draws the aim line and the cue-tip marker on the cue ball.
-        void drawAimGuide(
-            const glm::vec3& cueBallPosition,
-            float ballRadius,
-            const glm::vec3& aimDirection,
-            float aimAngleRadians,
-            float charge01,
-            float strikeRight01,
-            float strikeForward01);
+        // The cue stick: tip at tipPosition, the butt along buttDirection.
+        void drawCue(const glm::vec3& tipPosition, const glm::vec3& buttDirection);
+
+        // A translucent polyline on the cloth (aim and path guides).
+        void drawPath(const std::vector<glm::vec3>& points, const glm::vec3& color, float width, float alpha);
+
+        // A translucent ball, e.g. the ghost ball where the cue ball will make contact.
+        void drawGhostBall(const glm::vec3& position, const glm::vec3& color, float alpha);
 
         // A glowing marker: an ellipsoid with half-extents `size` in metres
         // (a flat y makes a disc) or, with box = true, a box with full extents
@@ -112,5 +112,17 @@ namespace BilliardsSaloon
         std::unique_ptr<Mesh> m_planeMesh;
         std::unique_ptr<Mesh> m_sphereMesh;
         float m_sphereRadius {1.0f};
+
+        struct CueSegment
+        {
+            std::unique_ptr<Mesh> mesh;
+            float start {0.0f};        // distance from the tip
+            glm::vec3 color {1.0f};
+            float specular {0.4f};
+        };
+        std::vector<CueSegment> m_cue;
+
+        void beginTranslucent();
+        void endTranslucent();
     };
 }

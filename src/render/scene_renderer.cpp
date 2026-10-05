@@ -6,6 +6,7 @@
 #include <glad/gl.h>
 
 #include <algorithm>
+#include <cmath>
 #include <string>
 
 namespace BilliardsSaloon
@@ -98,6 +99,27 @@ namespace BilliardsSaloon
         , m_sphereMesh(Mesh::createUVSphere(ballRadius, 40U, 20U))
         , m_sphereRadius(ballRadius)
     {
+        // A two-piece playing cue, from the tip back: leather tip, ferrule,
+        // tapered maple shaft, joint collar, forearm, wrap, butt sleeve, bumper.
+        // Lengths and radii in metres (58 in / 1.47 m overall).
+        struct Piece { float length; float r0; float r1; glm::vec3 color; float specular; };
+        const Piece pieces[] = {
+            {0.010f, 0.0065f, 0.0065f, glm::vec3(0.10f, 0.16f, 0.32f), 0.10f},
+            {0.020f, 0.0065f, 0.0066f, glm::vec3(0.93f, 0.91f, 0.86f), 0.60f},
+            {0.690f, 0.0066f, 0.0106f, glm::vec3(0.86f, 0.74f, 0.55f), 0.45f},
+            {0.022f, 0.0108f, 0.0108f, glm::vec3(0.78f, 0.78f, 0.80f), 0.90f},
+            {0.260f, 0.0110f, 0.0124f, glm::vec3(0.24f, 0.10f, 0.05f), 0.70f},
+            {0.280f, 0.0125f, 0.0136f, glm::vec3(0.05f, 0.05f, 0.06f), 0.15f},
+            {0.180f, 0.0137f, 0.0150f, glm::vec3(0.24f, 0.10f, 0.05f), 0.70f},
+            {0.012f, 0.0150f, 0.0150f, glm::vec3(0.03f, 0.03f, 0.03f), 0.10f},
+        };
+        float start = 0.0f;
+        for (const Piece& piece : pieces)
+        {
+            m_cue.push_back(CueSegment{Mesh::createFrustum(piece.r0, piece.r1, piece.length, 24U), start, piece.color, piece.specular});
+            start += piece.length;
+        }
+
     }
 
     bool SceneRenderer::beginFrame(
@@ -175,6 +197,7 @@ namespace BilliardsSaloon
         m_shader->setInt("uActivePointLightCount", activePointLightCount);
         m_shader->setFloat("uReflectionScale", reflectionScale);
         m_shader->setFloat("uEmissionScale", emissionScale);
+        m_shader->setFloat("uAlpha", 1.0f);
 
         for (std::size_t lightIndex = 0; lightIndex < settings.lights.positions.size(); ++lightIndex)
         {
@@ -240,6 +263,74 @@ namespace BilliardsSaloon
         );
     }
 
+    void SceneRenderer::beginTranslucent()
+    {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glDepthMask(GL_FALSE);
+    }
+
+    void SceneRenderer::endTranslucent()
+    {
+        m_shader->setFloat("uAlpha", 1.0f);
+        glDepthMask(GL_TRUE);
+        glDisable(GL_BLEND);
+    }
+
+    void SceneRenderer::drawCue(const glm::vec3& tipPosition, const glm::vec3& buttDirection)
+    {
+        const glm::vec3 axis = glm::normalize(buttDirection);
+        const glm::quat rotation(glm::vec3(0.0f, 1.0f, 0.0f), axis);   // shortest arc from +y
+
+        glDisable(GL_CULL_FACE);
+        for (const CueSegment& segment : m_cue)
+        {
+            m_shader->setMat4("uModel", composeMatrix(tipPosition + axis * segment.start, rotation, glm::vec3(1.0f)));
+            bindMaterial(flatMaterial(segment.color, segment.specular, 48.0f, 0.35f, 0.05f), glm::vec3(0.0f), 0);
+            segment.mesh->draw();
+        }
+        glEnable(GL_CULL_FACE);
+    }
+
+    void SceneRenderer::drawPath(const std::vector<glm::vec3>& points, const glm::vec3& color, float width, float alpha)
+    {
+        if (points.size() < 2)
+        {
+            return;
+        }
+
+        beginTranslucent();
+        m_shader->setFloat("uAlpha", alpha);
+        bindMaterial(flatMaterial(color, 0.0f, 4.0f, 1.0f, 0.0f), color * 0.8f, 0);
+        for (std::size_t i = 1; i < points.size(); ++i)
+        {
+            glm::vec3 a = points[i - 1];
+            glm::vec3 b = points[i];
+            a.y = b.y = 0.0015f;   // just above the cloth
+            const glm::vec3 delta = b - a;
+            const float length = glm::length(delta);
+            if (length < 1.0e-4f)
+            {
+                continue;
+            }
+            const float yaw = std::atan2(delta.x, delta.z);
+            m_shader->setMat4("uModel", composeMatrix(
+                0.5f * (a + b), glm::angleAxis(yaw, glm::vec3(0.0f, 1.0f, 0.0f)), glm::vec3(width, 0.0008f, length + 0.5f * width)));
+            m_cubeMesh->draw();
+        }
+        endTranslucent();
+    }
+
+    void SceneRenderer::drawGhostBall(const glm::vec3& position, const glm::vec3& color, float alpha)
+    {
+        beginTranslucent();
+        m_shader->setFloat("uAlpha", alpha);
+        m_shader->setMat4("uModel", composeMatrix(position, glm::quat(1.0f, 0.0f, 0.0f, 0.0f), glm::vec3(1.0f)));
+        bindMaterial(flatMaterial(color, 0.3f, 32.0f, 0.5f, 0.0f), color * 0.25f, 0);
+        m_sphereMesh->draw();
+        endTranslucent();
+    }
+
     void SceneRenderer::drawMarker(const glm::vec3& position, const glm::vec3& size, const glm::vec3& color, bool box)
     {
         const MaterialComponent material = flatMaterial(color, 0.10f, 8.0f, 0.60f, 0.0f);
@@ -249,49 +340,4 @@ namespace BilliardsSaloon
         (box ? m_cubeMesh : m_sphereMesh)->draw();
     }
 
-    void SceneRenderer::drawAimGuide(
-        const glm::vec3& cueBallPosition,
-        float ballRadius,
-        const glm::vec3& aimDirection,
-        float aimAngleRadians,
-        float charge01,
-        float strikeRight01,
-        float strikeForward01)
-    {
-        const MaterialComponent guideMaterial =
-            flatMaterial(glm::vec3(0.92f, 0.82f, 0.42f), 0.20f, 16.0f, 0.38f, 0.04f);
-
-        m_shader->setMat4("uModel", composeMatrix(
-            cueBallPosition + aimDirection * 0.18f,
-            glm::quat(glm::vec3(0.0f, -aimAngleRadians, 0.0f)),
-            glm::vec3(0.03f, 0.03f, 0.18f + 0.35f * charge01)
-        ));
-        bindMaterial(
-            guideMaterial,
-            glm::vec3(0.10f, 0.08f, 0.02f) + glm::vec3(0.10f, 0.06f, 0.01f) * charge01,
-            0
-        );
-        m_cubeMesh->draw();
-
-        const glm::vec3 up(0.0f, 1.0f, 0.0f);
-        const glm::vec3 right = glm::normalize(glm::cross(up, aimDirection));
-        const float markerRadius = ballRadius * 0.72f;
-
-        const glm::vec3 markerPosition =
-            cueBallPosition +
-            right * (strikeRight01 * markerRadius) +
-            aimDirection * (strikeForward01 * markerRadius) +
-            glm::vec3(0.0f, ballRadius * 0.25f, 0.0f);
-
-        const MaterialComponent markerMaterial =
-            flatMaterial(glm::vec3(0.10f, 0.10f, 0.12f), 0.10f, 12.0f, 0.52f, 0.03f);
-
-        m_shader->setMat4("uModel", composeMatrix(
-            markerPosition,
-            glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-            glm::vec3(0.012f)
-        ));
-        bindMaterial(markerMaterial, glm::vec3(0.18f, 0.12f, 0.02f), 0);
-        m_cubeMesh->draw();
-    }
 }

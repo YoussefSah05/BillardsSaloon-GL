@@ -303,10 +303,15 @@ namespace BilliardsSaloon
                 const glm::vec3 two = m_session->registry().get<TransformComponent>(*m_session->ballEntity(2)).position;
                 ShotControls toTwo;
                 toTwo.aimDeltaRadians =
-                    angleTo({cue.x, cue.z}, {two.x, two.z}) - m_session->shotState().aimAngleRadians;
+                    angleTo({cue.x, cue.z}, {two.x, two.z}) + 0.04f - m_session->shotState().aimAngleRadians;   // a slight cut
                 m_session->applyShotControls(toTwo, 0.0f);
             }
             setShellState(ApplicationShellState::Gameplay);
+        }
+
+        if (options.startCamera >= 0)
+        {
+            setCameraViewMode(static_cast<CameraViewMode>(options.startCamera));
         }
 
         updateCameraRig(FIXED_TIME_STEP);
@@ -1195,6 +1200,15 @@ namespace BilliardsSaloon
         if ((shot.phase == ShotPhase::BallsInMotion) && (m_previousShotPhase != ShotPhase::BallsInMotion))
         {
             m_hud->markShotPower(m_chargeBeforeShot);
+            m_followThroughSeconds = 0.0f;
+        }
+        else if (m_followThroughSeconds >= 0.0f)
+        {
+            m_followThroughSeconds += frameTimeSeconds;
+            if (m_followThroughSeconds > 1.0f)
+            {
+                m_followThroughSeconds = -1.0f;
+            }
         }
         m_previousShotPhase = shot.phase;
 
@@ -1335,22 +1349,99 @@ namespace BilliardsSaloon
 
         if (aiming && !cueBallState.pocketed)
         {
-            const glm::vec3 cueBallPosition =
-                interpolateTransform(registry.get<TransformComponent>(cueBall), renderAlpha).position;
-
-            m_renderer->drawAimGuide(
-                cueBallPosition,
-                cueBallState.radius,
-                m_session->aimDirection(),
-                shot.aimAngleRadians,
-                shot.charge01,
-                shot.strikeRight01,
-                shot.strikeForward01
-            );
+            drawCueAndGuides(interpolateTransform(registry.get<TransformComponent>(cueBall), renderAlpha).position,
+                             cueBallState.radius);
+        }
+        else if ((m_followThroughSeconds >= 0.0f) && (m_shellState == ApplicationShellState::Gameplay))
+        {
+            // The cue punches through the ball and stays a moment, then lifts away.
+            constexpr float STROKE_SECONDS = 0.07f;
+            constexpr float HOLD_SECONDS = 0.45f;
+            const float stroke = std::min(m_followThroughSeconds / STROKE_SECONDS, 1.0f);
+            const float travel = (m_cuePose.pullback + 0.035f) * stroke;
+            if (m_followThroughSeconds < HOLD_SECONDS)
+            {
+                m_renderer->drawCue(m_cuePose.tip - m_cuePose.butt * travel, m_cuePose.butt);
+            }
         }
 
         m_ui->update();
         m_ui->render();
+    }
+
+    void Application::drawCueAndGuides(const glm::vec3& cueBallPosition, float ballRadius)
+    {
+        const ShotState& shot = m_session->shotState();
+        const glm::vec3 aim = m_session->aimDirection();
+        const glm::vec3 up(0.0f, 1.0f, 0.0f);
+        const glm::vec3 right = glm::normalize(glm::cross(aim, up));
+
+        // Guides first, so the cue is drawn over them.
+        const int guide = m_settings.aimGuide;
+        if (guide > 0)
+        {
+            const ShotPreview& preview = m_session->shotPreview();
+            if (preview.valid && !preview.cuePath.empty())
+            {
+                const bool full = guide >= 2;
+                const auto truncated = [](const std::vector<glm::vec3>& points, std::size_t from, float maxLength)
+                {
+                    std::vector<glm::vec3> out;
+                    float length = 0.0f;
+                    for (std::size_t i = from; i < points.size(); ++i)
+                    {
+                        if (!out.empty())
+                        {
+                            length += glm::length(points[i] - out.back());
+                        }
+                        out.push_back(points[i]);
+                        if (length >= maxLength)
+                        {
+                            break;
+                        }
+                    }
+                    return out;
+                };
+
+                const glm::vec3 white(0.95f, 0.94f, 0.90f);
+                const glm::vec3 gold(0.95f, 0.70f, 0.25f);
+                const glm::vec3 blue(0.45f, 0.70f, 1.00f);
+
+                if (preview.contact)
+                {
+                    const std::vector<glm::vec3> toContact(preview.cuePath.begin(),
+                        preview.cuePath.begin() + static_cast<std::ptrdiff_t>(preview.cueContactIndex + 1));
+                    m_renderer->drawPath(toContact, white, 0.005f, 0.6f);
+                    m_renderer->drawGhostBall(preview.ghostBall, white, 0.35f);
+                    m_renderer->drawPath(full ? preview.objectPath : truncated(preview.objectPath, 0, 0.35f), gold, 0.008f, 0.85f);
+                    m_renderer->drawPath(full ? truncated(preview.cuePath, preview.cueContactIndex, 100.0f)
+                                              : truncated(preview.cuePath, preview.cueContactIndex, 0.22f),
+                                         blue, 0.006f, 0.8f);
+                }
+                else
+                {
+                    // No ball in the way: the line to the first cushion (or the whole path).
+                    m_renderer->drawPath(full ? preview.cuePath : truncated(preview.cuePath, 0, 0.8f), white, 0.005f, 0.5f);
+                }
+            }
+        }
+
+        // The cue: tip just behind the struck point, pulled back with power,
+        // butt raised a few degrees as a player holds it.
+        constexpr float ELEVATION_RADIANS = 0.07f;
+        const float tipReach = ShotInputTuning{}.tipOffsetPerStrikeUnit * ballRadius;
+        const glm::vec3 strikePoint = cueBallPosition +
+            right * (shot.strikeRight01 * tipReach) + up * (shot.strikeForward01 * tipReach);
+        const float pullback = 0.012f + 0.24f * shot.charge01;
+        const float alongBall = std::sqrt(std::max(ballRadius * ballRadius - tipReach * tipReach *
+            (shot.strikeRight01 * shot.strikeRight01 + shot.strikeForward01 * shot.strikeForward01), 0.0f));
+
+        CuePose pose;
+        pose.butt = glm::normalize(-aim * std::cos(ELEVATION_RADIANS) + up * std::sin(ELEVATION_RADIANS));
+        pose.tip = strikePoint - aim * alongBall + pose.butt * pullback;
+        pose.pullback = pullback;
+        m_cuePose = pose;
+        m_renderer->drawCue(pose.tip, pose.butt);
     }
 
     void Application::updateWindowTitle(double frameTimeSeconds, std::uint32_t fixedStepsThisFrame)

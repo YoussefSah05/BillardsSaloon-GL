@@ -26,8 +26,19 @@ namespace BilliardsSaloon
             ROW_QUALITY,
             ROW_SENSITIVITY,
             ROW_UI_SCALE,
-            ROW_REDUCED_MOTION
+            ROW_REDUCED_MOTION,
+            ROW_AIM_GUIDE
         };
+
+        const char* aimGuideName(int guide)
+        {
+            switch (guide)
+            {
+                case 0: return "OFF";
+                case 2: return "FULL PATH";
+                default: return "GHOST BALL";
+            }
+        }
 
         constexpr std::array<float, 7> SENSITIVITY_STEPS {0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f, 2.5f};
         constexpr std::array<float, 5> UI_SCALE_STEPS {1.0f, 1.1f, 1.25f, 1.4f, 1.5f};
@@ -96,6 +107,7 @@ namespace BilliardsSaloon
         model.BindFunc("sensitivity", [this](Rml::Variant& v) { v = formatted("%.2fx", static_cast<double>(m_settings.mouseSensitivity)); });
         model.BindFunc("ui_scale", [this](Rml::Variant& v) { v = formatted("%.0f%%", static_cast<double>(m_settings.uiScale * 100.0f)); });
         model.BindFunc("reduced_motion", [this](Rml::Variant& v) { v = Rml::String(onOff(m_settings.reducedMotion)); });
+        model.BindFunc("aim_guide", [this](Rml::Variant& v) { v = Rml::String(aimGuideName(m_settings.aimGuide)); });
 
         model.Bind("gamepad", &m_gamepad);
 
@@ -175,7 +187,7 @@ namespace BilliardsSaloon
 
     void SettingsScreen::refreshAll()
     {
-        for (const char* name : {"fullscreen", "vsync", "quality", "sensitivity", "ui_scale", "reduced_motion"})
+        for (const char* name : {"fullscreen", "vsync", "quality", "sensitivity", "ui_scale", "reduced_motion", "aim_guide"})
         {
             m_model.DirtyVariable(name);
         }
@@ -202,6 +214,9 @@ namespace BilliardsSaloon
                 break;
             case ROW_REDUCED_MOTION:
                 m_settings.reducedMotion = !m_settings.reducedMotion;
+                break;
+            case ROW_AIM_GUIDE:
+                m_settings.aimGuide = (m_settings.aimGuide + direction + AIM_GUIDE_COUNT) % AIM_GUIDE_COUNT;
                 break;
             default:
                 return;

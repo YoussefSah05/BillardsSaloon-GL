@@ -36,6 +36,7 @@ namespace BilliardsSaloon
         std::filesystem::path capturePath;   // empty = no capture
         int captureAfterFrames {90};
         DevScenario scenario {DevScenario::None};
+        int startCamera {-1};                 // --camera: 0 aim, 1 overview, 2 follow, 3 free; -1 = default
     };
 
     // Parses arguments after the program name. Throws std::invalid_argument

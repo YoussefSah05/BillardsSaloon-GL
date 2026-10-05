@@ -68,6 +68,20 @@ namespace BilliardsSaloon
         std::uint32_t seed {0x5EED};
     };
 
+    // The shot as it would play if struck now, for the aim guides.
+    struct ShotPreview
+    {
+        bool valid {false};
+        bool contact {false};                 // the cue ball reaches an object ball
+        glm::vec3 ghostBall {0.0f};           // cue ball centre at first contact
+        int objectBall {-1};                  // number of the ball it reaches
+        std::vector<glm::vec3> cuePath;       // cue ball centre, from now until it stops
+        std::size_t cueContactIndex {0};      // cuePath index at first contact
+        std::vector<glm::vec3> objectPath;    // the object ball after contact
+        bool objectPotted {false};
+        bool cuePotted {false};
+    };
+
     // What happened on the last resolved shot, for the HUD and stats.
     struct ShotOutcome
     {
@@ -180,6 +194,11 @@ namespace BilliardsSaloon
         // Advances physics; resolves the shot by the rules once all balls stop.
         void step(double deltaTimeSeconds);
 
+        // The predicted shot at the current aim, tip offset and power (the
+        // power being charged, else the last shot's). Recomputed only when an
+        // input changes; empty when no shot can be played.
+        [[nodiscard]] const ShotPreview& shotPreview();
+
         // Increments each time a shot is resolved; compare to detect new outcomes.
         [[nodiscard]] std::uint32_t resolvedShotCount() const { return m_resolvedShotCount; }
         [[nodiscard]] const ShotOutcome& lastOutcome() const { return m_lastOutcome; }
@@ -201,6 +220,8 @@ namespace BilliardsSaloon
         void spotBall(int number);
 
         void updateAutoCall();
+        [[nodiscard]] Sim::CueStrike currentStrike(float power01) const;
+        [[nodiscard]] std::vector<Sim::BallState> simBallStates() const;
 
         bool fireShot();
         void playBack(double deltaTimeSeconds);
@@ -240,6 +261,11 @@ namespace BilliardsSaloon
         std::vector<glm::vec3> m_pocketPositions;
         std::optional<Sim::ShotTrajectory> m_trajectory;
         double m_playbackSeconds {0.0};
+
+        ShotPreview m_preview;
+        glm::vec4 m_previewKey {-1.0f};      // aim, tip right, tip forward, power
+        glm::vec3 m_previewCue {0.0f};
+        float m_lastShotPower {0.5f};
 
         ShotOutcome m_lastOutcome {};
         std::uint32_t m_resolvedShotCount {0};

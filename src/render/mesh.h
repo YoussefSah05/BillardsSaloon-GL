@@ -31,6 +31,10 @@ namespace BilliardsSaloon
         static std::unique_ptr<Mesh> createPlane(float width, float depth);
         static std::unique_ptr<Mesh> createUVSphere(float radius, std::uint32_t slices, std::uint32_t stacks);
 
+        // A capped frustum along +y from y = 0 (radius bottomRadius) to
+        // y = length (radius topRadius).
+        static std::unique_ptr<Mesh> createFrustum(float bottomRadius, float topRadius, float length, std::uint32_t slices);
+
     private:
         unsigned int m_vao {0};
         unsigned int m_vbo {0};

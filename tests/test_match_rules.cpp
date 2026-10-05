@@ -239,3 +239,34 @@ TEST_CASE("10-ball: every shot is called; the call follows the aim and can be ch
     CHECK(session.pushOutDeclared());
     CHECK_FALSE(session.callRequired());
 }
+
+TEST_CASE("the shot preview predicts the contact, the object ball's path and the pot")
+{
+    MatchSession session(nineBallVariant(), {}, fixedRack());
+    const CornerShot shot = cornerShot(session.variant());
+    session.setLayout(shot.cue, {{9, shot.object}});
+    aimAt(session, shot.aim);
+
+    const ShotPreview& preview = session.shotPreview();
+    REQUIRE(preview.valid);
+    REQUIRE(preview.contact);
+    CHECK(preview.objectBall == 9);
+    CHECK(preview.objectPotted);
+    CHECK_FALSE(preview.objectPath.empty());
+
+    // The ghost ball touches the object ball, on the line of aim.
+    const glm::vec3 object = position(session, 9);
+    const float radius = session.variant().table.ballRadius;
+    CHECK(glm::length(preview.ghostBall - object) == doctest::Approx(2.0f * radius).epsilon(0.01));
+
+    // Playing the shot does what the preview said.
+    shoot(session, 0.5f);
+    CHECK(pocketed(session, 9));
+}
+
+TEST_CASE("the shot preview is empty while the cue ball is being placed")
+{
+    MatchSession session(eightBallVariant(), {}, fixedRack());
+    session.beginCueBallPlacement();
+    CHECK_FALSE(session.shotPreview().valid);
+}

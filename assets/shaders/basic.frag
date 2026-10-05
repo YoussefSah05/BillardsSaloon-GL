@@ -28,6 +28,8 @@ uniform vec3 uEmissionColor;
 
 uniform int uBallVisualType;
 
+uniform float uAlpha;
+
 out vec4 FragColor;
 
 const int SURFACE_CLOTH = 1;
@@ -292,5 +294,5 @@ void main()
     color = acesTonemap(color);
     color = pow(color, vec3(1.0 / 2.2));
 
-    FragColor = vec4(color, 1.0);
+    FragColor = vec4(color, uAlpha);
 }

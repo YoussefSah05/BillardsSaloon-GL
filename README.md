@@ -27,7 +27,9 @@ materials are scheduled for the hall-visuals milestone.
   spotted balls, three-foul rule, and the referee's choices (re-rack, hand the
   shot back). Races to N frames from a match setup screen.
   See [`docs/design/RULES.md`](docs/design/RULES.md).
-- Cue strike with power and tip offset (english, follow, draw).
+- Cue strike with power and tip offset (english, follow, draw), with a
+  modelled cue and aim guides predicted by the simulator (ghost ball, object
+  and cue ball lines; full paths optional).
 - Event-based physics on a WPA 9 ft table: each shot is simulated exactly
   (sliding, rolling and spinning in closed form, ball-ball throw, Han 2005
   cushions, pocket jaws, squirt) and played back in real time.
@@ -77,6 +79,7 @@ depending on the device used last.
 ./build/BilliardsSaloon --screen game                      # skip the main menu
 ./build/BilliardsSaloon --screen pause --capture pause.png # save a screenshot and quit
 ./build/BilliardsSaloon --scenario foul|choice|call        # script a shot: ball in hand, a referee choice, a called shot
+./build/BilliardsSaloon --camera overview                  # start with a camera view (aim, overview, follow, free)
 ```
 
 ## Project layout

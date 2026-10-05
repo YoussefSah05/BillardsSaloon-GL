@@ -68,6 +68,15 @@ namespace BilliardsSaloon
                 else throw std::invalid_argument("--scenario needs 'foul', 'choice' or 'call'.");
                 options.startScreen = StartScreen::Gameplay;
             }
+            else if (argument == "--camera")
+            {
+                const std::string_view value = nextValue();
+                if (value == "aim") options.startCamera = 0;
+                else if (value == "overview") options.startCamera = 1;
+                else if (value == "follow") options.startCamera = 2;
+                else if (value == "free") options.startCamera = 3;
+                else throw std::invalid_argument("--camera needs aim, overview, follow or free.");
+            }
             else if (argument == "--capture-frames")
             {
                 options.captureAfterFrames = parsePositiveInt(argument, nextValue());
@@ -88,6 +97,7 @@ namespace BilliardsSaloon
             "  --fullscreen            start in fullscreen\n"
             "  --screen title|main|setup|game|pause|settings  start on this screen\n"
             "  --scenario foul|choice|call  (development) script a state: ball in hand, a referee choice, a called shot\n"
+            "  --camera aim|overview|follow|free  start with this camera view\n"
             "  --capture FILE.png      save a screenshot after a few frames, then quit\n"
             "  --capture-frames N      frames to render before capturing (default 90)\n";
     }

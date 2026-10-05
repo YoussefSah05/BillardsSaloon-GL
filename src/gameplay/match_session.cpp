@@ -727,29 +727,9 @@ namespace BilliardsSaloon
         m_pushOutAtStrike = m_pushOut;
 
         const TableSpecification& table = m_variant->table;
-        const double length = table.clothWidth;
-        const double width = table.clothDepth;
-
-        std::vector<Sim::BallState> balls;
-        balls.reserve(m_simBalls.size());
-        for (const Entity entity : m_simBalls)
-        {
-            const BallComponent& ball = m_registry.get<BallComponent>(entity);
-            Sim::BallState state;
-            state.r = SimBridge::toSimPosition(m_registry.get<TransformComponent>(entity).position, length, width);
-            state.r.z = table.simBall.R;
-            state.s = ball.pocketed ? Sim::MotionState::Pocketed : Sim::MotionState::Stationary;
-            balls.push_back(state);
-        }
-
-        const Sim::CueStrike strike {
-            .speed = m_tuning.minCueSpeed + (m_tuning.maxCueSpeed - m_tuning.minCueSpeed) * m_shotState.charge01,
-            .phiDegrees = SimBridge::aimToPhiDegrees(aimDirection()),
-            .thetaDegrees = 0.0,
-            // The simulator's a > 0 is left english; the game's strikeRight01 > 0 is right.
-            .a = -m_shotState.strikeRight01 * m_tuning.tipOffsetPerStrikeUnit,
-            .b = m_shotState.strikeForward01 * m_tuning.tipOffsetPerStrikeUnit
-        };
+        const Sim::CueStrike strike = currentStrike(m_shotState.charge01);
+        m_lastShotPower = m_shotState.charge01;
+        std::vector<Sim::BallState> balls = simBallStates();
 
         m_trajectory = Sim::simulateShot(m_simTable, std::move(balls), 0, strike, table.simBall);
         m_playbackSeconds = 0.0;
@@ -757,6 +737,145 @@ namespace BilliardsSaloon
 
         applySimStates(m_trajectory->states.front(), 0.0);
         return true;
+    }
+
+    std::vector<Sim::BallState> MatchSession::simBallStates() const
+    {
+        const TableSpecification& table = m_variant->table;
+        std::vector<Sim::BallState> balls;
+        balls.reserve(m_simBalls.size());
+        for (const Entity entity : m_simBalls)
+        {
+            const BallComponent& ball = m_registry.get<BallComponent>(entity);
+            Sim::BallState state;
+            state.r = SimBridge::toSimPosition(m_registry.get<TransformComponent>(entity).position, table.clothWidth, table.clothDepth);
+            state.r.z = table.simBall.R;
+            state.s = ball.pocketed ? Sim::MotionState::Pocketed : Sim::MotionState::Stationary;
+            balls.push_back(state);
+        }
+        return balls;
+    }
+
+    Sim::CueStrike MatchSession::currentStrike(float power01) const
+    {
+        return Sim::CueStrike {
+            .speed = m_tuning.minCueSpeed + (m_tuning.maxCueSpeed - m_tuning.minCueSpeed) * power01,
+            .phiDegrees = SimBridge::aimToPhiDegrees(aimDirection()),
+            .thetaDegrees = 0.0,
+            // The simulator's a > 0 is left english; the game's strikeRight01 > 0 is right.
+            .a = -m_shotState.strikeRight01 * m_tuning.tipOffsetPerStrikeUnit,
+            .b = m_shotState.strikeForward01 * m_tuning.tipOffsetPerStrikeUnit
+        };
+    }
+
+    const ShotPreview& MatchSession::shotPreview()
+    {
+        const bool canShoot = acceptsShotInput() && !m_registry.get<BallComponent>(m_cueBallEntity).pocketed;
+        if (!canShoot)
+        {
+            m_preview = ShotPreview{};
+            m_previewKey = glm::vec4(-1.0f);
+            return m_preview;
+        }
+
+        const float power = (m_shotState.phase == ShotPhase::Charging) ? m_shotState.charge01 : m_lastShotPower;
+        const glm::vec4 key(m_shotState.aimAngleRadians, m_shotState.strikeRight01, m_shotState.strikeForward01, power);
+        const glm::vec3 cue = m_registry.get<TransformComponent>(m_cueBallEntity).position;
+        const glm::vec4 change = glm::abs(key - m_previewKey);
+        const bool unchanged = m_preview.valid && (glm::length(cue - m_previewCue) < 1.0e-5f) &&
+            (change.x < 1.0e-5f) && (change.y < 1.0e-4f) && (change.z < 1.0e-4f) && (change.w < 0.01f);
+        if (unchanged)
+        {
+            return m_preview;
+        }
+        m_previewKey = key;
+        m_previewCue = cue;
+
+        // A capped simulation: the guides only need the first part of the shot.
+        Sim::SimulationLimits limits;
+        limits.maxEvents = 400;
+        const TableSpecification& table = m_variant->table;
+        const Sim::ShotTrajectory trajectory =
+            Sim::simulateShot(m_simTable, simBallStates(), 0, currentStrike(power), table.simBall, {}, limits);
+
+        ShotPreview preview;
+        preview.valid = true;
+
+        int object = -1;
+        double contactTime = trajectory.duration();
+        for (const Sim::ShotEvent& event : trajectory.events)
+        {
+            if ((event.type == Sim::EventType::BallBall) && ((event.ball == 0) || (event.other == 0)))
+            {
+                object = (event.ball == 0) ? event.other : event.ball;
+                contactTime = event.time;
+                break;
+            }
+        }
+
+        const auto toGame = [&](const glm::dvec3& r)
+        {
+            glm::vec3 p = SimBridge::toGamePosition(r, table.clothWidth, table.clothDepth);
+            p.y = table.ballRadius;
+            return p;
+        };
+
+        // Sample both paths at a fixed step, plus the exact contact moment.
+        constexpr double SAMPLE_SECONDS = 1.0 / 60.0;
+        const double end = trajectory.duration();
+        bool contactAdded = false;
+        for (double t = 0.0; t <= end + SAMPLE_SECONDS; t += SAMPLE_SECONDS)
+        {
+            double sampleTime = std::min(t, end);
+            if (!contactAdded && (object >= 0) && (sampleTime >= contactTime))
+            {
+                sampleTime = contactTime;
+                contactAdded = true;
+                t = contactTime;
+            }
+            const std::vector<Sim::BallState> states = trajectory.stateAt(sampleTime);
+
+            if (states[0].s != Sim::MotionState::Pocketed)
+            {
+                preview.cuePath.push_back(toGame(states[0].r));
+                if (contactAdded && (preview.cueContactIndex == 0))
+                {
+                    preview.cueContactIndex = preview.cuePath.size() - 1;
+                }
+            }
+            else
+            {
+                preview.cuePotted = true;
+            }
+
+            if ((object >= 0) && (sampleTime >= contactTime))
+            {
+                const Sim::BallState& ball = states[static_cast<std::size_t>(object)];
+                if (ball.s == Sim::MotionState::Pocketed)
+                {
+                    preview.objectPotted = true;
+                }
+                else if (!preview.objectPotted)
+                {
+                    preview.objectPath.push_back(toGame(ball.r));
+                }
+            }
+
+            if (sampleTime >= end)
+            {
+                break;
+            }
+        }
+
+        if (object >= 0)
+        {
+            preview.contact = true;
+            preview.objectBall = m_simNumbers[static_cast<std::size_t>(object)];
+            preview.ghostBall = preview.cuePath.empty() ? cue : preview.cuePath[preview.cueContactIndex];
+        }
+
+        m_preview = std::move(preview);
+        return m_preview;
     }
 
     void MatchSession::applySimStates(const std::vector<Sim::BallState>& states, double deltaTimeSeconds)
