@@ -75,6 +75,7 @@ TEST_CASE("charging power does not depend on the frame rate")
 TEST_CASE("aiming turns at a fixed rate and the tip offset stays inside the cue ball")
 {
     MatchSession session(eightBallVariant());
+    const float startAngle = session.shotState().aimAngleRadians;
 
     ShotControls controls;
     controls.aimAxis = 1.0f;
@@ -86,7 +87,7 @@ TEST_CASE("aiming turns at a fixed rate and the tip offset stays inside the cue 
     }
 
     const ShotInputTuning tuning;
-    CHECK(session.shotState().aimAngleRadians == doctest::Approx(2.0f * tuning.aimRadiansPerSecond));
+    CHECK(session.shotState().aimAngleRadians - startAngle == doctest::Approx(2.0f * tuning.aimRadiansPerSecond));
 
     const glm::vec2 strike(session.shotState().strikeRight01, session.shotState().strikeForward01);
     CHECK(glm::length(strike) == doctest::Approx(tuning.maxStrikeRadius01));
@@ -159,13 +160,14 @@ TEST_CASE("pausing while charging abandons the shot")
 TEST_CASE("mouse aim and spin deltas apply directly")
 {
     MatchSession session(eightBallVariant());
+    const float startAngle = session.shotState().aimAngleRadians;
 
     ShotControls controls;
     controls.aimDeltaRadians = 0.25f;
     controls.strikeDelta = glm::vec2(0.2f, -0.3f);
     session.applyShotControls(controls, 1.0f / 60.0f);
 
-    CHECK(session.shotState().aimAngleRadians == doctest::Approx(0.25f));
+    CHECK(session.shotState().aimAngleRadians - startAngle == doctest::Approx(0.25f));
     CHECK(session.shotState().strikeRight01 == doctest::Approx(0.2f));
     CHECK(session.shotState().strikeForward01 == doctest::Approx(-0.3f));
 }
@@ -229,4 +231,55 @@ TEST_CASE("resetting the rack restores the opening position")
     {
         CHECK_FALSE(session.registry().get<BallComponent>(ball).pocketed);
     }
+}
+
+TEST_CASE("the opening aim points from the head spot at the rack")
+{
+    MatchSession session(eightBallVariant());
+    const glm::vec3 aim = session.aimDirection();
+    CHECK(aim.x == doctest::Approx(1.0f));
+    CHECK(session.cueBallStartPosition().x == doctest::Approx(-0.25f * eightBallVariant().table.clothWidth));
+}
+
+TEST_CASE("an event-simulated break plays back, syncs pots and records first contact")
+{
+    MatchSession session(eightBallVariant());
+    REQUIRE(session.backend() == PhysicsBackend::EventBased);
+
+    chargeAndRelease(session, 1.0f, 60.0f);
+    REQUIRE(session.activeTrajectory() != nullptr);
+    const std::size_t potted = [&]()
+    {
+        std::size_t count = 0;
+        for (const auto& event : session.activeTrajectory()->events)
+        {
+            count += (event.type == BilliardsSaloon::Sim::EventType::Pocket) ? 1U : 0U;
+        }
+        return count;
+    }();
+
+    stepUntilSettled(session);
+    REQUIRE(session.resolvedShotCount() == 1);
+    CHECK(session.activeTrajectory() == nullptr);
+
+    // The break hits the apex ball (the 1) first.
+    CHECK(session.lastOutcome().foul != FoulReason::NoBallHit);
+
+    std::size_t pocketedOnTable = 0;
+    for (const Entity ball : session.objectBallEntities())
+    {
+        pocketedOnTable += session.registry().get<BallComponent>(ball).pocketed ? 1U : 0U;
+    }
+    const bool cuePotted = session.registry().get<BallComponent>(session.cueBallEntity()).pocketed ||
+                           session.lastOutcome().foul == FoulReason::CueBallPocketed;
+    CHECK(pocketedOnTable + (cuePotted ? 1U : 0U) == potted);
+}
+
+TEST_CASE("the legacy solver still plays a frame")
+{
+    MatchSession session(eightBallVariant(), ShotInputTuning{}, PhysicsBackend::Legacy);
+    chargeAndRelease(session, 1.0f, 60.0f);
+    CHECK(session.activeTrajectory() == nullptr);
+    stepUntilSettled(session);
+    CHECK(session.resolvedShotCount() == 1);
 }

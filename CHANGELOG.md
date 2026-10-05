@@ -6,6 +6,23 @@ All notable changes to Billiards Saloon. The format follows
 
 ## [Unreleased]
 
+### Added
+- Event-based physics (M3), now the default: every shot is simulated exactly
+  when the cue is released and played back in real time. Sliding, rolling
+  and spinning follow closed-form equations; ball-ball throw and spin
+  transfer, Han 2005 cushions contacting at the nose height, real pocket
+  mouths with rounded jaws, and squirt from side spin. No tunnelling at any
+  speed; full power now reaches break speed (about 10.8 m/s ball speed).
+- `--physics legacy` runs the prototype solver for comparison.
+
+### Changed
+- The table is a WPA 9 ft table (2.54 × 1.27 m) with pocket geometry and
+  simulator coefficients in `table_9ft.json`.
+- Racking and breaking run along the length of the table: the rack sits on
+  the foot spot and the cue ball on the head spot (the prototype broke across
+  the short side).
+- Pockets are marked on the rails.
+
 Deferred from M2: remappable controls (with the M11 settings work) and UI
 sound cues (with M7 audio).
 

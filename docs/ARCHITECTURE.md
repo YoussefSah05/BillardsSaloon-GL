@@ -16,7 +16,9 @@ tests link, and the `BilliardsSaloon` executable.
 | `src/gameplay/game_variant.*` | bs_game | Variant/table types, JSON loaders, rack layouts. |
 | `src/gameplay/match_session.*` | bs_game | One rack of play: ECS world, shot state machine (aim, tip offset, charge, fire), physics step, rule resolution. |
 | `src/gameplay/turn_rules.*` | bs_game | `Rules::resolveShot` (8-ball only; 9-ball currently reuses it). |
-| `src/physics/billiards_physics.*` | bs_game | Fixed-step impulse solver: sliding→rolling cloth model, ball-ball and rail impulses, radius-based pocket capture. To be replaced by `sim/`. |
+| `src/sim/` | bs_sim | Event-based simulator: roots, motion, table geometry, event detection, collision models, `simulateShot` → `ShotTrajectory`. Default physics. See design/PHYSICS.md. |
+| `src/gameplay/sim_bridge.h` | bs_game | Game ↔ simulator frame conversion. |
+| `src/physics/billiards_physics.*` | bs_game | Prototype fixed-step solver, kept behind `--physics legacy` until removal. |
 | `src/platform/` | app | `Window` (GLFW, vsync on), `Input` (key edge detection), `Timer`. |
 | `src/render/` | app | `SceneRenderer` (frame setup, world, aim guide), `Shader`, `Mesh`, `Camera`, `camera_rig`, `ui_overlay` (voxel-font text). |
 | `src/app/` | app | `Application` (loop, screens, camera rig), `saloon_scene` (room, lamps, ball materials), `overlay_screens` (HUD and menus). |
@@ -24,9 +26,8 @@ tests link, and the `BilliardsSaloon` executable.
 | `assets/shaders/basic.*` | — | Single forward shader with procedural cloth/wood finishes and ball patterns. |
 | `tests/` | bs_tests | doctest suite: ECS, rules, physics characterization, session, data loading. |
 
-Known limitations: the table is 2.84 × 1.42 m (a 10 ft table; WPA 9 ft is
-2.54 × 1.27 m); max shot speed 3.8 m/s with ~3.2 cm per step (tunneling risk);
-flat rails, no pocket jaws; no audio, AI, settings or saves.
+Known limitations: no jump or massé shots yet (cue elevation); rails and
+pockets are drawn as simple boxes and wells; no audio, AI or saves.
 
 ## Target architecture (v1.0)
 

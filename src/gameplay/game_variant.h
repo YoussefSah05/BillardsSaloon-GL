@@ -1,6 +1,8 @@
 #pragma once
 
 #include "scene/components.h"
+#include "sim/motion.h"
+#include "sim/table.h"
 
 #include <glm/glm.hpp>
 
@@ -46,6 +48,11 @@ namespace BilliardsSaloon
         float cornerPocketRadius {0.090f};
         float sidePocketRadius {0.080f};
         TablePhysicsSpecification physics {};
+
+        // Event-based simulator: pocket and cushion geometry and ball
+        // coefficients (lengths, ball size and mass come from the fields above).
+        Sim::PocketTableSpec pocketGeometry {};
+        Sim::BallParams simBall {};
     };
 
     struct BallSpawnDefinition

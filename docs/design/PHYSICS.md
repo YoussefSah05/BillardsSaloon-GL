@@ -1,7 +1,8 @@
 # Billiards Saloon — Physics
 
-Status: the prototype solver ships today; the event-based simulator is
-milestone M3. Last revised 2026-10-05. Companion to `GDD.md` and
+Status: the event-based simulator (Part 2) is the game's default physics
+since milestone M3; the prototype solver (Part 1) remains behind
+`--physics legacy` for comparison until it is removed. Last revised 2026-10-05. Companion to `GDD.md` and
 `INTELLIGENCE.md`.
 
 ## Conventions
@@ -114,8 +115,23 @@ All in `assets/data/tables/table_10ft.json` (loaded by `loadTableSpecification`)
 
 ## Part 2 — The event-based simulator (milestone M3)
 
-Library `bs_sim`, headless, double precision, deterministic. Design follows
-Leckie & Greenspan and pooltool (Kiefl).
+Library `bs_sim` (`src/sim/`), headless, double precision, deterministic.
+Ported from pooltool (Kiefl; Apache-2.0) and Leckie & Greenspan. Internally it
+uses pooltool's frame (z up, origin at a corner of the playing surface);
+`src/gameplay/sim_bridge.h` converts to and from the game's frame.
+
+| File | Contents |
+|------|----------|
+| `sim/roots.*` | Real roots of degree ≤ 4 polynomials in a time window: split at turning points, safeguarded Newton–bisection; `firstClosingRoot` ignores grazes |
+| `sim/motion.*` | Motion states, transition times, closed-form evolution, position polynomials |
+| `sim/table.*` | Pocket-table geometry: 18 straight cushion segments, 12 jaw tips, 6 pockets |
+| `sim/events.*` | Ball–ball, cushion (at the nose height), jaw-tip and pocket event times |
+| `sim/resolve.*` | Cue strike with squirt, frictional ball–ball, Han 2005 cushion, pocket |
+| `sim/simulate.*` | The event loop and `ShotTrajectory` (exact state at any time) |
+
+In the game, `MatchSession` simulates the whole shot when the cue is released,
+reads first contact and pocketed balls from the events for the referee, and
+plays the trajectory back in real time. A full break simulates in 5–15 ms.
 
 ### Idea
 
@@ -172,12 +188,24 @@ cushion segment, approaching) counts.
 - **Pocket:** the ball drops when its centre crosses the pocket circle; jaws
   are cushion segments and circular arcs, so balls can rattle.
 
-### Table geometry
+### Table geometry and parameters
 
-WPA 9 ft table: 2.54 × 1.27 m playing surface, cushion nose at about 63.5% of
-ball diameter, corner and side pockets built from straight cushion segments,
-jaw arcs and pocket circles. Defined in the table JSON, so equipment variants
-are data.
+WPA 9 ft table: 2.54 × 1.27 m playing surface, cushion nose at 64% of ball
+diameter, corner and side pockets built from straight cushion segments, jaw
+arcs and pocket circles (pooltool's pocket geometry). Everything lives in
+`assets/data/tables/table_9ft.json` under `simulation`:
+
+| Parameter | Value |
+|-----------|-------|
+| Ball | R = 0.028575 m, m = 0.170097 kg |
+| Cloth | μ_s = 0.2, μ_r = 0.01, μ_sp = 0.444·R |
+| Ball–ball | e = 0.95, friction μ = 0.00995 + 0.108·e^(−1.088·v_slip) (Alciatore) |
+| Cushion | e = 0.85, μ = 0.2, height 0.0366 m, nose radius 1 mm |
+| Corner pocket | mouth 0.118 m, angle 5.3°, depth 0.0417 m, radius 0.062 m, jaw radius 0.021 m |
+| Side pocket | mouth 0.137 m, angle 7.14°, depth 0.0685 m, radius 0.0645 m, jaw radius 0.008 m |
+| Cue | mass 0.567 kg, squirt end mass m/30; game power maps to 0.5–7 m/s cue speed |
+
+Not yet modelled: cue elevation (jump and massé shots) and airborne balls.
 
 ### Validation
 
@@ -185,8 +213,11 @@ are data.
 - Golden shots (stop, follow and draw shots, banks, a break) compared with
   pooltool's output within tolerance; stored as JSON fixtures.
 - Kinetic energy never increases; identical inputs give identical trajectories.
-- The old solver stays behind a backend switch until the new one passes these
-  tests and play-tests, then is removed.
+- The old solver stays behind `--physics legacy` until the new one passes
+  play-tests, then is removed.
+- Done: closed-form checks, randomised root-finder tests, determinism, energy
+  monotonicity, a break with no overlaps at rest. Still to do: golden shots
+  compared against pooltool's output.
 
 ## References
 

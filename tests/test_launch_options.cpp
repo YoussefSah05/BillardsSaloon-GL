@@ -40,4 +40,6 @@ TEST_CASE("bad arguments are rejected with a reason")
     CHECK_THROWS_AS(static_cast<void>(parse({"--capture-frames", "-3"})), std::invalid_argument);
     CHECK_THROWS_AS(static_cast<void>(parse({"--capture-frames", "12x"})), std::invalid_argument);
     CHECK_THROWS_AS(static_cast<void>(parse({"--speed"})), std::invalid_argument);
+    CHECK_THROWS_AS(static_cast<void>(parse({"--physics", "magic"})), std::invalid_argument);
+    CHECK(parse({"--physics", "legacy"}).legacyPhysics);
 }

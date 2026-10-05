@@ -59,20 +59,28 @@ namespace
     }
 }
 
-TEST_CASE("the shipped 8-ball data matches the prototype's built-in values")
+TEST_CASE("the shipped 8-ball data describes a WPA 9 ft table")
 {
     const GameVariantDefinition& variant = eightBallVariant();
 
     CHECK(variant.discipline == GameDiscipline::EightBall);
     CHECK(variant.displayName == "8-Ball");
     CHECK(variant.rack.pattern == RackPattern::Triangle);
-    CHECK(variant.rack.apexPosition.z == doctest::Approx(-0.18f));
+    CHECK(variant.rack.apexPosition.x == doctest::Approx(0.635f));
+    CHECK(variant.rack.apexPosition.z == doctest::Approx(0.0f));
     CHECK(variant.rack.apexPosition.y == doctest::Approx(variant.table.ballRadius));
 
-    CHECK(variant.table.clothWidth == doctest::Approx(2.84f));
-    CHECK(variant.table.clothDepth == doctest::Approx(1.42f));
+    CHECK(variant.table.clothWidth == doctest::Approx(2.54f));
+    CHECK(variant.table.clothDepth == doctest::Approx(1.27f));
     CHECK(variant.table.ballRadius == doctest::Approx(0.028575f));
-    CHECK(variant.table.ballMassKg == doctest::Approx(0.17f));
+    CHECK(variant.table.ballMassKg == doctest::Approx(0.170097f));
+
+    // The simulator's geometry follows the table and its pocket data.
+    CHECK(variant.table.pocketGeometry.length == doctest::Approx(2.54));
+    CHECK(variant.table.pocketGeometry.width == doctest::Approx(1.27));
+    CHECK(variant.table.pocketGeometry.cornerPocketWidth == doctest::Approx(0.118));
+    CHECK(variant.table.simBall.R == doctest::Approx(0.028575));
+    CHECK(variant.table.simBall.e_c == doctest::Approx(0.85));
     CHECK(variant.table.cornerPocketRadius == doctest::Approx(0.090f));
     CHECK(variant.table.sidePocketRadius == doctest::Approx(0.080f));
     CHECK(variant.table.physics.cushionRestitution == doctest::Approx(0.92f));

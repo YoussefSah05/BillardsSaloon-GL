@@ -1,6 +1,8 @@
 #include "app/saloon_scene.h"
 
 #include "gameplay/match_session.h"
+#include "gameplay/sim_bridge.h"
+#include "sim/table.h"
 #include "render/camera.h"
 #include "scene/components.h"
 
@@ -284,6 +286,33 @@ namespace BilliardsSaloon
                 ),
                 StaticMeshComponent{MeshPrimitive::Sphere},
                 lampMaterial
+            );
+        }
+
+        // Dark wells where the simulator's pockets are, drawn on top of the
+        // prototype's solid rails until the hall-visuals milestone models real pockets.
+        const MaterialComponent pocketMaterial{
+            .albedo = glm::vec3(0.015f, 0.015f, 0.017f),
+            .specularStrength = 0.02f,
+            .shininess = 4.0f,
+            .surfaceType = MaterialSurfaceType::Generic,
+            .roughness = 1.0f,
+            .reflectivity = 0.0f,
+            .clearcoatStrength = 0.0f,
+            .emissionColor = glm::vec3(0.0f),
+            .emissionIntensity = 0.0f
+        };
+        const Sim::Table pockets = Sim::buildPocketTable(variant.table.pocketGeometry);
+        for (const Sim::Pocket& pocket : pockets.pockets)
+        {
+            const glm::vec3 center = SimBridge::toGamePosition(pocket.center, variant.table.clothWidth, variant.table.clothDepth);
+            const float scale = static_cast<float>(pocket.radius) / variant.table.ballRadius;
+            createSceneEntity(
+                registry,
+                "Pocket",
+                makeTransform(glm::vec3(center.x, frameCenterY + 0.5f * frameHeight + 0.0015f, center.z), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), glm::vec3(scale, 0.02f, scale)),
+                StaticMeshComponent{MeshPrimitive::Sphere},
+                pocketMaterial
             );
         }
 

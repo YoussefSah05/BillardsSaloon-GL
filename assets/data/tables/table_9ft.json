@@ -1,0 +1,52 @@
+{
+  "name": "WPA 9 ft",
+  "clothWidth": 2.54,
+  "clothDepth": 1.27,
+  "ballRadius": 0.028575,
+  "ballMassKg": 0.170097,
+  "pockets": {
+    "cornerRadius": 0.09,
+    "sideRadius": 0.08
+  },
+  "cushion": {
+    "restitution": 0.92,
+    "friction": 0.14
+  },
+  "ballContact": {
+    "restitution": 0.96,
+    "friction": 0.05
+  },
+  "cloth": {
+    "slidingFriction": 0.2,
+    "rollingFriction": 0.01,
+    "spinningFriction": 0.015,
+    "stopSpeed": 0.006
+  },
+  "simulation": {
+    "cushionWidth": 0.0508,
+    "cushionHeight": 0.036576,
+    "cushionNoseRadius": 0.001,
+    "cornerPocket": {
+      "width": 0.118,
+      "angle": 5.3,
+      "depth": 0.0417,
+      "radius": 0.062,
+      "jawRadius": 0.02095
+    },
+    "sidePocket": {
+      "width": 0.137,
+      "angle": 7.14,
+      "depth": 0.0685,
+      "radius": 0.0645,
+      "jawRadius": 0.00795
+    },
+    "ball": {
+      "slidingFriction": 0.2,
+      "rollingFriction": 0.01,
+      "spinningFrictionPerRadius": 0.4444444444444444,
+      "ballRestitution": 0.95,
+      "cushionRestitution": 0.85,
+      "cushionFriction": 0.2
+    }
+  }
+}

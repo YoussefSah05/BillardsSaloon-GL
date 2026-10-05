@@ -135,12 +135,12 @@ namespace BilliardsSaloon
             for (int row = 0; placed < ballCount; ++row)
             {
                 const int rowCount = row + 1;
-                const float z = apexPosition.z - static_cast<float>(row) * rowSpacing;
+                const float x = apexPosition.x + static_cast<float>(row) * rowSpacing;
 
                 for (int col = 0; (col < rowCount) && (placed < ballCount); ++col)
                 {
-                    const float x =
-                        apexPosition.x +
+                    const float z =
+                        apexPosition.z +
                         (static_cast<float>(col) - 0.5f * static_cast<float>(row)) * diameter * spacingScale;
 
                     positions.push_back(glm::vec3(x, apexPosition.y, z));
@@ -169,12 +169,12 @@ namespace BilliardsSaloon
             for (int row = 0; (row < 5) && (placed < ballCount); ++row)
             {
                 const int rowCount = rowCounts[row];
-                const float z = apexPosition.z - static_cast<float>(row) * rowSpacing;
+                const float x = apexPosition.x + static_cast<float>(row) * rowSpacing;
 
                 for (int col = 0; (col < rowCount) && (placed < ballCount); ++col)
                 {
-                    const float x =
-                        apexPosition.x +
+                    const float z =
+                        apexPosition.z +
                         (static_cast<float>(col) - 0.5f * static_cast<float>(rowCount - 1)) * diameter * spacingScale;
 
                     positions.push_back(glm::vec3(x, apexPosition.y, z));
@@ -217,6 +217,50 @@ namespace BilliardsSaloon
             table.physics.spinningFriction = cloth.at("spinningFriction").get<float>();
             table.physics.stopSpeed = cloth.at("stopSpeed").get<float>();
 
+            if (json.contains("simulation"))
+            {
+                const Json& sim = json.at("simulation");
+                Sim::PocketTableSpec& g = table.pocketGeometry;
+                g.cushionWidth = sim.value("cushionWidth", g.cushionWidth);
+                g.cushionHeight = sim.value("cushionHeight", g.cushionHeight);
+                g.cushionNoseRadius = sim.value("cushionNoseRadius", g.cushionNoseRadius);
+                if (sim.contains("cornerPocket"))
+                {
+                    const Json& corner = sim.at("cornerPocket");
+                    g.cornerPocketWidth = corner.value("width", g.cornerPocketWidth);
+                    g.cornerPocketAngle = corner.value("angle", g.cornerPocketAngle);
+                    g.cornerPocketDepth = corner.value("depth", g.cornerPocketDepth);
+                    g.cornerPocketRadius = corner.value("radius", g.cornerPocketRadius);
+                    g.cornerJawRadius = corner.value("jawRadius", g.cornerJawRadius);
+                }
+                if (sim.contains("sidePocket"))
+                {
+                    const Json& side = sim.at("sidePocket");
+                    g.sidePocketWidth = side.value("width", g.sidePocketWidth);
+                    g.sidePocketAngle = side.value("angle", g.sidePocketAngle);
+                    g.sidePocketDepth = side.value("depth", g.sidePocketDepth);
+                    g.sidePocketRadius = side.value("radius", g.sidePocketRadius);
+                    g.sideJawRadius = side.value("jawRadius", g.sideJawRadius);
+                }
+                if (sim.contains("ball"))
+                {
+                    const Json& ball = sim.at("ball");
+                    Sim::BallParams& b = table.simBall;
+                    b.u_s = ball.value("slidingFriction", b.u_s);
+                    b.u_r = ball.value("rollingFriction", b.u_r);
+                    b.u_sp_proportionality = ball.value("spinningFrictionPerRadius", b.u_sp_proportionality);
+                    b.e_b = ball.value("ballRestitution", b.e_b);
+                    b.e_c = ball.value("cushionRestitution", b.e_c);
+                    b.f_c = ball.value("cushionFriction", b.f_c);
+                }
+            }
+
+            // The simulator's table and balls follow the main dimensions.
+            table.pocketGeometry.length = table.clothWidth;
+            table.pocketGeometry.width = table.clothDepth;
+            table.simBall.R = table.ballRadius;
+            table.simBall.m = table.ballMassKg;
+
             if ((table.clothWidth <= 0.0f) || (table.clothDepth <= 0.0f) ||
                 (table.ballRadius <= 0.0f) || (table.ballMassKg <= 0.0f))
             {
@@ -253,6 +297,8 @@ namespace BilliardsSaloon
             {
                 throw std::invalid_argument("\"rack.apex\" must be [x, z]");
             }
+            // [x, z]: x along the table's length (head string at -length/4,
+            // foot spot at +length/4), z across it.
             variant.rack.apexPosition = glm::vec3(apex[0].get<float>(), 0.0f, apex[1].get<float>());
 
             variant.cueBall = readBall(json.at("cueBall"));
