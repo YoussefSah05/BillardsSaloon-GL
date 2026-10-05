@@ -54,9 +54,9 @@ mouse / keyboard ──► Input ──► ShotControls ──► MatchSession (
 | M0 Housekeeping, docs, knowledge graph | done |
 | M1 Foundation: library split, tests, CI, JSON data, mouse controls, fullscreen | done (v0.2.0) |
 | M2 UX foundation: RmlUi menus and HUD, settings, frontend flow, gamepad, accessibility | done (v0.3.0) |
-| M3 Event-based physics | done; golden shots agree with pooltool within 0.5 mm |
-| M4 WPA rules and referee | in progress (referee, ball in hand, match setup done) |
-| M5 Shot input and broadcast presentation | planned |
+| M3 Event-based physics | done (v0.4.0) |
+| M4 WPA rules and referee | done (v0.4.0) |
+| M5 Shot input and broadcast presentation | next |
 | M6 Hall visuals, realism, equipment customization | planned |
 | M7 Audio | planned |
 | M8 AI v1: classical search | planned |

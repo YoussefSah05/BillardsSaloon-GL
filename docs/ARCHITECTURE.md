@@ -83,7 +83,7 @@ Following Leckie & Greenspan (2006) and pooltool (Kiefl, JOSS 2024):
 ### Milestone order
 
 M0 housekeeping ✅ · M1 foundation ✅ · M2 UX foundation and broadcast
-frontend ✅ · M3 event-based physics · M4 WPA rules and referee · M5 shot input
+frontend ✅ · M3 event-based physics ✅ · M4 WPA rules and referee ✅ · M5 shot input
 and presentation · M6 hall visuals, realism and customization · M7 audio ·
 M8 AI v1 (classical search) · M9 intelligence (self-play learning, starts
 after M3 and runs in parallel) · M10 modes · M11 ship.

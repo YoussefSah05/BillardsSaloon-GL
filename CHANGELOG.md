@@ -6,8 +6,12 @@ All notable changes to Billiards Saloon. The format follows
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-05
+
+Event-based physics (M3) and WPA rules (M4).
+
 ### Added
-- Event-based physics (M3), now the default: every shot is simulated exactly
+- Event-based physics (M3): every shot is simulated exactly
   when the cue is released and played back in real time. Sliding, rolling
   and spinning follow closed-form equations; ball-ball throw and spin
   transfer, Han 2005 cushions contacting at the nose height, real pocket
@@ -137,7 +141,8 @@ Playable 8-ball prototype: local two-player 8-ball with fouls and turn
 resolution, a fixed-step physics model with sliding and rolling, camera modes,
 and main and pause menus.
 
-[Unreleased]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.1.0-prototype...v0.2.0
 [0.1.0-prototype]: https://github.com/YoussefSah05/BillardsSaloon-GL/releases/tag/v0.1.0-prototype
