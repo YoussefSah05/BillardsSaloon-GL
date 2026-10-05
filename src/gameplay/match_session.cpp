@@ -127,7 +127,8 @@ namespace BilliardsSaloon
 
         m_shotState = ShotState{};
         m_currentShotResult.clear();
-        m_shootWasHeld = false;
+        m_holdWasActive = false;
+        m_chargingByStroke = false;
 
         resetCueBall();
 
@@ -159,17 +160,22 @@ namespace BilliardsSaloon
 
     void MatchSession::applyShotControls(const ShotControls& controls, float deltaTimeSeconds)
     {
+        const bool holding = controls.shootHeld || controls.strokeHeld;
+
         if (!acceptsShotInput())
         {
-            m_shootWasHeld = controls.shootHeld;
+            m_holdWasActive = holding;
             return;
         }
 
         const float dt = std::max(deltaTimeSeconds, 0.0f);
 
-        m_shotState.aimAngleRadians += controls.aimAxis * m_tuning.aimRadiansPerSecond * dt;
-        m_shotState.strikeRight01 += controls.strikeRightAxis * m_tuning.strikeOffsetPerSecond * dt;
-        m_shotState.strikeForward01 += controls.strikeForwardAxis * m_tuning.strikeOffsetPerSecond * dt;
+        m_shotState.aimAngleRadians +=
+            controls.aimAxis * m_tuning.aimRadiansPerSecond * dt + controls.aimDeltaRadians;
+        m_shotState.strikeRight01 +=
+            controls.strikeRightAxis * m_tuning.strikeOffsetPerSecond * dt + controls.strikeDelta.x;
+        m_shotState.strikeForward01 +=
+            controls.strikeForwardAxis * m_tuning.strikeOffsetPerSecond * dt + controls.strikeDelta.y;
 
         if (controls.centerStrike)
         {
@@ -185,32 +191,57 @@ namespace BilliardsSaloon
         m_shotState.strikeRight01 = clampedStrike.x;
         m_shotState.strikeForward01 = clampedStrike.y;
 
-        if ((m_shotState.phase == ShotPhase::Aiming) && controls.shootHeld)
+        if ((m_shotState.phase == ShotPhase::Aiming) && holding)
         {
             m_shotState.phase = ShotPhase::Charging;
+            m_chargingByStroke = controls.strokeHeld && !controls.shootHeld;
         }
 
         if (m_shotState.phase == ShotPhase::Charging)
         {
-            if (controls.shootHeld)
+            if (holding)
             {
-                m_shotState.charge01 = std::min(m_shotState.charge01 + m_tuning.chargePerSecond * dt, 1.0f);
+                if (controls.shootHeld)
+                {
+                    m_shotState.charge01 += m_tuning.chargePerSecond * dt;
+                }
+
+                if (controls.strokeHeld)
+                {
+                    m_shotState.charge01 += controls.strokeDelta;
+                }
+
+                m_shotState.charge01 = std::clamp(m_shotState.charge01, 0.0f, 1.0f);
             }
-            else if (m_shootWasHeld)
+            else if (m_holdWasActive)
             {
-                const bool fired = fireShot();
-                m_shotState.phase = fired ? ShotPhase::BallsInMotion : ShotPhase::Aiming;
+                if (m_chargingByStroke && (m_shotState.charge01 < m_tuning.strokeCancelBelow))
+                {
+                    m_shotState.phase = ShotPhase::Aiming;
+                }
+                else
+                {
+                    const bool fired = fireShot();
+                    m_shotState.phase = fired ? ShotPhase::BallsInMotion : ShotPhase::Aiming;
+                    m_matchState.shotInProgress = fired;
+                }
+
                 m_shotState.charge01 = 0.0f;
-                m_matchState.shotInProgress = fired;
             }
         }
 
-        m_shootWasHeld = controls.shootHeld;
+        m_holdWasActive = holding;
     }
 
     void MatchSession::cancelHeldShot()
     {
-        m_shootWasHeld = false;
+        m_holdWasActive = false;
+
+        if (m_shotState.phase == ShotPhase::Charging)
+        {
+            m_shotState.phase = ShotPhase::Aiming;
+            m_shotState.charge01 = 0.0f;
+        }
     }
 
     void MatchSession::debugRespotCueBall()

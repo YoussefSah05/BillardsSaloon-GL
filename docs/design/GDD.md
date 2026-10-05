@@ -5,7 +5,7 @@ Status: v1.0 target. Last revised 2026-10-04.
 ## Identity: "The Tournament Hall"
 
 Billiards Saloon is a realism-first pool game presented like a televised
-tournament. Three pillars drive every decision:
+tournament. Four pillars drive every decision:
 
 1. **Authentic physics** — an event-based simulator (Leckie–Greenspan / pooltool
    lineage): exact sliding/rolling/spinning transitions, realistic cushions
@@ -13,7 +13,10 @@ tournament. Three pillars drive every decision:
 2. **Authentic rules** — WPA World Standardized Rules for 8-ball, 9-ball and
    10-ball, enforced by an on-screen referee.
 3. **Broadcast feel** — TV camera director, scorebug, shot clock, replays and
-   post-shot analysis.
+   post-shot analysis, in a frontend styled like a sports broadcast (see `UX.md`).
+4. **Intelligence** — opponents that play like distinct people, a coach that
+   teaches, difficulty that adapts and challenges that never run out, all from
+   self-play-trained models (see `INTELLIGENCE.md`).
 
 ## Modes (all required for v1.0)
 
@@ -45,6 +48,9 @@ tournament. Three pillars drive every decision:
 
 ## Presentation
 
+Frontend flow, HUD, menus, design language and accessibility are specified
+in [`UX.md`](UX.md).
+
 - Director camera: aim view, overhead, follow-ball, and cut-to-pocket using the
   known future of the simulated shot.
 - Scorebug: players, race score, active group/lowest ball, shot clock, foul count.
@@ -60,6 +66,10 @@ evaluated by running the headless simulator. Score = pot probability under
 execution noise + value of resulting cue-ball position. Named pros have
 profiles: accuracy, power preference, safety tendency, break style. 4–5 tiers.
 
+The first shipping AI (M8) uses a hand-tuned position evaluator. M9 replaces it
+with self-play-trained value and policy networks and adds the AI Coach,
+adaptive difficulty and generated challenges; design in `INTELLIGENCE.md`.
+
 ## Audio
 
 Ball-ball clicks, cushion thuds, pocket drops, cue strike, chalk — volume/pitch
@@ -70,3 +80,16 @@ scaled from simulated impulses. Hall ambience, crowd reactions, referee voice.
 Tournament arena: a single brightly lit table under a rectangular light canopy,
 dark surroundings, spectator stands, scorer's table. PBR materials, shadowed
 key lights, HDR with filmic tonemapping, subtle bloom on the canopy.
+
+Equipment matches what pros play on: slim modern tournament tables, leather
+pocket drops, cloth with visible nap and chalk marks that build up during a
+frame, tournament-grade ball sets with a measle-dot cue ball, and detailed cues.
+All designs are original; real brands (Predator, Brunswick, Diamond, Aramith
+and others) appear only under licence.
+
+## Customization
+
+A data-driven equipment catalogue (`assets/data/equipment/*.json`): table
+frames, rail woods and finishes, cloth colours, pocket styles, ball sets, cues
+(shaft, butt, wrap, ferrule), halls and lighting moods. Everything previews live
+in the 3D hall; items unlock through The Tour.
