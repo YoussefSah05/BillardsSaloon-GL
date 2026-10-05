@@ -5,3 +5,5 @@ build/
 *.dylib
 .cache/
 *.user
+compile_commands.json
+graphify-out/
