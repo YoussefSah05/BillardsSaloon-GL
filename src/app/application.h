@@ -1,6 +1,7 @@
 #pragma once
 
-#include "app/overlay_screens.h"
+#include "app/shell_menus.h"
+#include "core/launch_options.h"
 #include "ecs/entity.h"
 #include "gameplay/match_session.h"
 #include "platform/input.h"
@@ -8,6 +9,7 @@
 #include "platform/window.h"
 #include "render/camera_rig.h"
 #include "render/scene_renderer.h"
+#include "ui/ui_system.h"
 
 #include <cstdint>
 #include <memory>
@@ -21,59 +23,43 @@ namespace BilliardsSaloon
         PauseMenu
     };
 
-    enum class MainMenuSelection
-    {
-        StartMatch,
-        Fullscreen,
-        Quit
-    };
-
-    enum class PauseMenuSelection
-    {
-        Resume,
-        RestartRack,
-        Fullscreen,
-        ReturnToMainMenu
-    };
-
     // Owns the window and main loop, routes input to the active screen,
-    // and ties the match session, camera rig and renderer together.
+    // and ties the match session, camera rig, renderer and UI together.
     class Application
     {
     public:
-        Application();
+        explicit Application(const LaunchOptions& options = {});
         int run();
 
     private:
         void processInput(float frameTimeSeconds);
         void processGlobalShortcuts();
-        void processMainMenuInput();
-        void processPauseMenuInput();
         void processGameplayInput(float frameTimeSeconds);
         void updateCursorCapture();
 
-        // Mouse hover/click on the visible menu. Returns the clicked entry.
-        [[nodiscard]] std::optional<std::size_t> processMenuMouse(std::size_t& selectedIndex);
-        [[nodiscard]] bool menuConfirmPressed() const;
+        void setShellState(ApplicationShellState state);
+        void toggleFullscreen();
 
         void updateFixed(double deltaTimeSeconds);
         void updateCameraRig(double deltaTimeSeconds);
         [[nodiscard]] CameraRigContext buildGameplayCameraContext() const;
 
-        [[nodiscard]] MenuScreenModel mainMenuModel() const;
-        [[nodiscard]] MenuScreenModel pauseMenuModel() const;
-
         void render(double alpha);
         void updateWindowTitle(double frameTimeSeconds, std::uint32_t fixedStepsThisFrame);
         void refreshTitleSoon();
 
-        void enterPauseMenu();
-        void applyMainMenuSelection();
-        void applyPauseMenuSelection();
         void setCameraViewMode(CameraViewMode mode);
+
+        // Development capture (--capture): saves the frame, then closes.
+        void captureIfDue();
 
         static constexpr double FIXED_TIME_STEP = 1.0 / 120.0;
         static constexpr double MAX_FRAME_TIME = 0.25;
+
+        // Declaration order is construction order: the window (and its GL
+        // context) first; the menus last, because they hold UI documents.
+        LaunchOptions m_options;
+        std::uint64_t m_frameCount {0};
 
         Window m_window;
         Timer m_timer;
@@ -82,15 +68,18 @@ namespace BilliardsSaloon
         MatchSession m_session;
         Entity m_cameraEntity;
         std::unique_ptr<SceneRenderer> m_renderer;
-        FrameView m_lastFrameView {};
+        std::unique_ptr<UiSystem> m_ui;
+        std::unique_ptr<ShellMenus> m_menus;
 
         ApplicationShellState m_shellState {ApplicationShellState::MainMenu};
-        MainMenuSelection m_mainMenuSelection {MainMenuSelection::StartMatch};
-        PauseMenuSelection m_pauseMenuSelection {PauseMenuSelection::Resume};
         RenderQualityPreset m_renderQuality {RenderQualityPreset::Balanced};
 
         CameraRigState m_cameraRigState {};
         CameraRigInputAxes m_cameraInput {};
+
+        // A click or key that started the match (or resumed it) may still be
+        // held; ignore shot input until it is released.
+        bool m_waitForShotRelease {false};
 
         double m_accumulator {0.0};
 

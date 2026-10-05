@@ -44,6 +44,13 @@ ctest --test-dir build --output-on-failure   # unit tests
 | Fullscreen | Menu entry | F11, Alt+Enter, or Cmd+Ctrl+F on macOS |
 | Graphics quality / FPS in title | — | F2 / F1 |
 
+## Developer options
+
+```bash
+./build/BilliardsSaloon --screen game                      # skip the main menu
+./build/BilliardsSaloon --screen pause --capture pause.png # save a screenshot and quit
+```
+
 ## Project layout
 
 | Path | Contents |
@@ -52,7 +59,9 @@ ctest --test-dir build --output-on-failure   # unit tests
 | `src/ecs` | Sparse-set entity/component registry |
 | `src/physics` | Ball, cushion and pocket simulation |
 | `src/gameplay` | Game variants, match state, 8-ball rules |
-| `src/render` | Shaders, meshes, cameras, overlay text |
+| `src/render` | Shaders, meshes, cameras, overlay text, screenshots |
+| `src/ui` | RmlUi integration (fonts, input, rendering) |
+| `assets/ui` | Menu documents (`.rml`) and the shared stylesheet (`theme.rcss`) |
 | `assets/shaders` | GLSL shaders |
 | `docs` | Design document and architecture roadmap |
 

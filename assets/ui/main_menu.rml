@@ -1,0 +1,51 @@
+<rml>
+<head>
+    <title>Main menu</title>
+    <link type="text/rcss" href="theme.rcss"/>
+    <style>
+        /* Keeps the menu readable over any hall lighting. */
+        .scrim {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 760dp;
+            height: 100%;
+            decorator: horizontal-gradient(rgba(8, 9, 11, 230) rgba(8, 9, 11, 0));
+        }
+        .hub {
+            position: absolute;
+            left: 96dp;
+            top: 120dp;
+            width: 440dp;
+        }
+        .wordmark {
+            margin-bottom: 36dp;
+        }
+        .hints {
+            position: absolute;
+            left: 96dp;
+            bottom: 40dp;
+        }
+    </style>
+</head>
+<body class="screen" data-model="shell">
+    <div class="scrim"></div>
+    <div class="hub">
+        <div class="wordmark">
+            <div class="tag">THE TOURNAMENT HALL</div>
+            <h1>BILLIARDS<br/>SALOON</h1>
+            <div class="rule"></div>
+        </div>
+        <div class="menu">
+            <button class="menu-item" id="play" autofocus data-event-click="start_match"><span class="label">PLAY<span class="sub">8-Ball · two players</span></span></button>
+            <button class="menu-item" id="fullscreen" data-event-click="toggle_fullscreen"><span class="label">{{ fullscreen_label }}</span></button>
+            <button class="menu-item" id="quit" data-event-click="quit"><span class="label">QUIT</span></button>
+        </div>
+    </div>
+    <div class="hints">
+        <span class="hint"><span class="key">UP / DOWN</span>Select</span>
+        <span class="hint"><span class="key">ENTER</span>or click to confirm</span>
+        <span class="hint"><span class="key">ESC</span>Quit</span>
+    </div>
+</body>
+</rml>

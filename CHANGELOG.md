@@ -6,6 +6,20 @@ All notable changes to Billiards Saloon. The format follows
 
 ## [Unreleased]
 
+### Added
+- Main and pause menus rebuilt with RmlUi: broadcast-style slanted bars,
+  Barlow typefaces, hover and keyboard focus states, a blurred pause overlay.
+- `--screen main|game|pause`, `--fullscreen` and `--capture FILE.png`
+  launch options; capture renders a screen, saves a PNG and quits.
+
+### Changed
+- Starting or resuming a match ignores the click or key that triggered it
+  until it is released, so a menu click never starts a shot.
+- The HUD stays visible under the pause overlay.
+
+### Fixed
+- Material colours were gamma-corrected twice, washing out the whole scene.
+
 ## [0.2.0] - 2026-10-05
 
 Milestone M1: foundation for shipping, plus mouse controls and fullscreen.

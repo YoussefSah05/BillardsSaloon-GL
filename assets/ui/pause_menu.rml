@@ -1,0 +1,48 @@
+<rml>
+<head>
+    <title>Paused</title>
+    <link type="text/rcss" href="theme.rcss"/>
+    <style>
+        body {
+            background-color: rgba(8, 9, 11, 140);
+            backdrop-filter: blur(8dp);
+        }
+        .panel {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 400dp;
+            margin-left: -200dp;
+            margin-top: -190dp;
+        }
+        .panel h2 {
+            margin-bottom: 18dp;
+            font-weight: 800;
+            font-size: 46dp;
+            letter-spacing: 2dp;
+            text-align: center;
+        }
+        .hints {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 40dp;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="screen" data-model="shell">
+    <div class="panel">
+        <h2>PAUSED</h2>
+        <button class="menu-item" id="resume" autofocus data-event-click="resume"><span class="label">RESUME</span></button>
+        <button class="menu-item" id="restart" data-event-click="restart_rack"><span class="label">RESTART RACK</span></button>
+        <button class="menu-item" id="fullscreen" data-event-click="toggle_fullscreen"><span class="label">{{ fullscreen_label }}</span></button>
+        <button class="menu-item" id="mainmenu" data-event-click="main_menu"><span class="label">MAIN MENU</span></button>
+    </div>
+    <div class="hints">
+        <span class="hint"><span class="key">UP / DOWN</span>Select</span>
+        <span class="hint"><span class="key">ENTER</span>or click to confirm</span>
+        <span class="hint"><span class="key">ESC</span>Resume</span>
+    </div>
+</body>
+</rml>
