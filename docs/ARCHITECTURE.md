@@ -66,6 +66,8 @@ prediction and AI evaluation all reuse the same exact result.
 
 ### Event-based simulator (`sim/`)
 
+Equations, parameters and validation: [design/PHYSICS.md](design/PHYSICS.md).
+
 Following Leckie & Greenspan (2006) and pooltool (Kiefl, JOSS 2024):
 
 - Ball motion states: stationary, spinning, sliding, rolling, airborne.

@@ -79,6 +79,35 @@ ctest --test-dir build --output-on-failure   # unit tests
 | `assets/shaders` | GLSL shaders |
 | `docs` | Design document and architecture roadmap |
 
+## Blueprint
+
+The full design lives in [`docs/`](docs/README.md). In short:
+
+- **Physics** ([PHYSICS.md](docs/design/PHYSICS.md)) — today a fixed-step
+  solver with an analytic cloth model: sliding balls decelerate at `μ_s·g`
+  until the slip vanishes after `2|u|/(7μ_s·g)`, then roll at `μ_r·g`;
+  collisions use impulses with Coulomb friction for throw and spin transfer.
+  Milestone M3 replaces it with an event-based simulator (Leckie–Greenspan /
+  pooltool): every ball follows closed-form motion between events, event times
+  come from quadratic and quartic equations, and a whole shot is computed
+  exactly at the strike, with real cushion geometry, pocket jaws, squirt,
+  swerve and massé.
+- **AI and machine learning** ([INTELLIGENCE.md](docs/design/INTELLIGENCE.md)) —
+  a search over candidate shots under execution noise, guided by value and
+  policy networks trained by self-play (expert iteration, AlphaZero-style) on
+  the game's own simulator. Trained in Python/PyTorch, shipped through ONNX
+  Runtime. The same models power AI pros with personalities, an AI coach
+  (best shot, where the cue ball should have finished, shot difficulty),
+  adaptive difficulty and generated challenges.
+- **Experience** ([UX.md](docs/design/UX.md), [GDD.md](docs/design/GDD.md)) —
+  a televised-final presentation: broadcast scorebug, referee calls that name
+  every foul, replays and a director camera over a live 3D tournament hall;
+  WPA rules for 8-, 9- and 10-ball; Quick Match, Practice, Trick Shots and a
+  career tour.
+- **Code** ([ARCHITECTURE.md](docs/ARCHITECTURE.md)) — C++20, OpenGL 4.1,
+  no engine; a headless game library that tests (and later the AI) link
+  without graphics.
+
 ## Roadmap
 
 See [`docs/design/GDD.md`](docs/design/GDD.md) for the v1.0 game design and
