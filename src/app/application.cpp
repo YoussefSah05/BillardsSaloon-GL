@@ -1513,6 +1513,8 @@ namespace BilliardsSaloon
             }
         }
 
+        m_renderer->endFrame(m_window.width(), m_window.height());
+
         m_ui->update();
         m_ui->render();
     }

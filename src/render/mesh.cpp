@@ -153,6 +153,17 @@ namespace BilliardsSaloon
         return std::make_unique<Mesh>(vertices, indices);
     }
 
+    std::unique_ptr<Mesh> Mesh::fromData(const MeshData& data)
+    {
+        std::vector<Vertex> vertices;
+        vertices.reserve(data.vertices.size());
+        for (const MeshVertex& v : data.vertices)
+        {
+            vertices.push_back(Vertex{{v.position.x, v.position.y, v.position.z}, {v.normal.x, v.normal.y, v.normal.z}, {v.uv.x, v.uv.y}});
+        }
+        return std::make_unique<Mesh>(vertices, data.indices);
+    }
+
     std::unique_ptr<Mesh> Mesh::createUVSphere(float radius, std::uint32_t slices, std::uint32_t stacks)
     {
         slices = (slices < 3U) ? 3U : slices;
@@ -202,13 +213,15 @@ namespace BilliardsSaloon
                 const std::uint32_t c = b + 1U;
                 const std::uint32_t d = a + 1U;
 
+                // Counter-clockwise seen from outside, so back-face culling
+                // removes the far side, not the near one.
                 indices.push_back(a);
-                indices.push_back(b);
                 indices.push_back(d);
+                indices.push_back(b);
 
                 indices.push_back(d);
-                indices.push_back(b);
                 indices.push_back(c);
+                indices.push_back(b);
             }
         }
 

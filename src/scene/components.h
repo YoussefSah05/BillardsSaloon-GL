@@ -4,6 +4,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+#include "scene/mesh_data.h"
+
+#include <memory>
 #include <string>
 
 namespace BilliardsSaloon
@@ -41,12 +44,15 @@ namespace BilliardsSaloon
     {
         Cube,
         Plane,
-        Sphere
+        Sphere,
+        Custom    // StaticMeshComponent::custom, built headless and uploaded on first draw
     };
 
     struct StaticMeshComponent
     {
         MeshPrimitive primitive {MeshPrimitive::Cube};
+        std::shared_ptr<const MeshData> custom;
+        bool castsShadow {true};
     };
 
     enum class MaterialSurfaceType

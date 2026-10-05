@@ -134,6 +134,7 @@ add_library(bs_game STATIC
     src/gameplay/game_variant.cpp
     src/gameplay/match_session.cpp
     src/rules/racking.cpp
+    src/scene/table_geometry.cpp
     src/rules/referee.cpp
     src/rules/shot_record.cpp
 )
@@ -160,6 +161,8 @@ add_executable(BilliardsSaloon
     src/platform/window.cpp
     src/platform/timer.cpp
     src/render/scene_renderer.cpp
+    src/render/render_targets.cpp
+    src/render/number_atlas.cpp
     src/render/screenshot.cpp
     src/render/shader.cpp
     src/render/mesh.cpp
@@ -181,6 +184,8 @@ target_link_libraries(BilliardsSaloon PRIVATE
     glfw
     OpenGL::GL
 )
+# Ball numbers are rasterised with FreeType, which RmlUi already links.
+target_include_directories(BilliardsSaloon SYSTEM PRIVATE $<TARGET_PROPERTY:freetype,INTERFACE_INCLUDE_DIRECTORIES>)
 
 bs_set_warnings(BilliardsSaloon)
 
@@ -221,6 +226,7 @@ if(BS_BUILD_TESTS)
         tests/test_match_session.cpp
         tests/test_match_rules.cpp
         tests/test_director.cpp
+        tests/test_table_geometry.cpp
         tests/test_game_variant.cpp
         tests/test_game_data.cpp
         tests/test_launch_options.cpp

@@ -3,6 +3,8 @@
 #include "core/asset_paths.h"
 #include "render/camera.h"
 
+#include <glm/gtc/matrix_transform.hpp>
+
 #include <glad/gl.h>
 
 #include <algorithm>
@@ -99,6 +101,17 @@ namespace BilliardsSaloon
         , m_sphereMesh(Mesh::createUVSphere(ballRadius, 40U, 20U))
         , m_sphereRadius(ballRadius)
     {
+        const auto shader = [](const char* vertex, const char* fragment)
+        {
+            return std::make_unique<Shader>(resolveAssetPath(vertex).string(), resolveAssetPath(fragment).string());
+        };
+        m_shadowShader = shader("shaders/shadow.vert", "shaders/shadow.frag");
+        m_bloomDownShader = shader("shaders/fullscreen.vert", "shaders/bloom_down.frag");
+        m_bloomUpShader = shader("shaders/fullscreen.vert", "shaders/bloom_up.frag");
+        m_postShader = shader("shaders/fullscreen.vert", "shaders/post.frag");
+        m_numbers = std::make_unique<NumberAtlas>(resolveAssetPath("fonts/BarlowCondensed-Bold.ttf"));
+        glGenVertexArrays(1, &m_emptyVertexArray);   // core profile: draws need a bound VAO
+
         // A two-piece playing cue, from the tip back: leather tip, ferrule,
         // tapered maple shaft, joint collar, forearm, wrap, butt sleeve, bumper.
         // Lengths and radii in metres (58 in / 1.47 m overall).
@@ -122,6 +135,11 @@ namespace BilliardsSaloon
 
     }
 
+    SceneRenderer::~SceneRenderer()
+    {
+        glDeleteVertexArrays(1, &m_emptyVertexArray);
+    }
+
     bool SceneRenderer::beginFrame(
         const Registry& registry,
         Entity camera,
@@ -129,8 +147,49 @@ namespace BilliardsSaloon
         const FrameSettings& settings,
         FrameView& outView)
     {
-        glViewport(0, 0, settings.viewportWidth, settings.viewportHeight);
-        glClearColor(settings.clearColor.r, settings.clearColor.g, settings.clearColor.b, 1.0f);
+        // Quality: multisampling, bloom and shadow detail.
+        int samples = 4;
+        int shadowSize = 2048;
+        m_bloomEnabled = true;
+        m_shadowsEnabled = true;
+        m_shadowKernel = 3;
+        switch (settings.quality)
+        {
+            case RenderQualityPreset::Low:
+                samples = 1;
+                shadowSize = 1024;
+                m_bloomEnabled = false;
+                m_shadowKernel = 1;
+                break;
+            case RenderQualityPreset::Balanced:
+                break;
+            case RenderQualityPreset::High:
+                samples = 8;
+                m_shadowKernel = 5;
+                break;
+        }
+
+        m_sceneTarget.ensure(settings.viewportWidth, settings.viewportHeight, samples);
+        m_bloom.ensure(settings.viewportWidth, settings.viewportHeight, m_bloomEnabled ? 6 : 0);
+        m_shadows.ensure(shadowSize, static_cast<int>(settings.lights.positions.size()));
+
+        // Each lamp looks straight down over the whole table.
+        m_lightMatrices.clear();
+        const glm::mat4 lightProjection = glm::perspective(glm::radians(125.0f), 1.0f, 0.15f, 3.5f);
+        for (const glm::vec3& lamp : settings.lights.positions)
+        {
+            const glm::mat4 lightView = glm::lookAt(lamp, lamp - glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.0f, 0.0f, -1.0f));
+            m_lightMatrices.push_back(lightProjection * lightView);
+        }
+
+        m_sceneTarget.bindForDrawing();
+        glEnable(GL_DEPTH_TEST);
+        glDepthMask(GL_TRUE);
+        glEnable(GL_CULL_FACE);
+        glDisable(GL_BLEND);
+        // The scene buffer is linear light; the clear colour is given in sRGB.
+        const glm::vec3 clear = glm::pow(settings.clearColor, glm::vec3(2.2f));
+        glClearColor(clear.r, clear.g, clear.b, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         if (!registry.has<TransformComponent>(camera) || !registry.has<CameraComponent>(camera))
@@ -166,37 +225,22 @@ namespace BilliardsSaloon
         m_shader->setMat4("uProjection", projectionMatrix);
         m_shader->setVec3("uViewPosition", outView.position);
 
-        m_shader->setVec3("uDirectionalLightDirection", glm::normalize(glm::vec3(-0.35f, -1.0f, -0.18f)));
-        m_shader->setVec3("uDirectionalLightColor", glm::vec3(0.22f, 0.24f, 0.28f));
-
-        int activePointLightCount = 2;
-        float reflectionScale = 0.55f;
-        float emissionScale = 0.85f;
-
-        switch (settings.quality)
+        m_shader->setInt("uActivePointLightCount", static_cast<int>(std::min<std::size_t>(settings.lights.positions.size(), 3)));
+        m_shader->setFloat("uReflectionScale", 0.45f);   // a dark hall: the lamps light the scene
+        m_shader->setFloat("uEmissionScale", 1.0f);
+        m_shader->setFloat("uLightIntensity", 2.6f);
+        m_shader->setFloat("uLightRadius", 0.05f);
+        m_shader->setInt("uShadowsEnabled", m_shadowsEnabled ? 1 : 0);
+        m_shader->setInt("uShadowKernel", m_shadowKernel);
+        m_shader->setFloat("uShadowTexel", 1.0f / static_cast<float>(shadowSize));
+        m_shader->setInt("uShadowMaps", 0);
+        m_shader->setInt("uNumberAtlas", 1);
+        m_shader->setInt("uBallNumber", 0);
+        for (std::size_t i = 0; i < m_lightMatrices.size(); ++i)
         {
-            case RenderQualityPreset::Low:
-                activePointLightCount = 1;
-                reflectionScale = 0.15f;
-                emissionScale = 0.70f;
-                break;
-
-            case RenderQualityPreset::Balanced:
-                activePointLightCount = 2;
-                reflectionScale = 0.55f;
-                emissionScale = 0.85f;
-                break;
-
-            case RenderQualityPreset::High:
-                activePointLightCount = 3;
-                reflectionScale = 1.0f;
-                emissionScale = 1.0f;
-                break;
+            m_shader->setMat4("uLightMatrices[" + std::to_string(i) + "]", m_lightMatrices[i]);
         }
-
-        m_shader->setInt("uActivePointLightCount", activePointLightCount);
-        m_shader->setFloat("uReflectionScale", reflectionScale);
-        m_shader->setFloat("uEmissionScale", emissionScale);
+        bindSceneShader();
         m_shader->setFloat("uAlpha", 1.0f);
 
         for (std::size_t lightIndex = 0; lightIndex < settings.lights.positions.size(); ++lightIndex)
@@ -209,8 +253,169 @@ namespace BilliardsSaloon
         return true;
     }
 
-    void SceneRenderer::bindMaterial(const MaterialComponent& material, const glm::vec3& dynamicEmission, int visualType)
+    Mesh* SceneRenderer::meshFor(const StaticMeshComponent& component)
     {
+        switch (component.primitive)
+        {
+            case MeshPrimitive::Cube:
+                return m_cubeMesh.get();
+            case MeshPrimitive::Plane:
+                return m_planeMesh.get();
+            case MeshPrimitive::Sphere:
+                return m_sphereMesh.get();
+            case MeshPrimitive::Custom:
+                break;
+        }
+        if (!component.custom)
+        {
+            return nullptr;
+        }
+
+        const MeshData* key = component.custom.get();
+        auto found = m_customMeshes.find(key);
+        if ((found != m_customMeshes.end()) && found->second.data.expired())
+        {
+            m_customMeshes.erase(found);   // the address was reused by new data
+            found = m_customMeshes.end();
+        }
+        if (found == m_customMeshes.end())
+        {
+            // Drop meshes whose scenes are gone, then upload this one.
+            for (auto it = m_customMeshes.begin(); it != m_customMeshes.end();)
+            {
+                it = it->second.data.expired() ? m_customMeshes.erase(it) : std::next(it);
+            }
+            found = m_customMeshes.emplace(key, CachedMesh{component.custom, Mesh::fromData(*component.custom)}).first;
+        }
+        return found->second.mesh.get();
+    }
+
+    void SceneRenderer::bindSceneShader()
+    {
+        m_shader->bind();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D_ARRAY, m_shadows.texture());
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, m_numbers->texture());
+        glActiveTexture(GL_TEXTURE0);
+    }
+
+    void SceneRenderer::renderShadows(Registry& registry, float alpha)
+    {
+        if (!m_shadowsEnabled)
+        {
+            return;
+        }
+
+        m_shadowShader->bind();
+        glEnable(GL_POLYGON_OFFSET_FILL);
+        glPolygonOffset(1.5f, 2.0f);
+        glDisable(GL_CULL_FACE);   // planes (cloth, floor) are one-sided; casters are closed anyway
+
+        for (std::size_t layer = 0; layer < m_lightMatrices.size(); ++layer)
+        {
+            m_shadows.bindLayerForDrawing(static_cast<int>(layer));
+            glClear(GL_DEPTH_BUFFER_BIT);
+            m_shadowShader->setMat4("uLightMatrix", m_lightMatrices[layer]);
+
+            registry.view<TransformComponent, StaticMeshComponent, MaterialComponent>().each(
+                [&](Entity entity, TransformComponent& transform, StaticMeshComponent& meshComponent, MaterialComponent& material)
+                {
+                    // Lamps hold the lights; floors and walls only receive.
+                    if ((material.surfaceType == MaterialSurfaceType::LampGlass) ||
+                        (meshComponent.primitive == MeshPrimitive::Plane) || !meshComponent.castsShadow)
+                    {
+                        return;
+                    }
+                    const BallComponent* ball = registry.tryGet<BallComponent>(entity);
+                    if ((ball != nullptr) && ball->pocketed)
+                    {
+                        return;
+                    }
+                    Mesh* mesh = meshFor(meshComponent);
+                    if (mesh == nullptr)
+                    {
+                        return;
+                    }
+                    m_shadowShader->setMat4("uModel", composeInterpolatedMatrix(transform, alpha));
+                    mesh->draw();
+                });
+        }
+
+        glDisable(GL_POLYGON_OFFSET_FILL);
+        glEnable(GL_CULL_FACE);
+        m_sceneTarget.bindForDrawing();
+        bindSceneShader();
+    }
+
+    void SceneRenderer::endFrame(int framebufferWidth, int framebufferHeight)
+    {
+        m_sceneTarget.resolve();
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_CULL_FACE);
+        glBindVertexArray(m_emptyVertexArray);
+
+        const std::vector<BloomChain::Level>& levels = m_bloom.levels();
+        if (m_bloomEnabled && !levels.empty())
+        {
+            // Down the chain from the scene...
+            m_bloomDownShader->bind();
+            m_bloomDownShader->setInt("uSource", 0);
+            unsigned int source = m_sceneTarget.colorTexture();
+            glm::vec2 sourceTexel(1.0f / static_cast<float>(m_sceneTarget.width()), 1.0f / static_cast<float>(m_sceneTarget.height()));
+            for (std::size_t i = 0; i < levels.size(); ++i)
+            {
+                glBindFramebuffer(GL_FRAMEBUFFER, levels[i].framebuffer);
+                glViewport(0, 0, levels[i].width, levels[i].height);
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, source);
+                m_bloomDownShader->setVec2("uSourceTexel", sourceTexel);
+                m_bloomDownShader->setInt("uFirstPass", (i == 0) ? 1 : 0);
+                glDrawArrays(GL_TRIANGLES, 0, 3);
+                source = levels[i].texture;
+                sourceTexel = glm::vec2(1.0f / static_cast<float>(levels[i].width), 1.0f / static_cast<float>(levels[i].height));
+            }
+
+            // ...and back up, adding each smaller level onto the next larger one.
+            m_bloomUpShader->bind();
+            m_bloomUpShader->setInt("uSource", 0);
+            m_bloomUpShader->setFloat("uRadius", 1.0f);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_ONE, GL_ONE);
+            for (std::size_t i = levels.size() - 1; i > 0; --i)
+            {
+                glBindFramebuffer(GL_FRAMEBUFFER, levels[i - 1].framebuffer);
+                glViewport(0, 0, levels[i - 1].width, levels[i - 1].height);
+                glBindTexture(GL_TEXTURE_2D, levels[i].texture);
+                m_bloomUpShader->setVec2("uSourceTexel", glm::vec2(1.0f / static_cast<float>(levels[i].width), 1.0f / static_cast<float>(levels[i].height)));
+                glDrawArrays(GL_TRIANGLES, 0, 3);
+            }
+            glDisable(GL_BLEND);
+        }
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, framebufferWidth, framebufferHeight);
+        m_postShader->bind();
+        m_postShader->setInt("uScene", 0);
+        m_postShader->setInt("uBloom", 1);
+        m_postShader->setInt("uBloomEnabled", (m_bloomEnabled && !levels.empty()) ? 1 : 0);
+        m_postShader->setFloat("uBloomStrength", 0.045f);
+        m_postShader->setFloat("uExposure", 1.0f);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, m_sceneTarget.colorTexture());
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, levels.empty() ? 0U : levels.front().texture);
+        glActiveTexture(GL_TEXTURE0);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+
+        glBindVertexArray(0);
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_CULL_FACE);
+    }
+
+    void SceneRenderer::bindMaterial(const MaterialComponent& material, const glm::vec3& dynamicEmission, int visualType, int ballNumber)
+    {
+        m_shader->setInt("uBallNumber", ballNumber);
         m_shader->setVec3("uMaterialAlbedo", material.albedo);
         m_shader->setFloat("uMaterialSpecularStrength", material.specularStrength);
         m_shader->setFloat("uMaterialShininess", material.shininess);
@@ -224,6 +429,8 @@ namespace BilliardsSaloon
 
     void SceneRenderer::drawWorld(Registry& registry, float alpha, const BallHighlight& highlight)
     {
+        renderShadows(registry, alpha);
+
         registry.view<TransformComponent, StaticMeshComponent, MaterialComponent>().each(
             [&](Entity entity, TransformComponent& transform, StaticMeshComponent& meshComponent, MaterialComponent& material)
             {
@@ -233,20 +440,7 @@ namespace BilliardsSaloon
                     return;
                 }
 
-                Mesh* mesh = nullptr;
-
-                switch (meshComponent.primitive)
-                {
-                    case MeshPrimitive::Cube:
-                        mesh = m_cubeMesh.get();
-                        break;
-                    case MeshPrimitive::Plane:
-                        mesh = m_planeMesh.get();
-                        break;
-                    case MeshPrimitive::Sphere:
-                        mesh = m_sphereMesh.get();
-                        break;
-                }
+                Mesh* mesh = meshFor(meshComponent);
 
                 if (mesh == nullptr)
                 {
@@ -257,7 +451,8 @@ namespace BilliardsSaloon
                     (entity == highlight.ball) ? highlight.emission : glm::vec3(0.0f);
 
                 m_shader->setMat4("uModel", composeInterpolatedMatrix(transform, alpha));
-                bindMaterial(material, dynamicEmission, (ball != nullptr) ? ballVisualType(*ball) : 0);
+                const int number = ((ball != nullptr) && !ball->isCueBall) ? ball->number : 0;
+                bindMaterial(material, dynamicEmission, (ball != nullptr) ? ballVisualType(*ball) : 0, number);
                 mesh->draw();
             }
         );

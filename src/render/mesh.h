@@ -2,6 +2,8 @@
 
 #include <cstddef>
 #include <cstdint>
+#include "scene/mesh_data.h"
+
 #include <memory>
 #include <vector>
 
@@ -27,6 +29,7 @@ namespace BilliardsSaloon
 
         void draw() const;
 
+        static std::unique_ptr<Mesh> fromData(const MeshData& data);
         static std::unique_ptr<Mesh> createCube();
         static std::unique_ptr<Mesh> createPlane(float width, float depth);
         static std::unique_ptr<Mesh> createUVSphere(float radius, std::uint32_t slices, std::uint32_t stacks);

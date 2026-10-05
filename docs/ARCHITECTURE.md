@@ -12,6 +12,7 @@ tests link, and the `BilliardsSaloon` executable.
 |------|--------|------|
 | `src/core/asset_paths.*` | bs_game | `resolveAssetPath`: exe-relative asset lookup (build tree, macOS bundle, source fallback). |
 | `src/ecs/` | bs_game | Sparse-set `Registry` with `view<...>().each(...)`. |
+| `src/scene/table_geometry.*`, `mesh_data.h` | bs_game | Headless meshes for the table furniture (cushions from the simulator's segments, rails with pocket cut-outs, rims, drops, sights, trim, apron, legs); the renderer uploads `MeshData` on first draw. |
 | `src/scene/components.h` | bs_game | Transform (with previous state for interpolation), Ball, Material, TableBounds, Camera tags. |
 | `src/gameplay/game_variant.*` | bs_game | Variant/table types, JSON loaders, rack layouts. |
 | `src/gameplay/match_session.*` | bs_game | A match: ECS world, shot state machine (place, aim, tip offset, elevation, charge, fire), playback, shot preview, replays, shot clock, referee, ball in hand, spotting, calls, push-outs, race to N. |
@@ -20,10 +21,10 @@ tests link, and the `BilliardsSaloon` executable.
 | `src/gameplay/director.*` | bs_game | Broadcast director: plans camera cuts (pocket camera, wide) from a simulated trajectory. |
 | `src/gameplay/sim_bridge.h` | bs_game | Game ↔ simulator frame conversion. |
 | `src/platform/` | app | `Window` (GLFW, vsync on), `Input` (key edge detection), `Timer`. |
-| `src/render/` | app | `SceneRenderer` (frame setup, world, aim guide), `Shader`, `Mesh`, `Camera`, `camera_rig`, `ui_overlay` (voxel-font text). |
+| `src/render/` | app | `SceneRenderer` (shadow pass, HDR scene, cue, guides, post chain), `render_targets` (MSAA HDR buffer, bloom chain, shadow map array), `number_atlas` (ball numbers via FreeType), `Shader`, `Mesh`, `Camera`, `camera_rig`. |
 | `src/app/` | app | `Application` (loop, screens, camera rig), `saloon_scene` (room, lamps, ball materials), RmlUi screens: `shell_menus` (title, hub, pause, frame over, confirm, referee choice), `match_setup_screen`, `settings_screen`, `hud_screen`. |
 | `assets/data/` | — | Game data: `variants/*.json` (rules discipline, rack, balls) and `tables/*.json` (dimensions, pockets, physics coefficients). |
-| `assets/shaders/basic.*` | — | Single forward shader with procedural cloth/wood finishes and ball patterns. |
+| `assets/shaders/` | — | `basic.*`: physically based forward shading (GGX, ball resin, cloth sheen, PCF lamp shadows, ball numbers) into an HDR buffer; `shadow.*` depth pass; `bloom_*` and `post.frag`: bloom, ACES filmic tone curve, vignette, sRGB. |
 | `tests/` | bs_tests | doctest suite: ECS, simulator (closed-form, golden shots vs pooltool), rules per WPA clause, session, data loading. |
 
 Known limitations: no jump or massé shots yet (cue elevation); rails and

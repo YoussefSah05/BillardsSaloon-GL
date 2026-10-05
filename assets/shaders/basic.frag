@@ -30,6 +30,20 @@ uniform int uBallVisualType;
 
 uniform float uAlpha;
 
+// Lamps: inverse-square point lights of a small radius (soft highlights),
+// each with a shadow map layer seen from the lamp looking down.
+uniform float uLightIntensity;
+uniform float uLightRadius;
+uniform mat4 uLightMatrices[3];
+uniform sampler2DArrayShadow uShadowMaps;
+uniform int uShadowsEnabled;
+uniform int uShadowKernel;          // PCF taps per side: 1, 3 or 5
+uniform float uShadowTexel;
+
+// Ball numbers: a 4 x 4 atlas, cell n holds number n.
+uniform sampler2D uNumberAtlas;
+uniform int uBallNumber;
+
 out vec4 FragColor;
 
 const int SURFACE_CLOTH = 1;
@@ -41,6 +55,8 @@ const int BALL_VISUAL_CUE = 1;
 const int BALL_VISUAL_SOLID = 2;
 const int BALL_VISUAL_STRIPE = 3;
 const int BALL_VISUAL_EIGHT = 4;
+
+const float PI = 3.14159265359;
 
 float saturate(float value)
 {
@@ -122,6 +138,21 @@ vec3 applyBallFinish(vec3 baseColor)
         color = mix(color, ivory, patchMask);
     }
 
+    // The number, printed in the white spot on both sides of the ball.
+    if ((uBallNumber > 0) && (patchMask > 0.0))
+    {
+        float spotRadius = sin(radians(20.0));
+        vec2 p = localDirection.xy / spotRadius;
+        if (localDirection.z < 0.0)
+        {
+            p.x = -p.x;
+        }
+        vec2 uv = p * 0.5 + 0.5;
+        vec2 cell = vec2(float(uBallNumber % 4), float(uBallNumber / 4));
+        float ink = texture(uNumberAtlas, (cell + vec2(uv.x, 1.0 - uv.y)) / 4.0).r;
+        color = mix(color, vec3(0.03, 0.03, 0.035), ink * patchMask);
+    }
+
     float polish = 0.5 + 0.5 * sin(atan(localDirection.z, localDirection.x) * 2.0 + localDirection.y * 6.0);
     color *= 0.98 + 0.02 * polish;
 
@@ -148,48 +179,136 @@ vec3 sampleAnalyticEnvironment(vec3 direction)
     return environment;
 }
 
-vec3 evaluateLight(
-    vec3 radiance,
-    vec3 lightDirection,
-    vec3 normal,
-    vec3 viewDirection,
-    vec3 baseColor,
-    float roughness,
-    vec3 fresnelBase)
-{
-    vec3 halfVector = normalize(lightDirection + viewDirection);
-    float nDotL = max(dot(normal, lightDirection), 0.0);
+// ---- Physically based shading ------------------------------------------------
 
+float distributionGgx(float nDotH, float alpha)
+{
+    float a2 = alpha * alpha;
+    float d = nDotH * nDotH * (a2 - 1.0) + 1.0;
+    return a2 / (PI * d * d);
+}
+
+// Height-correlated Smith visibility (includes the 1 / (4 NoL NoV) term).
+float visibilitySmith(float nDotV, float nDotL, float alpha)
+{
+    float a2 = alpha * alpha;
+    float gv = nDotL * sqrt(nDotV * nDotV * (1.0 - a2) + a2);
+    float gl = nDotV * sqrt(nDotL * nDotL * (1.0 - a2) + a2);
+    return 0.5 / max(gv + gl, 1.0e-5);
+}
+
+// Cloth sheen (Estevez & Kulla "Charlie" distribution, Neubelt visibility).
+float distributionCharlie(float nDotH, float alpha)
+{
+    float inverse = 1.0 / max(alpha, 1.0e-3);
+    float sin2 = max(1.0 - nDotH * nDotH, 0.0078125);
+    return (2.0 + inverse) * pow(sin2, inverse * 0.5) / (2.0 * PI);
+}
+
+float visibilityNeubelt(float nDotV, float nDotL)
+{
+    return 1.0 / (4.0 * (nDotL + nDotV - nDotL * nDotV));
+}
+
+// Split-sum environment response without a lookup table (Karis, mobile).
+vec3 environmentBrdf(vec3 f0, float roughness, float nDotV)
+{
+    const vec4 c0 = vec4(-1.0, -0.0275, -0.572, 0.022);
+    const vec4 c1 = vec4(1.0, 0.0425, 1.04, -0.04);
+    vec4 r = roughness * c0 + c1;
+    float a004 = min(r.x * r.x, exp2(-9.28 * nDotV)) * r.x + r.y;
+    vec2 ab = vec2(-1.04, 1.04) * a004 + r.zw;
+    return f0 * ab.x + ab.y;
+}
+
+float shadowVisibility(int light, vec3 normal)
+{
+    if (uShadowsEnabled == 0)
+    {
+        return 1.0;
+    }
+
+    // Offset along the normal against acne, then project into the lamp's view.
+    vec4 lightSpace = uLightMatrices[light] * vec4(vWorldPosition + normal * 0.004, 1.0);
+    vec3 p = lightSpace.xyz / lightSpace.w * 0.5 + 0.5;
+    if (any(lessThan(p.xy, vec2(0.0))) || any(greaterThan(p.xy, vec2(1.0))) || (p.z > 1.0))
+    {
+        return 1.0;
+    }
+
+    float depth = p.z - 0.0004;
+    int halfKernel = uShadowKernel / 2;
+    float sum = 0.0;
+    for (int y = -halfKernel; y <= halfKernel; ++y)
+    {
+        for (int x = -halfKernel; x <= halfKernel; ++x)
+        {
+            vec2 offset = vec2(float(x), float(y)) * uShadowTexel * 1.5;
+            sum += texture(uShadowMaps, vec4(p.xy + offset, float(light), depth));
+        }
+    }
+    return sum / float(uShadowKernel * uShadowKernel);
+}
+
+struct Surface
+{
+    vec3 baseColor;
+    float roughness;
+    vec3 f0;
+    float clearcoat;
+    bool cloth;
+};
+
+vec3 shadeLight(Surface surface, vec3 radiance, vec3 lightDirection, float lightDistance, vec3 normal, vec3 viewDirection)
+{
+    float nDotL = dot(normal, lightDirection);
     if (nDotL <= 0.0)
     {
         return vec3(0.0);
     }
 
-    float hDotV = max(dot(halfVector, viewDirection), 0.0);
-    float nDotH = max(dot(normal, halfVector), 0.0);
-    float legacySpecularPower = clamp(uMaterialShininess, 4.0, 256.0);
-    float roughnessDrivenPower = mix(220.0, 18.0, roughness);
-    float specularPower = mix(roughnessDrivenPower, legacySpecularPower, 0.35);
-    float specularTerm = pow(nDotH, specularPower) * uMaterialSpecularStrength;
-    vec3 fresnel = fresnelSchlick(hDotV, fresnelBase);
+    vec3 halfVector = normalize(lightDirection + viewDirection);
+    float nDotV = max(dot(normal, viewDirection), 1.0e-4);
+    float nDotH = saturate(dot(normal, halfVector));
+    float lDotH = saturate(dot(lightDirection, halfVector));
 
-    vec3 diffuse = baseColor * nDotL;
-    vec3 specular = specularTerm * fresnel;
+    // A lamp is not a point: widen the lobe by its angular size (Karis 2013).
+    float alpha = surface.roughness * surface.roughness;
+    float lightAlpha = saturate(alpha + uLightRadius / (2.0 * max(lightDistance, 0.1)));
 
-    return radiance * (diffuse + specular);
-}
+    vec3 fresnel = fresnelSchlick(lDotH, surface.f0);
+    vec3 specular = distributionGgx(nDotH, lightAlpha) * visibilitySmith(nDotV, nDotL, alpha) * fresnel;
+    specular *= (alpha / lightAlpha) * (alpha / lightAlpha);   // keep the energy of the widened lobe
+    vec3 diffuse = (1.0 - fresnel) * surface.baseColor / PI;
 
-vec3 acesTonemap(vec3 color)
-{
-    vec3 a = color * (2.51 * color + 0.03);
-    vec3 b = color * (2.43 * color + 0.59) + 0.14;
-    return clamp(a / b, 0.0, 1.0);
+    if (surface.cloth)
+    {
+        // Velvet-like sheen at grazing angles; the baize looks soft, not plastic.
+        vec3 sheenColor = mix(surface.baseColor, vec3(1.0), 0.15) * 0.3;
+        specular = sheenColor * distributionCharlie(nDotH, 0.65) * visibilityNeubelt(nDotV, nDotL);
+        diffuse = surface.baseColor / PI;
+    }
+
+    vec3 color = diffuse + specular;
+
+    if (surface.clearcoat > 0.0)
+    {
+        // A thin glossy lacquer over the base: resin balls, varnished wood.
+        float coatFresnel = fresnelSchlick(lDotH, vec3(0.04)).x * surface.clearcoat;
+        float coatAlpha = saturate(0.0025 + uLightRadius / (2.0 * max(lightDistance, 0.1)));
+        float coat = distributionGgx(nDotH, coatAlpha) * visibilitySmith(nDotV, nDotL, 0.05) * coatFresnel;
+        coat *= (0.0025 / coatAlpha) * (0.0025 / coatAlpha);
+        color = color * (1.0 - coatFresnel) + coat;
+    }
+
+    return color * radiance * nDotL;
 }
 
 void main()
 {
     vec3 normal = normalize(vWorldNormal);
     vec3 viewDirection = normalize(uViewPosition - vWorldPosition);
+    float nDotV = max(dot(normal, viewDirection), 1.0e-4);
 
     // Material colours are authored in sRGB; light them in linear space.
     vec3 baseColor = pow(max(uMaterialAlbedo, vec3(0.0)), vec3(2.2));
@@ -206,33 +325,22 @@ void main()
         baseColor = applyBallFinish(baseColor);
     }
 
-    float legacyGlossRoughness = sqrt(2.0 / max(uMaterialShininess + 2.0, 2.0));
-    float roughness = clamp(mix(uMaterialRoughness, legacyGlossRoughness, 0.30), 0.05, 1.0);
-    vec3 fresnelBase = vec3(clamp(uMaterialReflectivity, 0.02, 0.9));
-
-    if (uMaterialSurfaceType == SURFACE_CLOTH)
+    Surface surface;
+    surface.baseColor = baseColor;
+    surface.roughness = clamp(uMaterialRoughness, 0.04, 1.0);
+    surface.f0 = vec3(clamp(uMaterialReflectivity, 0.02, 0.9));
+    surface.clearcoat = clamp(uMaterialClearcoatStrength, 0.0, 1.0);
+    surface.cloth = uMaterialSurfaceType == SURFACE_CLOTH;
+    if (uMaterialSurfaceType == SURFACE_BALL)
     {
-        roughness = clamp(roughness + 0.16, 0.16, 1.0);
-    }
-    else if (uMaterialSurfaceType == SURFACE_BALL)
-    {
-        roughness = clamp(roughness, 0.05, 0.22);
-        fresnelBase = max(fresnelBase, vec3(0.07));
+        // Phenolic resin is one hard, polished dielectric: a small sharp
+        // highlight over saturated colour (a separate coat would double it).
+        surface.roughness = 0.06;
+        surface.f0 = vec3(0.045);
+        surface.clearcoat = 0.0;
     }
 
     vec3 lighting = vec3(0.0);
-
-    vec3 directionalDirection = normalize(-uDirectionalLightDirection);
-    lighting += evaluateLight(
-        uDirectionalLightColor,
-        directionalDirection,
-        normal,
-        viewDirection,
-        baseColor,
-        roughness,
-        fresnelBase
-    );
-
     for (int i = 0; i < 3; ++i)
     {
         if (i >= uActivePointLightCount)
@@ -243,56 +351,31 @@ void main()
         vec3 lightVector = uPointLightPositions[i] - vWorldPosition;
         float distanceToLight = length(lightVector);
         vec3 lightDirection = lightVector / max(distanceToLight, 1.0e-4);
+        vec3 radiance = uPointLightColors[i] * uLightIntensity / (distanceToLight * distanceToLight + 0.02);
+        radiance *= shadowVisibility(i, normal);
 
-        float attenuation =
-            1.0 / (1.0 + 0.22 * distanceToLight + 0.12 * distanceToLight * distanceToLight);
-        vec3 radiance = uPointLightColors[i] * attenuation;
-
-        lighting += evaluateLight(
-            radiance,
-            lightDirection,
-            normal,
-            viewDirection,
-            baseColor,
-            roughness,
-            fresnelBase
-        );
+        lighting += shadeLight(surface, radiance, lightDirection, distanceToLight, normal, viewDirection);
     }
 
-    vec3 ambient = mix(vec3(0.05, 0.04, 0.03), vec3(0.14, 0.12, 0.10), saturate(normal.y * 0.5 + 0.5));
+    // The dim room: a warm floor bounce and a little sky from the ceiling.
+    vec3 ambient = mix(vec3(0.030, 0.022, 0.016), vec3(0.075, 0.064, 0.055), saturate(normal.y * 0.5 + 0.5));
     ambient *= baseColor;
 
     vec3 reflectionDirection = reflect(-viewDirection, normal);
     vec3 environment = sampleAnalyticEnvironment(reflectionDirection);
-    vec3 reflectionFresnel =
-        fresnelSchlick(max(dot(normal, viewDirection), 0.0), fresnelBase + vec3(0.04 * uMaterialClearcoatStrength));
-
-    float reflectionStrength = (1.0 - roughness * 0.68) * uMaterialSpecularStrength;
-    if (uMaterialSurfaceType == SURFACE_CLOTH)
+    environment = mix(environment, vec3(0.06, 0.045, 0.035), surface.roughness * 0.8);
+    vec3 reflections = environment * environmentBrdf(surface.f0, surface.roughness, nDotV);
+    if (surface.clearcoat > 0.0)
     {
-        reflectionStrength *= 0.22;
+        reflections += 0.5 * sampleAnalyticEnvironment(reflectionDirection) * fresnelSchlick(nDotV, vec3(0.04)) * surface.clearcoat;
     }
-    else if (uMaterialSurfaceType == SURFACE_WOOD)
+    if (surface.cloth)
     {
-        reflectionStrength *= 0.60;
-    }
-    else if (uMaterialSurfaceType == SURFACE_LAMP)
-    {
-        reflectionStrength *= 1.05;
-    }
-
-    vec3 reflections = environment * reflectionFresnel * reflectionStrength;
-
-    if (uMaterialSurfaceType == SURFACE_BALL)
-    {
-        float rim = pow(1.0 - max(dot(normal, viewDirection), 0.0), 4.0);
-        reflections += environment * rim * 0.06;
+        reflections *= 0.25;
     }
 
     vec3 color = ambient + lighting + reflections * uReflectionScale + uEmissionColor * uEmissionScale;
 
-    color = acesTonemap(color);
-    color = pow(color, vec3(1.0 / 2.2));
-
+    // Linear HDR out; the post pass tone maps and encodes for the display.
     FragColor = vec4(color, uAlpha);
 }
