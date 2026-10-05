@@ -328,10 +328,7 @@ namespace BilliardsSaloon
         settings.breakOrder = setup.breakOrder;
         settings.seed = std::random_device{}();
 
-        m_session = std::make_unique<MatchSession>(
-            variantFor(setup.game), ShotInputTuning{},
-            m_options.legacyPhysics ? PhysicsBackend::Legacy : PhysicsBackend::EventBased,
-            settings);
+        m_session = std::make_unique<MatchSession>(variantFor(setup.game), ShotInputTuning{}, settings);
 
         // The hall, the table's meshes and the camera live in the session's
         // registry, so a new session gets them again.

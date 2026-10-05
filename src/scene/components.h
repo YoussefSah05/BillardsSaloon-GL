@@ -96,37 +96,6 @@ namespace BilliardsSaloon
         bool isCueBall {false};
     };
 
-    struct TableBoundsComponent
-    {
-        float halfWidth {1.42f};
-        float halfDepth {0.71f};
-
-        float railRestitution {0.92f};
-        float ballRestitution {0.96f};
-
-        // Effective tangential impulse cap for cushion contact.
-        // This primarily controls how strongly side spin and rail-parallel slide
-        // can redirect the rebound.
-        float railContactFrictionCoefficient {0.14f};
-
-        // Effective tangential impulse cap for ball-ball contacts.
-        // This is a gameplay-tuned coefficient, not a calibrated material constant.
-        float ballContactFrictionCoefficient {0.05f};
-
-        // Cloth parameters guided by common pool-physics references.
-        // Typical values are roughly:
-        // - sliding friction: around 0.2
-        // - rolling resistance: around 0.005 to 0.015
-        // - spin decay: around 5 to 15 rad/s^2
-        float slidingFrictionCoefficient {0.20f};
-        float rollingFrictionCoefficient {0.010f};
-        float spinningFrictionCoefficient {0.015f};
-        float stopSpeedThreshold {0.006f};
-
-        float cornerPocketRadius {0.090f};
-        float sidePocketRadius {0.080f};
-    };
-
     struct CameraTagComponent
     {
     };

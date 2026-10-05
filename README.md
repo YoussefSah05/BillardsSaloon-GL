@@ -77,7 +77,6 @@ depending on the device used last.
 ./build/BilliardsSaloon --screen game                      # skip the main menu
 ./build/BilliardsSaloon --screen pause --capture pause.png # save a screenshot and quit
 ./build/BilliardsSaloon --scenario foul|choice|call        # script a shot: ball in hand, a referee choice, a called shot
-./build/BilliardsSaloon --physics legacy                   # the prototype solver, for comparison
 ```
 
 ## Project layout
@@ -88,7 +87,6 @@ depending on the device used last.
 | `src/ecs` | Sparse-set entity/component registry |
 | `src/sim` | Event-based physics simulator (headless, double precision) |
 | `src/rules` | WPA referee, shot records, racking, match score |
-| `src/physics` | Prototype fixed-step solver (`--physics legacy`) |
 | `src/gameplay` | Game variants, the match session (shot input, playback, ball in hand) |
 | `src/render` | Shaders, meshes, cameras, overlay text, screenshots |
 | `src/ui` | RmlUi integration (fonts, input, rendering) |

@@ -132,8 +132,6 @@ add_library(bs_game STATIC
     src/gameplay/shot_state.cpp
     src/gameplay/game_variant.cpp
     src/gameplay/match_session.cpp
-    src/gameplay/shot_result.cpp
-    src/physics/billiards_physics.cpp
     src/rules/racking.cpp
     src/rules/referee.cpp
     src/rules/shot_record.cpp
@@ -231,7 +229,6 @@ if(BS_BUILD_TESTS)
         tests/test_sim_events.cpp
         tests/test_sim_shots.cpp
         tests/test_sim_golden.cpp
-        tests/test_physics.cpp
         tests/test_asset_paths.cpp
     )
 

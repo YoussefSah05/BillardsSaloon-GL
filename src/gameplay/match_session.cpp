@@ -1,7 +1,6 @@
 #include "gameplay/match_session.h"
 
 #include "gameplay/sim_bridge.h"
-#include "physics/billiards_physics.h"
 #include "rules/racking.h"
 #include "rules/shot_record.h"
 #include "scene/components.h"
@@ -62,13 +61,11 @@ namespace BilliardsSaloon
         return glm::normalize(glm::vec3(std::sin(angleRadians), 0.0f, -std::cos(angleRadians)));
     }
 
-    MatchSession::MatchSession(const GameVariantDefinition& variant, ShotInputTuning tuning, PhysicsBackend backend,
-                               MatchSettings settings)
+    MatchSession::MatchSession(const GameVariantDefinition& variant, ShotInputTuning tuning, MatchSettings settings)
         : m_variant(&variant)
         , m_tuning(tuning)
         , m_settings(settings)
         , m_random(settings.seed)
-        , m_backend(backend)
         , m_simTable(Sim::buildPocketTable(variant.table.pocketGeometry))
     {
         for (const Sim::Pocket& pocket : m_simTable.pockets)
@@ -139,33 +136,13 @@ namespace BilliardsSaloon
 
     bool MatchSession::ballsInMotion() const
     {
-        if (m_backend == PhysicsBackend::EventBased)
-        {
-            return m_trajectory.has_value();
-        }
-        // anyBallInMotion only reads, but the registry view API is non-const.
-        return Physics::anyBallInMotion(const_cast<Registry&>(m_registry));
+        return m_trajectory.has_value();
     }
 
     void MatchSession::spawnTable()
     {
+        // The table's geometry lives in m_simTable; the entity carries its look.
         m_tableEntity = m_registry.createEntity();
-        const TableSpecification& table = m_variant->table;
-
-        m_registry.emplace<TableBoundsComponent>(m_tableEntity, TableBoundsComponent{
-            .halfWidth = 0.5f * table.clothWidth,
-            .halfDepth = 0.5f * table.clothDepth,
-            .railRestitution = table.physics.cushionRestitution,
-            .ballRestitution = table.physics.ballRestitution,
-            .railContactFrictionCoefficient = table.physics.cushionFriction,
-            .ballContactFrictionCoefficient = table.physics.ballFriction,
-            .slidingFrictionCoefficient = table.physics.slidingFriction,
-            .rollingFrictionCoefficient = table.physics.rollingFriction,
-            .spinningFrictionCoefficient = table.physics.spinningFriction,
-            .stopSpeedThreshold = table.physics.stopSpeed,
-            .cornerPocketRadius = table.cornerPocketRadius,
-            .sidePocketRadius = table.sidePocketRadius
-        });
     }
 
     void MatchSession::spawnBalls()
@@ -238,7 +215,6 @@ namespace BilliardsSaloon
     void MatchSession::rackBalls()
     {
         m_trajectory.reset();
-        m_legacyResult.clear();
         m_holdWasActive = false;
         m_chargingByStroke = false;
 
@@ -737,7 +713,6 @@ namespace BilliardsSaloon
         resetCueBall();
         m_shotState.phase = ShotPhase::Aiming;
         m_shotState.charge01 = 0.0f;
-        m_legacyResult.clear();
     }
 
     bool MatchSession::fireShot()
@@ -751,34 +726,6 @@ namespace BilliardsSaloon
         m_callAtStrike = callRequired() ? m_call : std::nullopt;
         m_pushOutAtStrike = m_pushOut;
 
-        if (m_backend == PhysicsBackend::EventBased)
-        {
-            return fireSimulatedShot();
-        }
-
-        BallComponent& ball = m_registry.get<BallComponent>(m_cueBallEntity);
-        m_legacyResult.clear();
-        m_legacyResult.shotActive = true;
-
-        const glm::vec3 forward = aimDirection();
-        const glm::vec3 up(0.0f, 1.0f, 0.0f);
-        const glm::vec3 right = glm::normalize(glm::cross(up, forward));
-
-        const float shotSpeed =
-            m_tuning.minShotSpeed + (m_tuning.maxShotSpeed - m_tuning.minShotSpeed) * m_shotState.charge01;
-
-        ball.linearVelocity = forward * shotSpeed;
-
-        const float spinBase = shotSpeed / ball.radius;
-        const glm::vec3 sideSpin = up * (m_shotState.strikeRight01 * 0.85f * spinBase);
-        const glm::vec3 topBackSpin = right * (m_shotState.strikeForward01 * 1.00f * spinBase);
-
-        ball.angularVelocity = sideSpin + topBackSpin;
-        return true;
-    }
-
-    bool MatchSession::fireSimulatedShot()
-    {
         const TableSpecification& table = m_variant->table;
         const double length = table.clothWidth;
         const double width = table.clothDepth;
@@ -866,14 +813,7 @@ namespace BilliardsSaloon
 
     void MatchSession::step(double deltaTimeSeconds)
     {
-        if (m_backend == PhysicsBackend::EventBased)
-        {
-            playBack(deltaTimeSeconds);
-        }
-        else
-        {
-            Physics::stepBilliardsWorld(m_registry, deltaTimeSeconds, m_legacyResult);
-        }
+        playBack(deltaTimeSeconds);
 
         if ((m_shotState.phase == ShotPhase::BallsInMotion) && !ballsInMotion())
         {
@@ -883,23 +823,6 @@ namespace BilliardsSaloon
 
     void MatchSession::resolveShot()
     {
-        if (m_backend == PhysicsBackend::Legacy)
-        {
-            // The prototype solver reports no cushions or pockets; assume a
-            // cushion was reached and every ball went where it was called.
-            m_record = Rules::ShotRecord{};
-            m_record.firstContact = m_legacyResult.firstObjectBallNumber;
-            m_record.railAfterContact = true;
-            m_record.objectBallsToRail = 4;
-            for (const PocketedBallRecord& potted : m_legacyResult.pocketedBalls)
-            {
-                const int number = potted.isCueBall ? Rules::CUE_BALL : potted.number;
-                const int pocket = (m_callAtStrike && (m_callAtStrike->ball == number)) ? m_callAtStrike->pocket : 0;
-                m_record.pots.push_back({number, pocket});
-            }
-            m_legacyResult.clear();
-        }
-
         m_record.pushOut = m_pushOutAtStrike;
         m_record.call = m_callAtStrike;
 

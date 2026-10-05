@@ -35,7 +35,6 @@ namespace BilliardsSaloon
         StartScreen startScreen {StartScreen::Title};
         std::filesystem::path capturePath;   // empty = no capture
         int captureAfterFrames {90};
-        bool legacyPhysics {false};           // --physics legacy: prototype solver
         DevScenario scenario {DevScenario::None};
     };
 

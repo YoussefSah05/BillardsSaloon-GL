@@ -81,7 +81,7 @@ namespace
 
 TEST_CASE("an 8-ball break that drives too few balls to a cushion offers the re-rack choice")
 {
-    MatchSession session(eightBallVariant(), {}, PhysicsBackend::EventBased, fixedRack());
+    MatchSession session(eightBallVariant(), {}, fixedRack());
     aimAt(session, -0.5f * PI);   // away from the rack, into the head cushion
     shoot(session, 0.15f);
 
@@ -108,7 +108,7 @@ TEST_CASE("an 8-ball break that drives too few balls to a cushion offers the re-
 
 TEST_CASE("a foul gives ball in hand anywhere: placement is clamped, checked for overlaps, then confirmed")
 {
-    MatchSession session(nineBallVariant(), {}, PhysicsBackend::EventBased, fixedRack());
+    MatchSession session(nineBallVariant(), {}, fixedRack());
     aimAt(session, -0.5f * PI);   // a soft break the wrong way: no ball, or too few to a cushion
     shoot(session, 0.15f);
 
@@ -136,7 +136,7 @@ TEST_CASE("a foul gives ball in hand anywhere: placement is clamped, checked for
 
 TEST_CASE("on the break the cue ball may only be placed behind the head string")
 {
-    MatchSession session(eightBallVariant(), {}, PhysicsBackend::EventBased, fixedRack());
+    MatchSession session(eightBallVariant(), {}, fixedRack());
     CHECK(session.canPlaceCueBall());
     session.beginCueBallPlacement();
     REQUIRE(session.placingCueBall());
@@ -149,7 +149,7 @@ TEST_CASE("on the break the cue ball may only be placed behind the head string")
 
 TEST_CASE("9-ball: potting the 9 legally wins the frame, and the race goes on")
 {
-    MatchSession session(nineBallVariant(), {}, PhysicsBackend::EventBased, fixedRack(2));
+    MatchSession session(nineBallVariant(), {}, fixedRack(2));
     const CornerShot shot = cornerShot(session.variant());
     session.setLayout(shot.cue, {{9, shot.object}});
     aimAt(session, shot.aim);
@@ -171,7 +171,7 @@ TEST_CASE("9-ball: potting the 9 legally wins the frame, and the race goes on")
 
 TEST_CASE("9-ball: the 9 pocketed on a foul comes back to the foot spot")
 {
-    MatchSession session(nineBallVariant(), {}, PhysicsBackend::EventBased, fixedRack());
+    MatchSession session(nineBallVariant(), {}, fixedRack());
     const CornerShot shot = cornerShot(session.variant());
     // The 1 is on the table, so hitting the 9 first is a foul.
     session.setLayout(shot.cue, {{1, glm::vec2(-0.9f, -0.4f)}, {9, shot.object}});
@@ -190,7 +190,7 @@ TEST_CASE("9-ball: the 9 pocketed on a foul comes back to the foot spot")
 
 TEST_CASE("8-ball: the 8 on the break is spotted and the breaker chooses")
 {
-    MatchSession session(eightBallVariant(), {}, PhysicsBackend::EventBased, fixedRack());
+    MatchSession session(eightBallVariant(), {}, fixedRack());
     const CornerShot shot = cornerShot(session.variant());
     session.setLayout(shot.cue, {{8, shot.object}});
     CHECK_FALSE(session.callRequired());   // the break needs no call
@@ -206,7 +206,7 @@ TEST_CASE("8-ball: the 8 on the break is spotted and the breaker chooses")
 
 TEST_CASE("10-ball: every shot is called; the call follows the aim and can be changed by hand")
 {
-    MatchSession session(tenBallVariant(), {}, PhysicsBackend::EventBased, fixedRack());
+    MatchSession session(tenBallVariant(), {}, fixedRack());
     const CornerShot shot = cornerShot(session.variant());
 
     // A layout break that legally pots the 1; then check the next shot's call.

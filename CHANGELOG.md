@@ -48,6 +48,9 @@ All notable changes to Billiards Saloon. The format follows
 
 ### Removed
 - The prototype 8-ball rules (`turn_rules`, `MatchState`).
+- The prototype fixed-step solver, `--physics legacy` and the legacy table
+  coefficients: the event simulator matched the golden shots and passed
+  play-testing.
 
 Deferred from M2: remappable controls (with the M11 settings work) and UI
 sound cues (with M7 audio).

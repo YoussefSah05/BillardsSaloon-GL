@@ -23,10 +23,7 @@ namespace
             "name": "Test table",
             "clothWidth": 2.54, "clothDepth": 1.27,
             "ballRadius": 0.028575, "ballMassKg": 0.17,
-            "pockets": {"cornerRadius": 0.06, "sideRadius": 0.065},
-            "cushion": {"restitution": 0.9, "friction": 0.2},
-            "ballContact": {"restitution": 0.95, "friction": 0.06},
-            "cloth": {"slidingFriction": 0.2, "rollingFriction": 0.01, "spinningFriction": 0.02, "stopSpeed": 0.005}
+            "simulation": {"ball": {"slidingFriction": 0.25}}
         })";
 
         const std::filesystem::path file = root / "variants" / "variant.json";
@@ -81,11 +78,8 @@ TEST_CASE("the shipped 8-ball data describes a WPA 9 ft table")
     CHECK(variant.table.pocketGeometry.cornerPocketWidth == doctest::Approx(0.118));
     CHECK(variant.table.simBall.R == doctest::Approx(0.028575));
     CHECK(variant.table.simBall.e_c == doctest::Approx(0.85));
-    CHECK(variant.table.cornerPocketRadius == doctest::Approx(0.090f));
-    CHECK(variant.table.sidePocketRadius == doctest::Approx(0.080f));
-    CHECK(variant.table.physics.cushionRestitution == doctest::Approx(0.92f));
-    CHECK(variant.table.physics.slidingFriction == doctest::Approx(0.20f));
-    CHECK(variant.table.physics.rollingFriction == doctest::Approx(0.010f));
+    CHECK(variant.table.simBall.u_s == doctest::Approx(0.2));
+    CHECK(variant.table.simBall.u_r == doctest::Approx(0.01));
 
     CHECK(variant.cueBall.isCueBall);
     CHECK(variant.cueBall.specularStrength == doctest::Approx(0.95f));

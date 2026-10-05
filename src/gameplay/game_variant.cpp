@@ -200,24 +200,6 @@ namespace BilliardsSaloon
             table.ballRadius = json.at("ballRadius").get<float>();
             table.ballMassKg = json.at("ballMassKg").get<float>();
 
-            const Json& pockets = json.at("pockets");
-            table.cornerPocketRadius = pockets.at("cornerRadius").get<float>();
-            table.sidePocketRadius = pockets.at("sideRadius").get<float>();
-
-            const Json& cushion = json.at("cushion");
-            table.physics.cushionRestitution = cushion.at("restitution").get<float>();
-            table.physics.cushionFriction = cushion.at("friction").get<float>();
-
-            const Json& ballContact = json.at("ballContact");
-            table.physics.ballRestitution = ballContact.at("restitution").get<float>();
-            table.physics.ballFriction = ballContact.at("friction").get<float>();
-
-            const Json& cloth = json.at("cloth");
-            table.physics.slidingFriction = cloth.at("slidingFriction").get<float>();
-            table.physics.rollingFriction = cloth.at("rollingFriction").get<float>();
-            table.physics.spinningFriction = cloth.at("spinningFriction").get<float>();
-            table.physics.stopSpeed = cloth.at("stopSpeed").get<float>();
-
             if (json.contains("simulation"))
             {
                 const Json& sim = json.at("simulation");
