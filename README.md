@@ -7,6 +7,17 @@ Built from scratch in C++20 and OpenGL 4.1 — no game engine.
 > 8-ball prototype. Work toward v1.0 (event-based physics, full WPA rules,
 > AI opponents, career mode) is tracked in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
+## Screenshots
+
+| Main menu | Aiming |
+|-----------|--------|
+| ![Main menu over the live table](docs/media/main.jpg) | ![Aiming with the broadcast HUD](docs/media/game.jpg) |
+| **Referee call after a scratch** | **Pause** |
+| ![Foul banner and ball-in-hand lower third](docs/media/foul.jpg) | ![Pause menu over the blurred table](docs/media/pause.jpg) |
+
+Work in progress: the menus and HUD are final in style; table lighting and
+materials are scheduled for the hall-visuals milestone.
+
 ## What works today
 
 - 8-ball against a second local player: break, open table, group assignment,
@@ -15,7 +26,10 @@ Built from scratch in C++20 and OpenGL 4.1 — no game engine.
 - Physics: sliding→rolling cloth model with spin, ball-ball and cushion
   impulses with friction, pocket capture.
 - Camera modes: aim, table overview, shot follow, free look.
-- Main and pause menus, Low/Balanced/High render quality.
+- Broadcast-style main menu, pause menu and in-match HUD (RmlUi): scorebug,
+  ball trays, power meter, spin widget, referee banners that name each foul,
+  and a frame-over card.
+- Low/Balanced/High render quality.
 
 ## Build
 
