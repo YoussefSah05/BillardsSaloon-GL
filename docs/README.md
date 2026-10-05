@@ -1,7 +1,10 @@
 # Billiards Saloon — Blueprint
 
 The documentation map: what the game is, how it works, and where it is going.
-Start here after time away from the project.
+Start here after time away from the project. The design documents explain
+the theory behind each part (models, equations, algorithms and the reasons
+for each choice), not just the code. Equations are written in LaTeX, which
+GitHub renders.
 
 ## The game
 
@@ -11,7 +14,7 @@ presented like a televised tournament. Four pillars:
 | Pillar | In one line | Document |
 |--------|-------------|----------|
 | Authentic physics | An exact, event-based simulation of sliding, rolling, spin, cushions and pockets | [PHYSICS.md](design/PHYSICS.md) |
-| Authentic rules | WPA 8-ball, 9-ball and 10-ball, called by an on-screen referee | [GDD.md](design/GDD.md#rules-scope-wpa) |
+| Authentic rules | WPA 8-ball, 9-ball and 10-ball, called by an on-screen referee | [RULES.md](design/RULES.md) |
 | Broadcast feel | Scorebug, referee banners, replays and a TV director camera over a live 3D hall | [UX.md](design/UX.md) |
 | Intelligence | Self-play-trained AI pros, an AI coach, adaptive difficulty, generated challenges | [INTELLIGENCE.md](design/INTELLIGENCE.md) |
 
@@ -22,8 +25,11 @@ presented like a televised tournament. Four pillars:
 | [design/GDD.md](design/GDD.md) | What the player does: modes, rules, shot input, presentation, equipment and customization |
 | [design/RULES.md](design/RULES.md) | The referee: WPA clauses enforced, simplifications, code and tests |
 | [design/UX.md](design/UX.md) | How it looks and feels: design language, frontend flow, HUD states, accessibility, RmlUi approach |
-| [design/PHYSICS.md](design/PHYSICS.md) | The physics: today's solver with its equations and parameters, and the event-based simulator that replaces it |
-| [design/INTELLIGENCE.md](design/INTELLIGENCE.md) | The AI/ML plan: why search plus learned value and policy networks, the self-play pipeline, ONNX shipping, evaluation |
+| [design/PHYSICS.md](design/PHYSICS.md) | The physics: equations of motion on cloth, event detection, collision models (ball, cushion, cue), validation |
+| [design/RENDERING.md](design/RENDERING.md) | The image: microfacet shading, lamps, cloth sheen, shadows, bloom, tone mapping, procedural table geometry |
+| [design/AUDIO.md](design/AUDIO.md) | The sound: modal synthesis, crowd textures, from simulator events to a positioned mix |
+| [design/AI.md](design/AI.md) | The computer opponents: ghost-ball geometry, error propagation, expected utility under execution noise, position value |
+| [design/INTELLIGENCE.md](design/INTELLIGENCE.md) | The AI/ML plan and its theory: value functions, proper scoring, set encoders, TD learning, expert iteration, Elo, Bayesian skill estimation |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | The code: modules, targets, data flow of a shot, milestone order |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | How work flows: branches, commits, merges, releases |
 | [../CHANGELOG.md](../CHANGELOG.md) | What changed in each version |
