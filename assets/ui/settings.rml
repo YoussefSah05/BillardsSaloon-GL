@@ -13,7 +13,7 @@
             top: 50%;
             width: 600dp;
             margin-left: -300dp;
-            margin-top: -350dp;
+            margin-top: -470dp;
         }
         .panel h2 {
             margin-bottom: 6dp;
@@ -26,9 +26,9 @@
         }
         .setting {
             width: 600dp;
-            height: 50dp;
-            margin-bottom: 8dp;
-            line-height: 50dp;
+            height: 44dp;
+            margin-bottom: 6dp;
+            line-height: 44dp;
             font-size: 22dp;
             nav-left: none;
             nav-right: none;
@@ -70,6 +70,11 @@
         <div class="eyebrow section">CONTROLS</div>
         <button class="menu-item setting" id="sensitivity" data-event-click="cycle(3, 1)" data-event-keydown="key(3, ev.key_identifier)"><span class="label">MOUSE SENSITIVITY<span class="value">{{ sensitivity }}</span></span></button>
         <button class="menu-item setting" id="aimguide" data-event-click="cycle(6, 1)" data-event-keydown="key(6, ev.key_identifier)"><span class="label">AIM GUIDE<span class="value">{{ aim_guide }}</span></span></button>
+
+        <div class="eyebrow section">AUDIO</div>
+        <button class="menu-item setting" id="master" data-event-click="cycle(7, 1)" data-event-keydown="key(7, ev.key_identifier)"><span class="label">MASTER VOLUME<span class="value">{{ master_volume }}</span></span></button>
+        <button class="menu-item setting" id="effects" data-event-click="cycle(8, 1)" data-event-keydown="key(8, ev.key_identifier)"><span class="label">TABLE SOUNDS<span class="value">{{ effects_volume }}</span></span></button>
+        <button class="menu-item setting" id="crowd" data-event-click="cycle(9, 1)" data-event-keydown="key(9, ev.key_identifier)"><span class="label">CROWD<span class="value">{{ crowd_volume }}</span></span></button>
 
         <div class="eyebrow section">ACCESSIBILITY</div>
         <button class="menu-item setting" id="uiscale" data-event-click="cycle(4, 1)" data-event-keydown="key(4, ev.key_identifier)"><span class="label">TEXT AND UI SIZE<span class="value">{{ ui_scale }}</span></span></button>

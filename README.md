@@ -3,11 +3,11 @@
 A realism-first 3D pool game presented like a televised tournament.
 Built from scratch in C++20 and OpenGL 4.1 — no game engine.
 
-> **Status:** early development. `v0.6.0` has event-based physics, WPA 8-,
+> **Status:** early development. `v0.7.0` has event-based physics, WPA 8-,
 > 9- and 10-ball for two local players, simulator aim guides, broadcast
 > presentation (director cuts, replays, shot clock), a physically based
-> tournament table and hall, and a Locker for equipment. Work toward v1.0
-> (audio, AI opponents, career mode) is tracked in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+> tournament table and hall, a Locker for equipment, and simulator-driven
+> sound. Work toward v1.0 (AI opponents, career mode) is tracked in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Screenshots
 
@@ -43,6 +43,8 @@ materials are scheduled for the hall-visuals milestone.
   ball trays, power meter, spin widget, referee banners that name each foul,
   and a frame-over card.
 - Low/Balanced/High render quality.
+- Sound synthesised in code and driven by the simulator: every click,
+  cushion and pocket at its moment and loudness, a hall crowd and applause.
 
 ## Build
 
@@ -87,6 +89,8 @@ depending on the device used last.
 ./build/BilliardsSaloon --screen game                      # skip the main menu
 ./build/BilliardsSaloon --screen pause --capture pause.png # save a screenshot and quit
 ./build/BilliardsSaloon --scenario foul|choice|call|replay # script a shot: ball in hand, a referee choice, a called shot, a winning replay
+./build/BilliardsSaloon --mute                             # no sound
+./build/bs_sound_preview /tmp/sounds                       # write the game's sounds (and a mixed break) to WAV files
 ./build/BilliardsSaloon --camera overview                  # start with a camera view (broadcast, aim, overview, follow, free)
 ```
 

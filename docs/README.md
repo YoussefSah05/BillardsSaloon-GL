@@ -58,7 +58,8 @@ mouse / keyboard ──► Input ──► ShotControls ──► MatchSession (
 | M4 WPA rules and referee | done (v0.4.0) |
 | M5 Shot input and broadcast presentation | done (v0.5.0); jump shots wait for airborne-ball physics |
 | M6 Hall visuals, realism, equipment customization | done (v0.6.0) |
-| M7 Audio | next |
+| M7 Audio | done (v0.7.0); referee voice later |
+| M8 Classical AI opponents | next |
 | M8 AI v1: classical search | planned |
 | M9 Intelligence: self-play learning (starts after M3, runs in parallel) | planned |
 | M10 Modes: Quick Match, Practice, Trick Shots, The Tour | planned |

@@ -45,6 +45,9 @@ namespace BilliardsSaloon
     {
         settings.mouseSensitivity = std::clamp(settings.mouseSensitivity, MIN_MOUSE_SENSITIVITY, MAX_MOUSE_SENSITIVITY);
         settings.uiScale = std::clamp(settings.uiScale, MIN_UI_SCALE, MAX_UI_SCALE);
+        settings.masterVolume = std::clamp(settings.masterVolume, 0.0f, 1.0f);
+        settings.effectsVolume = std::clamp(settings.effectsVolume, 0.0f, 1.0f);
+        settings.crowdVolume = std::clamp(settings.crowdVolume, 0.0f, 1.0f);
         settings.matchGame = std::clamp(settings.matchGame, 0, MATCH_GAME_COUNT - 1);
         settings.aimGuide = std::clamp(settings.aimGuide, 0, AIM_GUIDE_COUNT - 1);
         settings.raceTo = std::clamp(settings.raceTo, 1, MAX_RACE_TO);
@@ -113,6 +116,13 @@ namespace BilliardsSaloon
             settings.aimGuide = json.value("aimGuide", settings.aimGuide);
             settings.uiScale = json.value("uiScale", settings.uiScale);
             settings.reducedMotion = json.value("reducedMotion", settings.reducedMotion);
+            if (json.contains("audio"))
+            {
+                const Json& audio = json.at("audio");
+                settings.masterVolume = audio.value("master", settings.masterVolume);
+                settings.effectsVolume = audio.value("effects", settings.effectsVolume);
+                settings.crowdVolume = audio.value("crowd", settings.crowdVolume);
+            }
             if (json.contains("equipment"))
             {
                 const Json& e = json.at("equipment");
@@ -157,6 +167,11 @@ namespace BilliardsSaloon
             {"aimGuide", settings.aimGuide},
             {"uiScale", settings.uiScale},
             {"reducedMotion", settings.reducedMotion},
+            {"audio", {
+                {"master", settings.masterVolume},
+                {"effects", settings.effectsVolume},
+                {"crowd", settings.crowdVolume}
+            }},
             {"equipment", {
                 {"cloth", settings.equipment.cloth},
                 {"rails", settings.equipment.rails},

@@ -41,6 +41,11 @@ namespace BilliardsSaloon
         float mouseSensitivity {1.0f};   // multiplies mouse aim, spin and stroke
         int aimGuide {1};                // 0 off, 1 ghost ball and short lines, 2 full predicted paths
 
+        // Audio, 0..1
+        float masterVolume {0.8f};
+        float effectsVolume {1.0f};
+        float crowdVolume {0.7f};
+
         // Accessibility
         float uiScale {1.0f};            // 1.0 to 1.5
         bool reducedMotion {false};

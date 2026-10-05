@@ -1,5 +1,6 @@
 #pragma once
 
+#include "app/audio_engine.h"
 #include "app/hud_screen.h"
 #include "app/locker_screen.h"
 #include "app/match_setup_screen.h"
@@ -78,6 +79,8 @@ namespace BilliardsSaloon
         [[nodiscard]] CameraRigContext buildGameplayCameraContext() const;
 
         void updateHud(float frameTimeSeconds);
+        // Plays the sounds of the shot (or replay) on screen as playback passes them.
+        void updateAudio();
         [[nodiscard]] HudSnapshot buildHudSnapshot() const;
 
         void render(double alpha);
@@ -109,6 +112,7 @@ namespace BilliardsSaloon
         std::unique_ptr<MatchSession> m_session;
         Entity m_cameraEntity;
         std::unique_ptr<SceneRenderer> m_renderer;
+        std::unique_ptr<AudioEngine> m_audio;
         std::unique_ptr<UiSystem> m_ui;
         std::unique_ptr<HudScreen> m_hud;
         std::unique_ptr<ShellMenus> m_menus;
@@ -160,6 +164,12 @@ namespace BilliardsSaloon
         // A frame-winning pot is replayed in slow motion before the result card.
         bool m_replayBeforeCard {false};
         bool m_cardAfterReplay {false};
+
+        // Shot sounds for the playback on screen.
+        std::vector<Audio::SoundCue> m_soundCues;
+        std::size_t m_nextSoundCue {0};
+        std::uint32_t m_soundPlayback {0};
+        double m_lastPlaybackSeconds {0.0};
         std::optional<CameraViewMode> m_cameraBeforePlacing;
         ShotPhase m_previousShotPhase {ShotPhase::Aiming};
         float m_chargeBeforeShot {0.0f};
