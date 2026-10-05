@@ -134,6 +134,7 @@ add_library(bs_game STATIC
     src/gameplay/game_variant.cpp
     src/gameplay/match_session.cpp
     src/rules/racking.cpp
+    src/scene/table_geometry.cpp
     src/rules/referee.cpp
     src/rules/shot_record.cpp
 )
@@ -225,6 +226,7 @@ if(BS_BUILD_TESTS)
         tests/test_match_session.cpp
         tests/test_match_rules.cpp
         tests/test_director.cpp
+        tests/test_table_geometry.cpp
         tests/test_game_variant.cpp
         tests/test_game_data.cpp
         tests/test_launch_options.cpp

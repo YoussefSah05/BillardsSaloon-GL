@@ -253,6 +253,43 @@ namespace BilliardsSaloon
         return true;
     }
 
+    Mesh* SceneRenderer::meshFor(const StaticMeshComponent& component)
+    {
+        switch (component.primitive)
+        {
+            case MeshPrimitive::Cube:
+                return m_cubeMesh.get();
+            case MeshPrimitive::Plane:
+                return m_planeMesh.get();
+            case MeshPrimitive::Sphere:
+                return m_sphereMesh.get();
+            case MeshPrimitive::Custom:
+                break;
+        }
+        if (!component.custom)
+        {
+            return nullptr;
+        }
+
+        const MeshData* key = component.custom.get();
+        auto found = m_customMeshes.find(key);
+        if ((found != m_customMeshes.end()) && found->second.data.expired())
+        {
+            m_customMeshes.erase(found);   // the address was reused by new data
+            found = m_customMeshes.end();
+        }
+        if (found == m_customMeshes.end())
+        {
+            // Drop meshes whose scenes are gone, then upload this one.
+            for (auto it = m_customMeshes.begin(); it != m_customMeshes.end();)
+            {
+                it = it->second.data.expired() ? m_customMeshes.erase(it) : std::next(it);
+            }
+            found = m_customMeshes.emplace(key, CachedMesh{component.custom, Mesh::fromData(*component.custom)}).first;
+        }
+        return found->second.mesh.get();
+    }
+
     void SceneRenderer::bindSceneShader()
     {
         m_shader->bind();
@@ -286,7 +323,7 @@ namespace BilliardsSaloon
                 {
                     // Lamps hold the lights; floors and walls only receive.
                     if ((material.surfaceType == MaterialSurfaceType::LampGlass) ||
-                        (meshComponent.primitive == MeshPrimitive::Plane))
+                        (meshComponent.primitive == MeshPrimitive::Plane) || !meshComponent.castsShadow)
                     {
                         return;
                     }
@@ -295,7 +332,11 @@ namespace BilliardsSaloon
                     {
                         return;
                     }
-                    Mesh* mesh = (meshComponent.primitive == MeshPrimitive::Sphere) ? m_sphereMesh.get() : m_cubeMesh.get();
+                    Mesh* mesh = meshFor(meshComponent);
+                    if (mesh == nullptr)
+                    {
+                        return;
+                    }
                     m_shadowShader->setMat4("uModel", composeInterpolatedMatrix(transform, alpha));
                     mesh->draw();
                 });
@@ -399,20 +440,7 @@ namespace BilliardsSaloon
                     return;
                 }
 
-                Mesh* mesh = nullptr;
-
-                switch (meshComponent.primitive)
-                {
-                    case MeshPrimitive::Cube:
-                        mesh = m_cubeMesh.get();
-                        break;
-                    case MeshPrimitive::Plane:
-                        mesh = m_planeMesh.get();
-                        break;
-                    case MeshPrimitive::Sphere:
-                        mesh = m_sphereMesh.get();
-                        break;
-                }
+                Mesh* mesh = meshFor(meshComponent);
 
                 if (mesh == nullptr)
                 {

@@ -13,6 +13,7 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
 namespace BilliardsSaloon
@@ -116,6 +117,7 @@ namespace BilliardsSaloon
         void bindMaterial(const MaterialComponent& material, const glm::vec3& dynamicEmission, int ballVisualType, int ballNumber = 0);
         void renderShadows(Registry& registry, float alpha);
         void bindSceneShader();
+        [[nodiscard]] Mesh* meshFor(const StaticMeshComponent& component);
 
         std::unique_ptr<Shader> m_shader;
         std::unique_ptr<Shader> m_shadowShader;
@@ -147,6 +149,14 @@ namespace BilliardsSaloon
             float specular {0.4f};
         };
         std::vector<CueSegment> m_cue;
+
+        // Uploaded custom meshes, dropped once their data is gone.
+        struct CachedMesh
+        {
+            std::weak_ptr<const MeshData> data;
+            std::unique_ptr<Mesh> mesh;
+        };
+        std::unordered_map<const MeshData*, CachedMesh> m_customMeshes;
 
         void beginTranslucent();
         void endTranslucent();

@@ -14,6 +14,11 @@ All notable changes to Billiards Saloon. The format follows
   cue ball contact shadows, rails), with PCF filtering by quality.
 - Ball numbers printed in the white spot, from the game's own typeface.
 - Quality presets now choose MSAA (1/4/8), bloom and shadow detail.
+- A modelled tournament table (original design): cushions built from the
+  simulator's own nose lines, jaws and rounded jaw tips, so what you see is
+  what the balls hit; dark wood rails with 18 pearl sights, leather pocket
+  rims over open drop pockets, a metal trim line, a slim apron and square
+  legs. The table now stands at true height (cloth 30.5 in above the floor).
 
 ### Fixed
 - Spheres were wound clockwise, so culling showed the inside of the far

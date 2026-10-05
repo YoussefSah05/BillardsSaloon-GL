@@ -12,6 +12,7 @@ tests link, and the `BilliardsSaloon` executable.
 |------|--------|------|
 | `src/core/asset_paths.*` | bs_game | `resolveAssetPath`: exe-relative asset lookup (build tree, macOS bundle, source fallback). |
 | `src/ecs/` | bs_game | Sparse-set `Registry` with `view<...>().each(...)`. |
+| `src/scene/table_geometry.*`, `mesh_data.h` | bs_game | Headless meshes for the table furniture (cushions from the simulator's segments, rails with pocket cut-outs, rims, drops, sights, trim, apron, legs); the renderer uploads `MeshData` on first draw. |
 | `src/scene/components.h` | bs_game | Transform (with previous state for interpolation), Ball, Material, TableBounds, Camera tags. |
 | `src/gameplay/game_variant.*` | bs_game | Variant/table types, JSON loaders, rack layouts. |
 | `src/gameplay/match_session.*` | bs_game | A match: ECS world, shot state machine (place, aim, tip offset, elevation, charge, fire), playback, shot preview, replays, shot clock, referee, ball in hand, spotting, calls, push-outs, race to N. |

@@ -4,6 +4,7 @@
 #include "gameplay/sim_bridge.h"
 #include "sim/table.h"
 #include "render/camera.h"
+#include "scene/table_geometry.h"
 #include "scene/components.h"
 
 #include <string>
@@ -40,6 +41,31 @@ namespace BilliardsSaloon
             return entity;
         }
 
+        StaticMeshComponent primitive(MeshPrimitive shape)
+        {
+            return StaticMeshComponent{shape, nullptr, true};
+        }
+
+        StaticMeshComponent custom(MeshData data, bool castsShadow = true)
+        {
+            return StaticMeshComponent{MeshPrimitive::Custom, std::make_shared<const MeshData>(std::move(data)), castsShadow};
+        }
+
+        MaterialComponent material(const glm::vec3& albedo, MaterialSurfaceType surface, float roughness, float reflectivity, float clearcoat)
+        {
+            return MaterialComponent{
+                .albedo = albedo,
+                .specularStrength = 0.5f,
+                .shininess = 32.0f,
+                .surfaceType = surface,
+                .roughness = roughness,
+                .reflectivity = reflectivity,
+                .clearcoatStrength = clearcoat,
+                .emissionColor = glm::vec3(0.0f),
+                .emissionIntensity = 0.0f
+            };
+        }
+
         MaterialComponent ballMaterial(const BallSpawnDefinition& definition)
         {
             return MaterialComponent{
@@ -58,7 +84,7 @@ namespace BilliardsSaloon
         void attachBallVisual(Registry& registry, Entity ball, const BallSpawnDefinition& definition)
         {
             registry.emplace<NameComponent>(ball, NameComponent{definition.name});
-            registry.emplace<StaticMeshComponent>(ball, StaticMeshComponent{MeshPrimitive::Sphere});
+            registry.emplace<StaticMeshComponent>(ball, primitive(MeshPrimitive::Sphere));
             registry.emplace<MaterialComponent>(ball, ballMaterial(definition));
         }
     }
@@ -84,8 +110,6 @@ namespace BilliardsSaloon
         Registry& registry = session.registry();
         const GameVariantDefinition& variant = session.variant();
 
-        const float halfWidth = 0.5f * variant.table.clothWidth;
-        const float halfDepth = 0.5f * variant.table.clothDepth;
         const PointLightRig lightRig = saloonLightRig();
 
         const MaterialComponent clothMaterial{
@@ -96,30 +120,6 @@ namespace BilliardsSaloon
             .roughness = 0.58f,
             .reflectivity = 0.035f,
             .clearcoatStrength = 0.0f,
-            .emissionColor = glm::vec3(0.0f),
-            .emissionIntensity = 0.0f
-        };
-
-        const MaterialComponent railMaterial{
-            .albedo = glm::vec3(0.30f, 0.16f, 0.07f),
-            .specularStrength = 0.62f,
-            .shininess = 96.0f,
-            .surfaceType = MaterialSurfaceType::Wood,
-            .roughness = 0.34f,
-            .reflectivity = 0.04f,
-            .clearcoatStrength = 0.12f,
-            .emissionColor = glm::vec3(0.0f),
-            .emissionIntensity = 0.0f
-        };
-
-        const MaterialComponent legMaterial{
-            .albedo = glm::vec3(0.18f, 0.09f, 0.04f),
-            .specularStrength = 0.36f,
-            .shininess = 48.0f,
-            .surfaceType = MaterialSurfaceType::Wood,
-            .roughness = 0.42f,
-            .reflectivity = 0.04f,
-            .clearcoatStrength = 0.12f,
             .emissionColor = glm::vec3(0.0f),
             .emissionIntensity = 0.0f
         };
@@ -160,17 +160,42 @@ namespace BilliardsSaloon
             .emissionIntensity = 1.80f
         };
 
-        // The cloth is drawn on the session's table entity (which holds the bounds).
+        const TableStyle style;
+        const TableGeometry table = buildTableGeometry(Sim::buildPocketTable(variant.table.pocketGeometry), style);
+
+        // The cloth is drawn on the session's table entity.
         registry.emplace<NameComponent>(session.tableEntity(), NameComponent{"Table Cloth"});
         registry.emplace<TransformComponent>(session.tableEntity(), makeTransform(glm::vec3(0.0f)));
-        registry.emplace<StaticMeshComponent>(session.tableEntity(), StaticMeshComponent{MeshPrimitive::Plane});
+        registry.emplace<StaticMeshComponent>(session.tableEntity(), primitive(MeshPrimitive::Plane));
         registry.emplace<MaterialComponent>(session.tableEntity(), clothMaterial);
+
+        // A tournament table: cushions from the simulator's own geometry,
+        // dark wood rails with sights, leather pocket rims, a metal trim
+        // line, a slim apron and square legs. Original design, no brand.
+        MaterialComponent cushionMaterial = clothMaterial;
+        cushionMaterial.albedo *= 0.92f;
+        const MaterialComponent tableWood = material(glm::vec3(0.20f, 0.10f, 0.055f), MaterialSurfaceType::Wood, 0.40f, 0.035f, 0.06f);
+        const MaterialComponent leather = material(glm::vec3(0.035f, 0.032f, 0.030f), MaterialSurfaceType::Generic, 0.42f, 0.04f, 0.15f);
+        const MaterialComponent pocketDark = material(glm::vec3(0.012f, 0.012f, 0.014f), MaterialSurfaceType::Generic, 0.9f, 0.02f, 0.0f);
+        const MaterialComponent pearl = material(glm::vec3(0.93f, 0.91f, 0.86f), MaterialSurfaceType::Generic, 0.12f, 0.08f, 0.6f);
+        const MaterialComponent aluminium = material(glm::vec3(0.78f, 0.78f, 0.80f), MaterialSurfaceType::Generic, 0.28f, 0.55f, 0.0f);
+        const MaterialComponent apronFinish = material(glm::vec3(0.05f, 0.045f, 0.045f), MaterialSurfaceType::Generic, 0.35f, 0.04f, 0.3f);
+
+        const TransformComponent atOrigin = makeTransform(glm::vec3(0.0f));
+        createSceneEntity(registry, "Cushions", atOrigin, custom(table.cushions), cushionMaterial);
+        createSceneEntity(registry, "Rails", atOrigin, custom(table.rails), tableWood);
+        createSceneEntity(registry, "Pocket Rims", atOrigin, custom(table.pocketRims, false), leather);
+        createSceneEntity(registry, "Pocket Drops", atOrigin, custom(table.pocketCups, false), pocketDark);
+        createSceneEntity(registry, "Sights", atOrigin, custom(table.diamonds, false), pearl);
+        createSceneEntity(registry, "Trim", atOrigin, custom(table.trim), aluminium);
+        createSceneEntity(registry, "Apron", atOrigin, custom(table.apron), apronFinish);
+        createSceneEntity(registry, "Legs", atOrigin, custom(table.legs), apronFinish);
 
         createSceneEntity(
             registry,
             "Saloon Floor",
-            makeTransform(glm::vec3(0.0f, -0.46f, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), glm::vec3(4.8f, 1.0f, 4.8f)),
-            StaticMeshComponent{MeshPrimitive::Plane},
+            makeTransform(glm::vec3(0.0f, style.floorY, 0.0f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), glm::vec3(4.8f, 1.0f, 4.8f)),
+            primitive(MeshPrimitive::Plane),
             floorMaterial
         );
 
@@ -178,100 +203,12 @@ namespace BilliardsSaloon
             registry,
             "Back Wall",
             makeTransform(
-                glm::vec3(0.0f, 1.25f, -2.55f),
+                glm::vec3(0.0f, style.floorY + 1.6f, -2.55f),
                 glm::quat(glm::vec3(glm::radians(90.0f), 0.0f, 0.0f)),
                 glm::vec3(5.6f, 1.0f, 2.6f)
             ),
-            StaticMeshComponent{MeshPrimitive::Plane},
+            primitive(MeshPrimitive::Plane),
             wallMaterial
-        );
-
-        const float frameThickness = 0.16f;
-        const float frameHeight = 0.12f;
-        const float frameCenterY = -0.055f;
-
-        createSceneEntity(
-            registry,
-            "North Rail",
-            makeTransform(
-                glm::vec3(0.0f, frameCenterY, -(halfDepth + 0.5f * frameThickness)),
-                glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-                glm::vec3(variant.table.clothWidth + 2.0f * frameThickness, frameHeight, frameThickness)
-            ),
-            StaticMeshComponent{MeshPrimitive::Cube},
-            railMaterial
-        );
-
-        createSceneEntity(
-            registry,
-            "South Rail",
-            makeTransform(
-                glm::vec3(0.0f, frameCenterY, halfDepth + 0.5f * frameThickness),
-                glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-                glm::vec3(variant.table.clothWidth + 2.0f * frameThickness, frameHeight, frameThickness)
-            ),
-            StaticMeshComponent{MeshPrimitive::Cube},
-            railMaterial
-        );
-
-        createSceneEntity(
-            registry,
-            "West Rail",
-            makeTransform(
-                glm::vec3(-(halfWidth + 0.5f * frameThickness), frameCenterY, 0.0f),
-                glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-                glm::vec3(frameThickness, frameHeight, variant.table.clothDepth)
-            ),
-            StaticMeshComponent{MeshPrimitive::Cube},
-            railMaterial
-        );
-
-        createSceneEntity(
-            registry,
-            "East Rail",
-            makeTransform(
-                glm::vec3(halfWidth + 0.5f * frameThickness, frameCenterY, 0.0f),
-                glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
-                glm::vec3(frameThickness, frameHeight, variant.table.clothDepth)
-            ),
-            StaticMeshComponent{MeshPrimitive::Cube},
-            railMaterial
-        );
-
-        const float legOffsetX = halfWidth - 0.22f;
-        const float legOffsetZ = halfDepth - 0.15f;
-        const glm::vec3 legScale(0.16f, 0.84f, 0.16f);
-
-        createSceneEntity(
-            registry,
-            "North West Leg",
-            makeTransform(glm::vec3(-legOffsetX, -0.47f, -legOffsetZ), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), legScale),
-            StaticMeshComponent{MeshPrimitive::Cube},
-            legMaterial
-        );
-
-        createSceneEntity(
-            registry,
-            "North East Leg",
-            makeTransform(glm::vec3(legOffsetX, -0.47f, -legOffsetZ), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), legScale),
-            StaticMeshComponent{MeshPrimitive::Cube},
-            legMaterial
-        );
-
-        createSceneEntity(
-            registry,
-            "South West Leg",
-            makeTransform(glm::vec3(-legOffsetX, -0.47f, legOffsetZ), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), legScale),
-            StaticMeshComponent{MeshPrimitive::Cube},
-            legMaterial
-        );
-
-        createSceneEntity(
-            registry,
-            "South East Leg",
-            makeTransform(glm::vec3(legOffsetX, -0.47f, legOffsetZ), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), legScale),
-            StaticMeshComponent{MeshPrimitive::Cube},
-            legMaterial
         );
 
         for (std::size_t lightIndex = 0; lightIndex < lightRig.positions.size(); ++lightIndex)
@@ -284,35 +221,8 @@ namespace BilliardsSaloon
                     glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
                     glm::vec3(1.75f)
                 ),
-                StaticMeshComponent{MeshPrimitive::Sphere},
+                primitive(MeshPrimitive::Sphere),
                 lampMaterial
-            );
-        }
-
-        // Dark wells where the simulator's pockets are, drawn on top of the
-        // prototype's solid rails until the hall-visuals milestone models real pockets.
-        const MaterialComponent pocketMaterial{
-            .albedo = glm::vec3(0.015f, 0.015f, 0.017f),
-            .specularStrength = 0.02f,
-            .shininess = 4.0f,
-            .surfaceType = MaterialSurfaceType::Generic,
-            .roughness = 1.0f,
-            .reflectivity = 0.0f,
-            .clearcoatStrength = 0.0f,
-            .emissionColor = glm::vec3(0.0f),
-            .emissionIntensity = 0.0f
-        };
-        const Sim::Table pockets = Sim::buildPocketTable(variant.table.pocketGeometry);
-        for (const Sim::Pocket& pocket : pockets.pockets)
-        {
-            const glm::vec3 center = SimBridge::toGamePosition(pocket.center, variant.table.clothWidth, variant.table.clothDepth);
-            const float scale = static_cast<float>(pocket.radius) / variant.table.ballRadius;
-            createSceneEntity(
-                registry,
-                "Pocket",
-                makeTransform(glm::vec3(center.x, frameCenterY + 0.5f * frameHeight + 0.0015f, center.z), glm::quat(1.0f, 0.0f, 0.0f, 0.0f), glm::vec3(scale, 0.02f, scale)),
-                StaticMeshComponent{MeshPrimitive::Sphere},
-                pocketMaterial
             );
         }
 
