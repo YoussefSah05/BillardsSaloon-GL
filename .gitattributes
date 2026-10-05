@@ -1,0 +1,24 @@
+# Normalize text to LF in the repository; Windows scripts keep CRLF.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets: never diffed or line-normalized.
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.webp   binary
+*.ktx2   binary
+*.hdr    binary
+*.exr    binary
+*.glb    binary
+*.bin    binary
+*.ttf    binary
+*.otf    binary
+*.woff2  binary
+*.wav    binary
+*.ogg    binary
+*.flac   binary
+*.onnx   binary
+*.ico    binary
+*.icns   binary
