@@ -220,7 +220,7 @@
         </div>
     </div>
 
-    <div class="prompts" data-visible="aiming &amp;&amp; gamepad">
+    <div class="prompts" data-visible="aiming &amp;&amp; show_prompts &amp;&amp; gamepad">
         <span class="hint"><span class="k">Left stick</span> aim</span>
         <span class="hint"><span class="k">LB</span> fine aim</span>
         <span class="hint"><span class="k">Hold A</span> power</span>
@@ -230,7 +230,7 @@
         <span class="hint"><span class="k">Start</span> pause</span>
     </div>
 
-    <div class="prompts" data-visible="aiming &amp;&amp; !gamepad">
+    <div class="prompts" data-visible="aiming &amp;&amp; show_prompts &amp;&amp; !gamepad">
         <span class="hint"><span class="k">Mouse</span> aim</span>
         <span class="hint"><span class="k">Shift</span> fine aim</span>
         <span class="hint"><span class="k">Hold, drag back</span> power</span>

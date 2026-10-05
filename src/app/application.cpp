@@ -54,6 +54,7 @@ namespace BilliardsSaloon
         constexpr float MOUSE_SPIN_PER_POINT = 1.0f / 250.0f;
         constexpr float MOUSE_ORBIT_RADIANS_PER_POINT = 0.005f;
         constexpr float WHEEL_ZOOM_METERS_PER_STEP = 0.15f;
+        constexpr std::uint32_t PROMPT_SHOTS = 4;
 
         CameraViewMode nextCameraViewMode(CameraViewMode mode)
         {
@@ -165,10 +166,33 @@ namespace BilliardsSaloon
             .resume = [this]() { setShellState(ApplicationShellState::Gameplay); },
             .restartRack = [this]()
             {
-                m_session.resetRack();
-                setShellState(ApplicationShellState::Gameplay);
+                const auto restart = [this]()
+                {
+                    m_session.resetRack();
+                    setShellState(ApplicationShellState::Gameplay);
+                };
+                // Mid-frame, ask first; from the frame-over card, just go.
+                if (m_shellState == ApplicationShellState::PauseMenu)
+                {
+                    m_menus->askConfirmation("RESTART THE RACK?", "The current frame will be lost.", "RESTART", restart);
+                }
+                else
+                {
+                    restart();
+                }
             },
-            .returnToMainMenu = [this]() { setShellState(ApplicationShellState::MainMenu); }
+            .returnToMainMenu = [this]()
+            {
+                const auto leave = [this]() { setShellState(ApplicationShellState::MainMenu); };
+                if (m_shellState == ApplicationShellState::PauseMenu)
+                {
+                    m_menus->askConfirmation("LEAVE THE MATCH?", "The current frame will be lost.", "LEAVE", leave);
+                }
+                else
+                {
+                    leave();
+                }
+            }
         });
         m_settingsScreen = std::make_unique<SettingsScreen>(*m_ui, m_settings, SettingsScreenActions{
             .apply = [this](const GameSettings& settings) { applySettings(settings); },
@@ -285,7 +309,14 @@ namespace BilliardsSaloon
                 break;
 
             case ApplicationShellState::PauseMenu:
-                if (m_input.wasPressed(GLFW_KEY_ESCAPE) || backPressed || startPressed)
+                if (m_menus->confirmationOpen())
+                {
+                    if (m_input.wasPressed(GLFW_KEY_ESCAPE) || backPressed)
+                    {
+                        m_menus->cancelConfirmation();
+                    }
+                }
+                else if (m_input.wasPressed(GLFW_KEY_ESCAPE) || backPressed || startPressed)
                 {
                     setShellState(ApplicationShellState::Gameplay);
                 }
@@ -784,6 +815,8 @@ namespace BilliardsSaloon
         snapshot.strikeRight01 = shot.strikeRight01;
         snapshot.strikeForward01 = shot.strikeForward01;
         snapshot.gamepadPrompts = m_showGamepadPrompts;
+        // Control prompts teach the first few shots of a session, then step aside.
+        snapshot.showPrompts = m_session.resolvedShotCount() < PROMPT_SHOTS;
 
         std::string camera = cameraViewModeLabel(m_cameraRigState.mode);
         std::transform(camera.begin(), camera.end(), camera.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); });

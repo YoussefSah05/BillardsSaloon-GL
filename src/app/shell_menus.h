@@ -44,6 +44,13 @@ namespace BilliardsSaloon
         void show(MenuScreen screen);
         [[nodiscard]] MenuScreen shown() const { return m_shown; }
 
+        // A modal question over the current menu. onConfirm runs only if the
+        // player confirms; Cancel (the focused default) just closes it.
+        void askConfirmation(const std::string& title, const std::string& detail,
+                             const std::string& action, std::function<void()> onConfirm);
+        [[nodiscard]] bool confirmationOpen() const;
+        void cancelConfirmation();
+
         // Switch hint lines between keyboard/mouse and gamepad wording.
         void setGamepadPrompts(bool gamepad);
 
@@ -57,6 +64,11 @@ namespace BilliardsSaloon
         Rml::ElementDocument* m_mainMenu {nullptr};
         Rml::ElementDocument* m_pauseMenu {nullptr};
         Rml::ElementDocument* m_frameOver {nullptr};
+        Rml::ElementDocument* m_confirm {nullptr};
+        std::string m_confirmTitle;
+        std::string m_confirmDetail;
+        std::string m_confirmAction;
+        std::function<void()> m_onConfirm;
         std::string m_frameWinner;
         std::string m_frameDetail;
         std::string m_version;

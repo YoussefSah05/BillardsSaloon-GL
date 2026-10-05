@@ -135,6 +135,7 @@ namespace BilliardsSaloon
         model.Bind("camera_label", &m_cameraLabel);
         model.Bind("aiming", &m_aiming);
         model.Bind("gamepad", &m_gamepad);
+        model.Bind("show_prompts", &m_showPrompts);
 
         model.BindFunc("power_height", [this](Rml::Variant& value) { value = percent(m_power); });
         model.BindFunc("power_text", [this](Rml::Variant& value)
@@ -239,6 +240,7 @@ namespace BilliardsSaloon
         assign(m_model, m_cameraLabel, snapshot.cameraLabel, "camera_label");
         assign(m_model, m_aiming, snapshot.aiming, "aiming");
         assign(m_model, m_gamepad, snapshot.gamepadPrompts, "gamepad");
+        assign(m_model, m_showPrompts, snapshot.showPrompts, "show_prompts");
         setTray(0, snapshot.remainingBalls[0]);
         setTray(1, snapshot.remainingBalls[1]);
 

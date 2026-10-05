@@ -41,6 +41,7 @@ namespace BilliardsSaloon
         float strikeRight01 {0.0f};
         float strikeForward01 {0.0f};
         bool gamepadPrompts {false};
+        bool showPrompts {true};
     };
 
     // The in-match HUD (assets/ui/hud.rml): scorebug, ball tray, power meter,
@@ -80,6 +81,7 @@ namespace BilliardsSaloon
         std::string m_cameraLabel;
         bool m_aiming {false};
         bool m_gamepad {false};
+        bool m_showPrompts {true};
         float m_power {0.0f};
         float m_lastPower {0.0f};
         float m_strikeRight {0.0f};
