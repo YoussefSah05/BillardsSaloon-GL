@@ -111,8 +111,10 @@ endfunction()
 # Event-based billiards simulator: double precision, no graphics, no game
 # state. Linked by the game, the tests and (later) the Python bindings.
 add_library(bs_sim STATIC
+    src/sim/events.cpp
     src/sim/motion.cpp
     src/sim/roots.cpp
+    src/sim/table.cpp
 )
 target_include_directories(bs_sim PUBLIC src)
 target_link_libraries(bs_sim PUBLIC glm::glm)
@@ -218,6 +220,7 @@ if(BS_BUILD_TESTS)
         tests/test_gamepad_math.cpp
         tests/test_sim_roots.cpp
         tests/test_sim_motion.cpp
+        tests/test_sim_events.cpp
         tests/test_physics.cpp
         tests/test_asset_paths.cpp
     )
