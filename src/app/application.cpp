@@ -1,6 +1,5 @@
 #include "app/application.h"
 
-#include "app/overlay_screens.h"
 #include "app/saloon_scene.h"
 #include "render/screenshot.h"
 #include "scene/components.h"
@@ -8,6 +7,7 @@
 #include <GLFW/glfw3.h>
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <iostream>
 #include <optional>
@@ -31,6 +31,9 @@ namespace BilliardsSaloon
 
                 case ApplicationShellState::PauseMenu:
                     return "Paused";
+
+                case ApplicationShellState::FrameOver:
+                    return "Frame over";
             }
 
             return "Unknown";
@@ -85,6 +88,7 @@ namespace BilliardsSaloon
         m_cameraEntity = createMainCamera(m_session.registry());
 
         m_ui = std::make_unique<UiSystem>(m_window);
+        m_hud = std::make_unique<HudScreen>(*m_ui, variant);
         m_menus = std::make_unique<ShellMenus>(*m_ui, ShellMenuActions{
             .startMatch = [this]()
             {
@@ -145,6 +149,7 @@ namespace BilliardsSaloon
 
             const double frameTime = std::min(m_timer.tick(), MAX_FRAME_TIME);
             processInput(static_cast<float>(frameTime));
+            updateHud(static_cast<float>(frameTime));
 
             m_accumulator += frameTime;
             std::uint32_t fixedStepsThisFrame = 0;
@@ -194,6 +199,13 @@ namespace BilliardsSaloon
                 if (m_input.wasPressed(GLFW_KEY_ESCAPE))
                 {
                     setShellState(ApplicationShellState::Gameplay);
+                }
+                break;
+
+            case ApplicationShellState::FrameOver:
+                if (m_input.wasPressed(GLFW_KEY_ESCAPE))
+                {
+                    setShellState(ApplicationShellState::MainMenu);
                 }
                 break;
 
@@ -355,6 +367,7 @@ namespace BilliardsSaloon
     void Application::setShellState(ApplicationShellState state)
     {
         m_shellState = state;
+        m_frameOverDelay = -1.0f;
         m_cameraInput = CameraRigInputAxes{};
         m_session.cancelHeldShot();
 
@@ -366,6 +379,10 @@ namespace BilliardsSaloon
 
             case ApplicationShellState::PauseMenu:
                 m_menus->show(MenuScreen::Pause);
+                break;
+
+            case ApplicationShellState::FrameOver:
+                m_menus->show(MenuScreen::FrameOver);
                 break;
 
             case ApplicationShellState::Gameplay:
@@ -514,6 +531,97 @@ namespace BilliardsSaloon
         cameraTransform->rotation = blendedPose.rotation;
     }
 
+    HudSnapshot Application::buildHudSnapshot() const
+    {
+        const MatchState& match = m_session.matchState();
+        const ShotState& shot = m_session.shotState();
+
+        HudSnapshot snapshot;
+        snapshot.activePlayer = std::clamp(match.activePlayerIndex, 0, 1);
+        snapshot.groups = {match.players[0].targetGroup, match.players[1].targetGroup};
+        snapshot.discipline = m_session.variant().displayName;
+        std::transform(snapshot.discipline.begin(), snapshot.discipline.end(), snapshot.discipline.begin(),
+            [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+        snapshot.aiming = (m_shellState == ApplicationShellState::Gameplay) && m_session.acceptsShotInput();
+        snapshot.power01 = shot.charge01;
+        snapshot.strikeRight01 = shot.strikeRight01;
+        snapshot.strikeForward01 = shot.strikeForward01;
+
+        std::string camera = cameraViewModeLabel(m_cameraRigState.mode);
+        std::transform(camera.begin(), camera.end(), camera.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+        snapshot.cameraLabel = camera + " CAM";
+
+        for (std::size_t player = 0; player < 2; ++player)
+        {
+            const PlayerTargetGroup group = snapshot.groups[player];
+            if (group == PlayerTargetGroup::None)
+            {
+                continue;
+            }
+
+            const BallRuleTag tag = (group == PlayerTargetGroup::Solids) ? BallRuleTag::Solid : BallRuleTag::Stripe;
+            for (const Entity entity : m_session.objectBallEntities())
+            {
+                const BallComponent& ball = m_session.registry().get<BallComponent>(entity);
+                if (!ball.pocketed && (ball.ruleTag == tag))
+                {
+                    snapshot.remainingBalls[player].push_back(ball.number);
+                }
+            }
+            std::sort(snapshot.remainingBalls[player].begin(), snapshot.remainingBalls[player].end());
+        }
+
+        return snapshot;
+    }
+
+    void Application::updateHud(float frameTimeSeconds)
+    {
+        m_hud->setVisible(m_shellState != ApplicationShellState::MainMenu);
+
+        const HudSnapshot snapshot = buildHudSnapshot();
+
+        // Remember the power of each shot as it is struck, for the meter's marker.
+        const ShotState& shot = m_session.shotState();
+        if (shot.phase == ShotPhase::Charging)
+        {
+            m_chargeBeforeShot = shot.charge01;
+        }
+        if ((shot.phase == ShotPhase::BallsInMotion) && (m_previousShotPhase != ShotPhase::BallsInMotion))
+        {
+            m_hud->markShotPower(m_chargeBeforeShot);
+        }
+        m_previousShotPhase = shot.phase;
+
+        if (m_session.resolvedShotCount() != m_announcedShots)
+        {
+            m_announcedShots = m_session.resolvedShotCount();
+            const ShotOutcome& outcome = m_session.lastOutcome();
+            m_hud->announce(outcome, snapshot);
+
+            if (outcome.frameOver && (outcome.winner >= 0))
+            {
+                const std::string& winner = snapshot.playerNames[static_cast<std::size_t>(outcome.winner)];
+                const char* detail =
+                    (outcome.frameEnd == FrameEndReason::EightBallPotted) ? "The 8-ball went down after a cleared group."
+                    : (outcome.frameEnd == FrameEndReason::EightBallPottedOnFoul) ? "The 8-ball went down on a foul."
+                    : "The 8-ball went down before the group was cleared.";
+                m_menus->setFrameResult(winner + " WINS THE FRAME", detail);
+                m_frameOverDelay = 1.8f;   // let the referee banner play first
+            }
+        }
+
+        m_hud->update(snapshot, frameTimeSeconds);
+
+        if ((m_frameOverDelay > 0.0f) && (m_shellState == ApplicationShellState::Gameplay))
+        {
+            m_frameOverDelay -= frameTimeSeconds;
+            if (m_frameOverDelay <= 0.0f)
+            {
+                setShellState(ApplicationShellState::FrameOver);
+            }
+        }
+    }
+
     void Application::render(double alpha)
     {
         const MatchState& match = m_session.matchState();
@@ -538,6 +646,7 @@ namespace BilliardsSaloon
                 break;
 
             case ApplicationShellState::Gameplay:
+            case ApplicationShellState::FrameOver:
                 settings.clearColor = frameOver
                     ? glm::vec3(0.03f, 0.025f, 0.03f)
                     : glm::vec3(0.035f, 0.025f, 0.02f);
@@ -582,26 +691,6 @@ namespace BilliardsSaloon
                 shot.strikeRight01,
                 shot.strikeForward01
             );
-        }
-
-        // The scorebug stays visible under the pause overlay.
-        if (m_shellState != ApplicationShellState::MainMenu)
-        {
-            const int activePlayer = std::clamp(match.activePlayerIndex, 0, 1);
-
-            drawGameplayHud(*m_renderer, view, GameplayHudModel{
-                .disciplineName = m_session.variant().displayName,
-                .activePlayerIndex = activePlayer,
-                .activePlayerGroup = match.players[activePlayer].targetGroup,
-                .shotPhase = shot.phase,
-                .flowPhase = match.flowPhase,
-                .foulCommitted = match.foulCommittedThisTurn,
-                .ballInHand = match.ballInHand,
-                .winnerPlayerIndex = frameOver ? match.winnerPlayerIndex : -1,
-                .charge01 = shot.charge01,
-                .quality = m_renderQuality,
-                .cameraMode = m_cameraRigState.mode
-            });
         }
 
         m_ui->update();

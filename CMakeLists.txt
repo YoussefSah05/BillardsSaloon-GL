@@ -135,7 +135,7 @@ bs_set_warnings(bs_game)
 add_executable(BilliardsSaloon
     src/app/main.cpp
     src/app/application.cpp
-    src/app/overlay_screens.cpp
+    src/app/hud_screen.cpp
     src/app/saloon_scene.cpp
     src/app/shell_menus.cpp
     src/platform/input.cpp
@@ -147,7 +147,6 @@ add_executable(BilliardsSaloon
     src/render/mesh.cpp
     src/render/camera.cpp
     src/render/camera_rig.cpp
-    src/render/ui_overlay.cpp
     src/ui/ui_system.cpp
     external/glad/src/gl.c
 )

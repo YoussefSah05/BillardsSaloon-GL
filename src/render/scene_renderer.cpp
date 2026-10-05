@@ -124,12 +124,6 @@ namespace BilliardsSaloon
         outView.forward = interpolated.rotation * glm::vec3(0.0f, 0.0f, -1.0f);
         outView.up = interpolated.rotation * glm::vec3(0.0f, 1.0f, 0.0f);
         outView.right = interpolated.rotation * glm::vec3(1.0f, 0.0f, 0.0f);
-        outView.overlayFrame = UiOverlayFrame{
-            .rotation = interpolated.rotation,
-            .right = outView.right,
-            .up = outView.up
-        };
-
         const float aspectRatio =
             static_cast<float>(settings.viewportWidth) / static_cast<float>(std::max(settings.viewportHeight, 1));
 

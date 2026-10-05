@@ -4,7 +4,16 @@
     <link type="text/rcss" href="theme.rcss"/>
     <style>
         body {
-            background-color: rgba(8, 9, 11, 140);
+            z-index: 10;
+            background-color: rgba(8, 9, 11, 120);
+        }
+        /* Blurs the table but leaves the scorebug readable. */
+        .dim {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 110dp;
+            bottom: 0;
             backdrop-filter: blur(8dp);
         }
         .panel {
@@ -32,6 +41,7 @@
     </style>
 </head>
 <body class="screen" data-model="shell">
+    <div class="dim"></div>
     <div class="panel">
         <h2>PAUSED</h2>
         <button class="menu-item" id="resume" autofocus data-event-click="resume"><span class="label">RESUME</span></button>

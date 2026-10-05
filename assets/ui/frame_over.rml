@@ -1,0 +1,51 @@
+<rml>
+<head>
+    <title>Frame over</title>
+    <link type="text/rcss" href="theme.rcss"/>
+    <style>
+        body {
+            z-index: 10;
+            background-color: rgba(8, 9, 11, 110);
+        }
+        .card {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 600dp;
+            margin-left: -300dp;
+            margin-top: -170dp;
+            padding: 30dp 40dp 26dp;
+            box-sizing: border-box;
+            background-color: rgba(16, 18, 21, 245);
+            border-top: 4dp #D4A94A;
+            text-align: center;
+        }
+        .card .eyebrow { color: #D4A94A; }
+        .card h2 {
+            margin: 8dp 0 6dp;
+            font-weight: 800;
+            font-size: 42dp;
+            letter-spacing: 1dp;
+        }
+        .card .detail {
+            margin-bottom: 24dp;
+            font-size: 16dp;
+            color: #C9C3B9;
+        }
+        .card .menu-item {
+            display: inline-block;
+            width: 240dp;
+            margin: 0 6dp;
+        }
+    </style>
+</head>
+<body class="screen" data-model="shell">
+    <div class="card">
+        <div class="eyebrow">FRAME OVER</div>
+        <h2>{{ frame_winner }}</h2>
+        <div class="detail">{{ frame_detail }}</div>
+        <button class="menu-item" id="nextframe" autofocus data-event-click="restart_rack"><span class="label">NEXT FRAME</span></button>
+        <button class="menu-item" id="framemenu" data-event-click="main_menu"><span class="label">MAIN MENU</span></button>
+    </div>
+</body>
+</rml>

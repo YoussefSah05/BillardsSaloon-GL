@@ -1,0 +1,248 @@
+<rml>
+<head>
+    <title>Match HUD</title>
+    <link type="text/rcss" href="theme.rcss"/>
+    <style>
+        body { z-index: 0; }
+
+        /* ---- Scorebug -------------------------------------------- */
+        .scorebug { position: absolute; left: 40dp; top: 32dp; }
+        .bug { display: flex; height: 52dp; font-family: "Barlow Condensed"; }
+        .bug .marker { width: 7dp; height: 52dp; background-color: rgba(0, 0, 0, 0); }
+        .bug .marker.on { background-color: #D4A94A; }
+        .bug .player {
+            height: 52dp;
+            padding: 6dp 18dp 0;
+            box-sizing: border-box;
+            background-color: rgba(16, 18, 21, 240);
+        }
+        .bug .player .name { font-weight: 600; font-size: 21dp; letter-spacing: 0.8dp; color: #C9C3B9; }
+        .bug .player .group { font-size: 12dp; letter-spacing: 2dp; color: #A9A39A; }
+        .bug .player.active .name { font-weight: 700; color: #F2EEE6; }
+        .bug .player.active .group { color: #D4A94A; }
+        .bug .middle {
+            height: 52dp;
+            padding: 0 14dp;
+            box-sizing: border-box;
+            background-color: #F2EEE6;
+            color: #111214;
+            font-weight: 800;
+            font-size: 18dp;
+            line-height: 52dp;
+            letter-spacing: 1dp;
+        }
+        .tray { display: flex; margin-top: 8dp; padding-left: 12dp; }
+        .tray .side { display: flex; margin-right: 32dp; }
+        .tray .ball {
+            width: 16dp;
+            height: 16dp;
+            margin-right: 5dp;
+            border-radius: 8dp;
+            background-color: #F7F4EC;
+        }
+        .tray .band { margin-top: 4dp; height: 8dp; }
+
+        .camera-chip {
+            position: absolute;
+            right: 40dp;
+            top: 32dp;
+            padding: 8dp 14dp;
+            background-color: rgba(16, 18, 21, 230);
+            font-family: "Barlow Condensed";
+            font-size: 15dp;
+            letter-spacing: 2dp;
+            color: #A9A39A;
+        }
+
+        /* ---- Power meter ------------------------------------------ */
+        .power { position: absolute; right: 64dp; top: 50%; margin-top: -205dp; width: 60dp; text-align: center; }
+        .power .label { font-family: "Barlow Condensed"; font-size: 14dp; letter-spacing: 2dp; color: #A9A39A; margin-bottom: 10dp; }
+        .power .track {
+            position: relative;
+            width: 22dp;
+            height: 340dp;
+            margin: 0 auto;
+            background-color: rgba(16, 18, 21, 235);
+            border: 1dp rgba(242, 238, 230, 64);
+        }
+        .power .fill { position: absolute; left: 3dp; right: 3dp; bottom: 3dp; background-color: #D4A94A; }
+        .power .last { position: absolute; left: -8dp; right: -8dp; height: 2dp; background-color: #F2EEE6; }
+        .power .value { margin-top: 10dp; font-family: "Barlow Condensed"; font-weight: 800; font-size: 24dp; }
+
+        /* ---- Spin widget ------------------------------------------ */
+        .spin {
+            position: absolute;
+            right: 40dp;
+            bottom: 32dp;
+            display: flex;
+            align-items: center;
+            padding: 14dp 18dp;
+            background-color: rgba(16, 18, 21, 235);
+        }
+        .spin .text { margin-right: 16dp; width: 150dp; }
+        .spin .text .name { font-family: "Barlow Condensed"; font-weight: 700; font-size: 21dp; }
+        .spin .text .hint { font-size: 14dp; color: #C9C3B9; }
+        .spin .ball { position: relative; width: 96dp; height: 96dp; border-radius: 48dp; background-color: #EDE9E0; }
+        .spin .ball .v { position: absolute; left: 47dp; top: 8dp; width: 2dp; height: 80dp; background-color: rgba(17, 18, 20, 46); }
+        .spin .ball .h { position: absolute; top: 47dp; left: 8dp; height: 2dp; width: 80dp; background-color: rgba(17, 18, 20, 46); }
+        .spin .tip {
+            position: absolute;
+            width: 18dp;
+            height: 18dp;
+            box-sizing: border-box;
+            border: 3dp #D4A94A;
+            border-radius: 9dp;
+            background-color: #1A2B4A;
+        }
+
+        /* ---- Prompts ---------------------------------------------- */
+        .prompts {
+            position: absolute;
+            left: 50%;
+            bottom: 32dp;
+            width: 720dp;
+            margin-left: -360dp;
+            padding: 10dp 0;
+            text-align: center;
+            background-color: rgba(16, 18, 21, 200);
+            font-size: 14dp;
+            color: #C9C3B9;
+        }
+        .prompts .hint { margin: 0 9dp; }
+        .prompts .hint .k { color: #F2EEE6; font-weight: 600; }
+
+        /* ---- Referee banner and lower third ------------------------ */
+        .banner {
+            position: absolute;
+            left: 50%;
+            top: 110dp;
+            width: 640dp;
+            margin-left: -320dp;
+            display: flex;
+            height: 62dp;
+            font-family: "Barlow Condensed";
+            opacity: 0;
+            transform: translateY(-16dp);
+            transition: opacity transform 0.25s cubic-out;
+        }
+        .banner.visible { opacity: 1; transform: translateY(0dp); }
+        .banner .kind {
+            padding: 0 24dp;
+            font-weight: 800;
+            font-size: 30dp;
+            line-height: 62dp;
+            letter-spacing: 2dp;
+            background-color: #5B9BD5;
+            color: #0B0D0F;
+        }
+        .banner.foul .kind { background-color: #C9443A; color: #FFFFFF; }
+        .banner.legal .kind { background-color: #59B88A; color: #0B0D0F; }
+        .banner .msg { flex: 1; padding: 8dp 22dp 0; background-color: rgba(16, 18, 21, 245); }
+        .banner .msg .who { font-size: 12dp; letter-spacing: 2.5dp; color: #A9A39A; }
+        .banner .msg .what { font-weight: 700; font-size: 24dp; letter-spacing: 0.6dp; }
+
+        .lowerthird {
+            position: absolute;
+            left: 40dp;
+            bottom: 150dp;
+            display: flex;
+            height: 56dp;
+            font-family: "Barlow Condensed";
+            opacity: 0;
+            transform: translateX(-24dp);
+            transition: opacity transform 0.28s cubic-out;
+        }
+        .lowerthird.visible { opacity: 1; transform: translateX(0dp); }
+        .lowerthird .tag {
+            padding: 0 18dp;
+            background-color: #D4A94A;
+            color: #111214;
+            font-weight: 800;
+            font-size: 18dp;
+            line-height: 56dp;
+            letter-spacing: 2dp;
+        }
+        .lowerthird .text { padding: 6dp 24dp 0 16dp; background-color: rgba(16, 18, 21, 242); }
+        .lowerthird .title { font-weight: 700; font-size: 22dp; letter-spacing: 0.8dp; }
+        .lowerthird .sub { font-family: Barlow; font-size: 13dp; color: #C9C3B9; }
+    </style>
+</head>
+<body class="screen" data-model="hud">
+    <div class="scorebug">
+        <div class="bug">
+            <div class="marker" data-class-on="active == 0"></div>
+            <div class="player" data-class-active="active == 0">
+                <div class="name">{{ p1_name }}</div>
+                <div class="group">{{ p1_group }}</div>
+            </div>
+            <div class="middle">{{ discipline }}</div>
+            <div class="player" data-class-active="active == 1">
+                <div class="name">{{ p2_name }}</div>
+                <div class="group">{{ p2_group }}</div>
+            </div>
+            <div class="marker" data-class-on="active == 1"></div>
+        </div>
+        <div class="tray">
+            <div class="side" data-if="groups_assigned">
+                <div class="ball" data-for="ball : tray1" data-style-background-color="ball.fill">
+                    <div class="band" data-if="ball.stripe" data-style-background-color="ball.color"></div>
+                </div>
+            </div>
+            <div class="side" data-if="groups_assigned">
+                <div class="ball" data-for="ball : tray2" data-style-background-color="ball.fill">
+                    <div class="band" data-if="ball.stripe" data-style-background-color="ball.color"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="camera-chip">{{ camera_label }}</div>
+
+    <div class="power" data-visible="aiming">
+        <div class="label">POWER</div>
+        <div class="track">
+            <div class="fill" data-style-height="power_height"></div>
+            <div class="last" data-style-bottom="last_power_bottom"></div>
+        </div>
+        <div class="value">{{ power_text }}</div>
+    </div>
+
+    <div class="spin" data-visible="aiming">
+        <div class="text">
+            <div class="eyebrow">SPIN</div>
+            <div class="name">{{ spin_name }}</div>
+            <div class="hint">{{ spin_hint }}</div>
+        </div>
+        <div class="ball">
+            <div class="v"></div>
+            <div class="h"></div>
+            <div class="tip" data-style-left="tip_left" data-style-top="tip_top"></div>
+        </div>
+    </div>
+
+    <div class="prompts" data-visible="aiming">
+        <span class="hint"><span class="k">Mouse</span> aim</span>
+        <span class="hint"><span class="k">Shift</span> fine aim</span>
+        <span class="hint"><span class="k">Hold, drag back</span> power</span>
+        <span class="hint"><span class="k">Release</span> shoot</span>
+        <span class="hint"><span class="k">Right-drag</span> spin</span>
+        <span class="hint"><span class="k">Tab</span> camera</span>
+    </div>
+
+    <div class="banner" data-class-visible="banner_visible" data-class-foul="banner_foul" data-class-legal="banner_legal">
+        <div class="kind">{{ banner_kind }}</div>
+        <div class="msg">
+            <div class="who">REFEREE</div>
+            <div class="what">{{ banner_text }}</div>
+        </div>
+    </div>
+
+    <div class="lowerthird" data-class-visible="lower_visible">
+        <div class="tag">{{ lower_tag }}</div>
+        <div class="text">
+            <div class="title">{{ lower_title }}</div>
+            <div class="sub">{{ lower_sub }}</div>
+        </div>
+    </div>
+</body>
+</rml>
