@@ -216,8 +216,33 @@ Not yet modelled: cue elevation (jump and massé shots) and airborne balls.
 - The old solver stays behind `--physics legacy` until the new one passes
   play-tests, then is removed.
 - Done: closed-form checks, randomised root-finder tests, determinism, energy
-  monotonicity, a break with no overlaps at rest. Still to do: golden shots
-  compared against pooltool's output.
+  monotonicity, a break with no overlaps at rest, and golden shots.
+
+### Golden shots against pooltool
+
+`tools/golden/generate_golden_shots.py` runs ten reference shots through
+pooltool 0.6.0, set up like the game (9 ft table, Han 2005 cushions, the same
+ball, cue and pocket parameters). It writes `tests/data/golden_shots.json`,
+and `tests/test_sim_golden.cpp` replays the shots through `bs_sim`. The shots
+are stop, follow, draw, a thin cut, side spin into a cushion, a running-english
+bank, a pot, a jaw hit, a three-ball cluster, and a length-of-table draw.
+
+Result: the same collisions and pockets in the same order. Final positions
+agree within 0.43 mm (typically under 0.1 mm), and event times within about
+0.03%. The test allows 1 mm and 0.1% (relative).
+
+pooltool 0.6.0 has a defect these shots expose. Right after a ball changes
+motion state, it can report a collision between two balls that are apart and
+separating. In the stop shot, at t = 2.283 s, the balls are 78 mm apart and
+separating at 0.34 m/s. Its kiss step then moves them into contact and swaps
+their velocities, and this repeats every ~15 ms. The generator detects such
+events, and the fixture keeps the reference only up to the first one.
+`bs_sim` accepts only approaching contacts and does not have the defect.
+Regenerate with:
+
+```bash
+uv run --python 3.12 --with pooltool-billiards==0.6.0 tools/golden/generate_golden_shots.py
+```
 
 ## References
 

@@ -31,6 +31,10 @@ All notable changes to Billiards Saloon. The format follows
 - Scorebug for rotation games: the balls left with the one to hit marked,
   and the foul count with a warning on two.
 - `--screen setup` and `--scenario foul|choice|call` for captures.
+- Golden shots: ten reference shots from pooltool (generator in
+  `tools/golden/`) replayed against the simulator; final positions agree
+  within 0.5 mm. The comparison found a pooltool 0.6.0 defect (phantom
+  collisions between separating balls) that the simulator does not share.
 
 ### Changed
 - The table is a WPA 9 ft table (2.54 × 1.27 m) with pocket geometry and
