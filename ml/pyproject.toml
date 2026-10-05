@@ -1,0 +1,15 @@
+[project]
+name = "billiards-ml"
+version = "0.1.0"
+description = "Self-play learning for Billiards Saloon: data generation, training, ONNX export"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "numpy>=2.0",
+    "torch>=2.4",
+    "onnx>=1.16",
+    "onnxruntime>=1.19",
+    "tqdm>=4.66",
+]
+
+[tool.uv]
+package = false

@@ -12,6 +12,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(BS_BUILD_TESTS "Build the unit test executable" ON)
+option(BS_BUILD_PYTHON "Build the billiards_sim Python module (needs Python 3.12 dev)" OFF)
 option(BS_WARNINGS_AS_ERRORS "Treat compiler warnings in project code as errors" OFF)
 
 include(FetchContent)
@@ -146,6 +147,8 @@ add_library(bs_game STATIC
     src/gameplay/game_variant.cpp
     src/gameplay/match_session.cpp
     src/ai/ai_profile.cpp
+    src/ai/environment.cpp
+    src/ai/features.cpp
     src/ai/planner.cpp
     src/audio/shot_sounds.cpp
     src/audio/sound_synth.cpp
@@ -236,6 +239,22 @@ add_custom_target(bs_assets ALL
 )
 add_dependencies(BilliardsSaloon bs_assets)
 
+# Python bindings for training (ml/): the simulator, referee and classical AI.
+if(BS_BUILD_PYTHON)
+    find_package(Python 3.12 COMPONENTS Interpreter Development.Module REQUIRED)
+    set(PYBIND11_FINDPYTHON ON)   # use the Python found above, not pybind11's own search
+    FetchContent_Declare(
+        pybind11
+        GIT_REPOSITORY https://github.com/pybind/pybind11.git
+        GIT_TAG v2.13.6
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(pybind11)
+    pybind11_add_module(billiards_sim src/python/billiards_sim_module.cpp)
+    target_link_libraries(billiards_sim PRIVATE bs_game)
+    set_target_properties(billiards_sim PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/ml)
+endif()
+
 # Development tool: writes the synthesised sounds to WAV files.
 add_executable(bs_sound_preview tools/sound_preview/main.cpp)
 target_link_libraries(bs_sound_preview PRIVATE bs_game)
@@ -265,6 +284,7 @@ if(BS_BUILD_TESTS)
         tests/test_equipment.cpp
         tests/test_audio.cpp
         tests/test_ai.cpp
+        tests/test_environment.cpp
         tests/test_game_variant.cpp
         tests/test_game_data.cpp
         tests/test_launch_options.cpp
