@@ -34,7 +34,10 @@ materials are scheduled for the hall-visuals milestone.
 - Event-based physics on a WPA 9 ft table: each shot is simulated exactly
   (sliding, rolling and spinning in closed form, ball-ball throw, Han 2005
   cushions, pocket jaws, squirt) and played back in real time.
-- Camera modes: aim, table overview, shot follow, free look.
+- Camera modes: broadcast (director cuts), aim, table overview, shot follow, free look.
+- A modelled tournament table under physically based lighting with lamp
+  shadows, and a Locker to choose cloth, rails, trim, pockets, ball set, cue
+  and hall lighting.
 - Broadcast-style main menu, pause menu and in-match HUD (RmlUi): scorebug,
   ball trays, power meter, spin widget, referee banners that name each foul,
   and a frame-over card.

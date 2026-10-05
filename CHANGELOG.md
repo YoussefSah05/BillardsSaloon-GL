@@ -19,6 +19,14 @@ All notable changes to Billiards Saloon. The format follows
   what the balls hit; dark wood rails with 18 pearl sights, leather pocket
   rims over open drop pockets, a metal trim line, a slim apron and square
   legs. The table now stands at true height (cloth 30.5 in above the floor).
+- The Locker (main menu): cloth, rails, trim, pocket leather, ball set,
+  cue and hall lighting, changed live on the table behind the menu and
+  saved in settings. The catalogue is data
+  (`assets/data/equipment/catalog.json`): five cloths, four rail finishes,
+  three trims, three leathers, two ball sets (the broadcast set has a
+  measle cue ball), three cues and three lighting moods (Tournament Arena,
+  Classic Saloon, Night Final). Original designs, no brands.
+- `--screen locker` for captures.
 
 ### Fixed
 - Spheres were wound clockwise, so culling showed the inside of the far

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "app/hud_screen.h"
+#include "app/locker_screen.h"
 #include "app/match_setup_screen.h"
 #include "app/settings_screen.h"
 #include "core/gamepad_math.h"
@@ -32,6 +33,7 @@ namespace BilliardsSaloon
         FrameOver,
         Settings,
         MatchSetup,       // discipline and race length before a quick match
+        Locker,           // equipment and hall, previewed on the table
         RefereeChoice     // a player answers the referee (re-rack, push-out reply...)
     };
 
@@ -53,6 +55,8 @@ namespace BilliardsSaloon
         void startMatch(const MatchSetup& setup);
         [[nodiscard]] MatchSetup savedMatchSetup() const;
         void openRefereeChoice();
+        // Applies the chosen equipment to the scene, the cue and the lights.
+        void applyEquipment();
         void setFrameResultText(const ShotOutcome& outcome, const HudSnapshot& snapshot);
 
         // D-pad / left stick / A / B drive the menus through the UI's own
@@ -110,6 +114,7 @@ namespace BilliardsSaloon
         std::unique_ptr<ShellMenus> m_menus;
         std::unique_ptr<SettingsScreen> m_settingsScreen;
         std::unique_ptr<MatchSetupScreen> m_matchSetup;
+        std::unique_ptr<LockerScreen> m_locker;
         ApplicationShellState m_settingsReturnState {ApplicationShellState::MainMenu};
 
         ApplicationShellState m_shellState {ApplicationShellState::MainMenu};

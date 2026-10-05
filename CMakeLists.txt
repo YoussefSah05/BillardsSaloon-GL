@@ -131,6 +131,7 @@ add_library(bs_game STATIC
     src/core/settings.cpp
     src/gameplay/shot_state.cpp
     src/gameplay/director.cpp
+    src/gameplay/equipment.cpp
     src/gameplay/game_variant.cpp
     src/gameplay/match_session.cpp
     src/rules/racking.cpp
@@ -153,6 +154,7 @@ add_executable(BilliardsSaloon
     src/app/main.cpp
     src/app/application.cpp
     src/app/hud_screen.cpp
+    src/app/locker_screen.cpp
     src/app/match_setup_screen.cpp
     src/app/saloon_scene.cpp
     src/app/settings_screen.cpp
@@ -227,6 +229,7 @@ if(BS_BUILD_TESTS)
         tests/test_match_rules.cpp
         tests/test_director.cpp
         tests/test_table_geometry.cpp
+        tests/test_equipment.cpp
         tests/test_game_variant.cpp
         tests/test_game_data.cpp
         tests/test_launch_options.cpp

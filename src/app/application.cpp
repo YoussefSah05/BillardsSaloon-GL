@@ -1,6 +1,7 @@
 #include "app/application.h"
 
 #include "app/saloon_scene.h"
+#include "gameplay/equipment.h"
 #include "render/screenshot.h"
 #include "scene/components.h"
 
@@ -45,6 +46,9 @@ namespace BilliardsSaloon
 
                 case ApplicationShellState::MatchSetup:
                     return "Match setup";
+
+                case ApplicationShellState::Locker:
+                    return "Locker";
 
                 case ApplicationShellState::RefereeChoice:
                     return "Referee";
@@ -179,6 +183,7 @@ namespace BilliardsSaloon
         m_menus = std::make_unique<ShellMenus>(*m_ui, ShellMenuActions{
             .startMatch = [this]() { setShellState(ApplicationShellState::MatchSetup); },
             .openSettings = [this]() { openSettings(); },
+            .openLocker = [this]() { setShellState(ApplicationShellState::Locker); },
             .quit = [this]() { m_window.requestClose(); },
             .resume = [this]() { setShellState(ApplicationShellState::Gameplay); },
             .restartRack = [this]()
@@ -233,6 +238,16 @@ namespace BilliardsSaloon
             .apply = [this](const GameSettings& settings) { applySettings(settings); },
             .back = [this]() { closeSettings(); }
         });
+        m_locker = std::make_unique<LockerScreen>(*m_ui, m_settings.equipment, LockerActions{
+            .apply = [this](const EquipmentChoice& choice)
+            {
+                GameSettings settings = m_settings;
+                settings.equipment = choice;
+                applySettings(settings);
+            },
+            .back = [this]() { setShellState(ApplicationShellState::MainMenu); }
+        });
+        applyEquipment();
         m_matchSetup = std::make_unique<MatchSetupScreen>(*m_ui, savedMatchSetup(), MatchSetupActions{
             .start = [this](const MatchSetup& setup)
             {
@@ -271,6 +286,10 @@ namespace BilliardsSaloon
         if (options.startScreen == StartScreen::MatchSetup)
         {
             setShellState(ApplicationShellState::MatchSetup);
+        }
+        if (options.startScreen == StartScreen::Locker)
+        {
+            setShellState(ApplicationShellState::Locker);
         }
 
         if (options.scenario != DevScenario::None)
@@ -368,6 +387,7 @@ namespace BilliardsSaloon
         // registry, so a new session gets them again.
         buildSaloonScene(*m_session);
         m_cameraEntity = createMainCamera(m_session->registry());
+        applyEquipment();
 
         if (m_hud)
         {
@@ -383,6 +403,18 @@ namespace BilliardsSaloon
         m_frameOverDelay = -1.0f;
         m_cameraBeforePlacing.reset();
         updateCameraRig(FIXED_TIME_STEP);
+    }
+
+    void Application::applyEquipment()
+    {
+        BilliardsSaloon::applyEquipment(*m_session, m_settings.equipment);
+        if (m_renderer)
+        {
+            const EquipmentCatalog& catalog = equipmentCatalog();
+            const CueOption& cue = findOption(catalog.cues, m_settings.equipment.cue);
+            m_renderer->setCueStyle(cue.shaft, cue.forearm, cue.wrap, cue.joint);
+            m_renderer->setMeasleCueBall(findOption(catalog.balls, m_settings.equipment.balls).measleCueBall);
+        }
     }
 
     void Application::openRefereeChoice()
@@ -593,6 +625,7 @@ namespace BilliardsSaloon
                 break;
 
             case ApplicationShellState::MatchSetup:
+            case ApplicationShellState::Locker:
                 if (m_input.wasPressed(GLFW_KEY_ESCAPE) || backPressed)
                 {
                     setShellState(ApplicationShellState::MainMenu);
@@ -622,6 +655,7 @@ namespace BilliardsSaloon
             m_menus->setGamepadPrompts(gamepadPrompts);
             m_settingsScreen->setGamepadPrompts(gamepadPrompts);
             m_matchSetup->setGamepadPrompts(gamepadPrompts);
+            m_locker->setGamepadPrompts(gamepadPrompts);
         }
     }
 
@@ -983,6 +1017,7 @@ namespace BilliardsSaloon
 
             case ApplicationShellState::Settings:
             case ApplicationShellState::MatchSetup:
+            case ApplicationShellState::Locker:
             case ApplicationShellState::RefereeChoice:
                 m_menus->show(MenuScreen::None);
                 break;
@@ -995,6 +1030,7 @@ namespace BilliardsSaloon
 
         m_settingsScreen->setVisible(state == ApplicationShellState::Settings);
         m_matchSetup->setVisible(state == ApplicationShellState::MatchSetup);
+        m_locker->setVisible(state == ApplicationShellState::Locker);
         if (state != ApplicationShellState::RefereeChoice)
         {
             m_menus->hideChoice();
@@ -1033,6 +1069,10 @@ namespace BilliardsSaloon
         {
             m_ui->setReducedMotion(m_settings.reducedMotion);
         }
+        if (!(m_settings.equipment == previous.equipment))
+        {
+            applyEquipment();
+        }
 
         if (!m_settingsFile.empty() && !saveSettings(m_settingsFile, m_settings))
         {
@@ -1064,7 +1104,7 @@ namespace BilliardsSaloon
         const ApplicationShellState state =
             (m_shellState == ApplicationShellState::Settings) ? m_settingsReturnState : m_shellState;
         return (state != ApplicationShellState::Title) && (state != ApplicationShellState::MainMenu) &&
-               (state != ApplicationShellState::MatchSetup);
+               (state != ApplicationShellState::MatchSetup) && (state != ApplicationShellState::Locker);
     }
 
     void Application::updateFixed(double deltaTimeSeconds)
@@ -1220,7 +1260,8 @@ namespace BilliardsSaloon
 
         // On the hub the table sits to the right of the menu (wide windows only).
         const float wantedShift =
-            ((m_shellState == ApplicationShellState::MainMenu) && (m_window.aspectRatio() > 1.3f)) ? 0.32f : 0.0f;
+            (((m_shellState == ApplicationShellState::MainMenu) || (m_shellState == ApplicationShellState::Locker)) &&
+             (m_window.aspectRatio() > 1.3f)) ? 0.32f : 0.0f;
         m_lensShift += (wantedShift - m_lensShift) * (1.0f - std::exp(-4.0f * static_cast<float>(deltaTimeSeconds)));
 
         const float blendRate =
@@ -1409,7 +1450,10 @@ namespace BilliardsSaloon
 
         FrameSettings settings;
         settings.quality = m_renderQuality;
-        settings.lights = saloonLightRig();
+        const HallOption& hall = findOption(equipmentCatalog().halls, m_settings.equipment.hall);
+        settings.lights = saloonLightRig(hall.lamp);
+        settings.lightIntensity = 2.6f * hall.intensity;   // the catalogue's 4.4 is the classic saloon brightness
+        settings.exposure = hall.exposure;
         settings.viewportWidth = m_window.width();
         settings.viewportHeight = m_window.height();
         settings.lensShiftX = m_lensShift;
@@ -1419,20 +1463,14 @@ namespace BilliardsSaloon
             case ApplicationShellState::Title:
             case ApplicationShellState::MainMenu:
             case ApplicationShellState::MatchSetup:
-                settings.clearColor = glm::vec3(0.025f, 0.020f, 0.022f);
-                break;
-
+            case ApplicationShellState::Locker:
             case ApplicationShellState::PauseMenu:
-                settings.clearColor = glm::vec3(0.022f, 0.020f, 0.024f);
-                break;
-
             case ApplicationShellState::Gameplay:
             case ApplicationShellState::FrameOver:
             case ApplicationShellState::Settings:
             case ApplicationShellState::RefereeChoice:
-                settings.clearColor = frameOver
-                    ? glm::vec3(0.03f, 0.025f, 0.03f)
-                    : glm::vec3(0.035f, 0.025f, 0.02f);
+                // The dark of the hall around the table, set by the lighting mood.
+                settings.clearColor = frameOver ? hall.clear * 0.8f : hall.clear;
                 break;
         }
 

@@ -14,7 +14,8 @@ namespace BilliardsSaloon
         Gameplay,
         Pause,
         Settings,
-        MatchSetup
+        MatchSetup,
+        Locker
     };
 
     // Development scenarios played out before the first frame, so captures can

@@ -1,5 +1,7 @@
 #include "app/saloon_scene.h"
 
+#include "core/settings.h"
+#include "gameplay/equipment.h"
 #include "gameplay/match_session.h"
 #include "gameplay/sim_bridge.h"
 #include "sim/table.h"
@@ -89,7 +91,7 @@ namespace BilliardsSaloon
         }
     }
 
-    PointLightRig saloonLightRig()
+    PointLightRig saloonLightRig(const glm::vec3& lampColor)
     {
         PointLightRig rig;
         rig.positions = {
@@ -97,11 +99,8 @@ namespace BilliardsSaloon
             glm::vec3( 0.00f, 1.66f,  0.00f),
             glm::vec3( 0.82f, 1.58f, -0.04f)
         };
-        rig.colors = {
-            glm::vec3(4.4f, 3.1f, 1.7f),
-            glm::vec3(5.2f, 3.7f, 2.0f),
-            glm::vec3(4.4f, 3.1f, 1.7f)
-        };
+        // The centre lamp is a little stronger; the hall's intensity scales all three.
+        rig.colors = {lampColor, lampColor * 1.18f, lampColor};
         return rig;
     }
 
@@ -231,6 +230,56 @@ namespace BilliardsSaloon
         for (std::size_t i = 0; i < session.objectBallEntities().size(); ++i)
         {
             attachBallVisual(registry, session.objectBallEntities()[i], variant.objectBalls[i]);
+        }
+    }
+
+    void applyEquipment(MatchSession& session, const EquipmentChoice& choice)
+    {
+        const EquipmentCatalog& catalog = equipmentCatalog();
+        const FinishOption& cloth = findOption(catalog.cloth, choice.cloth);
+        const FinishOption& rails = findOption(catalog.rails, choice.rails);
+        const FinishOption& trim = findOption(catalog.trim, choice.trim);
+        const FinishOption& pockets = findOption(catalog.pockets, choice.pockets);
+        const BallSetOption& balls = findOption(catalog.balls, choice.balls);
+
+        Registry& registry = session.registry();
+        registry.view<NameComponent, MaterialComponent>().each(
+            [&](Entity, NameComponent& name, MaterialComponent& material)
+            {
+                if (name.value == "Table Cloth")
+                {
+                    material.albedo = cloth.color;
+                }
+                else if (name.value == "Cushions")
+                {
+                    material.albedo = cloth.color * 0.92f;
+                }
+                else if (name.value == "Rails")
+                {
+                    material.albedo = rails.color;
+                    material.roughness = rails.roughness;
+                    material.clearcoatStrength = rails.clearcoat;
+                }
+                else if (name.value == "Trim")
+                {
+                    material.albedo = trim.color;
+                    material.roughness = trim.roughness;
+                    material.reflectivity = trim.metal;
+                }
+                else if (name.value == "Pocket Rims")
+                {
+                    material.albedo = pockets.color;
+                }
+            });
+
+        // Ball colours: the set's, or the variant's where the set has none.
+        const GameVariantDefinition& variant = session.variant();
+        for (std::size_t i = 0; i < session.objectBallEntities().size(); ++i)
+        {
+            const BallSpawnDefinition& definition = variant.objectBalls[i];
+            const auto colour = balls.colors.find(definition.number);
+            registry.get<MaterialComponent>(session.objectBallEntities()[i]).albedo =
+                (colour != balls.colors.end()) ? colour->second : definition.albedo;
         }
     }
 

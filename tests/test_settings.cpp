@@ -36,6 +36,8 @@ TEST_CASE("settings survive a save and load")
     settings.raceTo = 7;
     settings.winnerBreaks = true;
     settings.shotClock = 45;
+    settings.equipment.cloth = "tournament_blue";
+    settings.equipment.hall = "arena";
 
     REQUIRE(saveSettings(file, settings));
     CHECK(loadSettings(file) == settings);

@@ -113,6 +113,18 @@ namespace BilliardsSaloon
             settings.aimGuide = json.value("aimGuide", settings.aimGuide);
             settings.uiScale = json.value("uiScale", settings.uiScale);
             settings.reducedMotion = json.value("reducedMotion", settings.reducedMotion);
+            if (json.contains("equipment"))
+            {
+                const Json& e = json.at("equipment");
+                EquipmentChoice& c = settings.equipment;
+                c.cloth = e.value("cloth", c.cloth);
+                c.rails = e.value("rails", c.rails);
+                c.trim = e.value("trim", c.trim);
+                c.pockets = e.value("pockets", c.pockets);
+                c.balls = e.value("balls", c.balls);
+                c.cue = e.value("cue", c.cue);
+                c.hall = e.value("hall", c.hall);
+            }
             if (json.contains("match"))
             {
                 const Json& match = json.at("match");
@@ -145,6 +157,15 @@ namespace BilliardsSaloon
             {"aimGuide", settings.aimGuide},
             {"uiScale", settings.uiScale},
             {"reducedMotion", settings.reducedMotion},
+            {"equipment", {
+                {"cloth", settings.equipment.cloth},
+                {"rails", settings.equipment.rails},
+                {"trim", settings.equipment.trim},
+                {"pockets", settings.equipment.pockets},
+                {"balls", settings.equipment.balls},
+                {"cue", settings.equipment.cue},
+                {"hall", settings.equipment.hall}
+            }},
             {"match", {
                 {"game", settings.matchGame},
                 {"raceTo", settings.raceTo},

@@ -12,6 +12,21 @@ namespace BilliardsSaloon
         High
     };
 
+    // Chosen equipment, by catalogue id (assets/data/equipment/catalog.json).
+    // Unknown ids fall back to each category's first option.
+    struct EquipmentChoice
+    {
+        std::string cloth {"tournament_green"};
+        std::string rails {"espresso"};
+        std::string trim {"aluminium"};
+        std::string pockets {"black_leather"};
+        std::string balls {"classic"};
+        std::string cue {"classic_maple"};
+        std::string hall {"saloon"};
+
+        friend bool operator==(const EquipmentChoice&, const EquipmentChoice&) = default;
+    };
+
     // Player preferences, saved between sessions as versioned JSON.
     struct GameSettings
     {
@@ -35,6 +50,8 @@ namespace BilliardsSaloon
         int raceTo {3};
         bool winnerBreaks {false};
         int shotClock {0};               // seconds; 0 = off
+
+        EquipmentChoice equipment;
 
         friend bool operator==(const GameSettings&, const GameSettings&) = default;
     };

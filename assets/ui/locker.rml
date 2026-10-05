@@ -1,0 +1,97 @@
+<rml>
+<head>
+    <title>Locker</title>
+    <link type="text/rcss" href="theme.rcss"/>
+    <style>
+        body {
+            z-index: 20;
+            background-color: rgba(8, 9, 11, 60);
+        }
+        .panel {
+            position: absolute;
+            left: 80dp;
+            top: 50%;
+            width: 560dp;
+            margin-top: -330dp;
+        }
+        .panel h2 {
+            margin-bottom: 6dp;
+            font-weight: 800;
+            font-size: 46dp;
+            letter-spacing: 2dp;
+        }
+        .about {
+            margin: 0 4dp 14dp;
+            font-size: 14dp;
+            color: #C9C3B9;
+        }
+        .section {
+            margin: 12dp 0 6dp 4dp;
+        }
+        .setting {
+            width: 560dp;
+            height: 46dp;
+            margin-bottom: 6dp;
+            line-height: 46dp;
+            font-size: 21dp;
+            nav-left: none;
+            nav-right: none;
+        }
+        .setting .label {
+            display: block;
+            width: 500dp;
+        }
+        .setting .value {
+            float: right;
+            color: #D4A94A;
+        }
+        .setting:hover .value,
+        .setting:focus .value {
+            color: #111214;
+        }
+        .back {
+            margin-top: 14dp;
+            width: 240dp;
+        }
+        .hints {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 36dp;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="screen" data-model="locker">
+    <div class="panel">
+        <div class="eyebrow">THE TOURNAMENT HALL</div>
+        <h2>LOCKER</h2>
+        <div class="about">Your table, balls, cue and hall. Changes show on the table behind.</div>
+
+        <div class="eyebrow section">TABLE</div>
+        <button class="menu-item setting" id="cloth" autofocus data-event-click="cycle(0, 1)" data-event-keydown="key(0, ev.key_identifier)"><span class="label">CLOTH<span class="value">{{ cloth }}</span></span></button>
+        <button class="menu-item setting" id="rails" data-event-click="cycle(1, 1)" data-event-keydown="key(1, ev.key_identifier)"><span class="label">RAILS<span class="value">{{ rails }}</span></span></button>
+        <button class="menu-item setting" id="trim" data-event-click="cycle(2, 1)" data-event-keydown="key(2, ev.key_identifier)"><span class="label">TRIM<span class="value">{{ trim }}</span></span></button>
+        <button class="menu-item setting" id="pockets" data-event-click="cycle(3, 1)" data-event-keydown="key(3, ev.key_identifier)"><span class="label">POCKETS<span class="value">{{ pockets }}</span></span></button>
+
+        <div class="eyebrow section">PLAYING EQUIPMENT</div>
+        <button class="menu-item setting" id="balls" data-event-click="cycle(4, 1)" data-event-keydown="key(4, ev.key_identifier)"><span class="label">BALL SET<span class="value">{{ balls }}</span></span></button>
+        <button class="menu-item setting" id="cue" data-event-click="cycle(5, 1)" data-event-keydown="key(5, ev.key_identifier)"><span class="label">CUE<span class="value">{{ cue }}</span></span></button>
+
+        <div class="eyebrow section">HALL</div>
+        <button class="menu-item setting" id="hall" data-event-click="cycle(6, 1)" data-event-keydown="key(6, ev.key_identifier)"><span class="label">LIGHTING<span class="value">{{ hall }}</span></span></button>
+
+        <button class="menu-item back" id="lockerback" data-event-click="back"><span class="label">BACK</span></button>
+    </div>
+    <div class="hints" data-visible="!gamepad">
+        <span class="hint"><span class="key">UP / DOWN</span>Select</span>
+        <span class="hint"><span class="key">LEFT / RIGHT</span>or click to change</span>
+        <span class="hint"><span class="key">ESC</span>Back</span>
+    </div>
+    <div class="hints" data-visible="gamepad">
+        <span class="hint"><span class="key">D-PAD</span>Select and change</span>
+        <span class="hint"><span class="key pad">A</span>Change</span>
+        <span class="hint"><span class="key pad">B</span>Back</span>
+    </div>
+</body>
+</rml>

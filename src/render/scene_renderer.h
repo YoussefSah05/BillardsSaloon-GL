@@ -63,6 +63,10 @@ namespace BilliardsSaloon
         // Moves the image sideways without turning the camera, in normalized
         // device units (+0.3 puts the scene 15% of the width to the right).
         float lensShiftX {0.0f};
+
+        // Lighting mood: exposure for the tone curve, and a scale on the lamps.
+        float exposure {1.0f};
+        float lightIntensity {2.6f};
     };
 
     // Optional emphasis on one ball (the cue ball while aiming).
@@ -95,6 +99,10 @@ namespace BilliardsSaloon
         // Resolves the scene, adds bloom, tone maps and writes the result to the
         // window (framebuffer 0), ready for the UI to draw on top.
         void endFrame(int framebufferWidth, int framebufferHeight);
+
+        // Cue finish: shaft, forearm and butt sleeve, wrap, joint collar.
+        void setCueStyle(const glm::vec3& shaft, const glm::vec3& forearm, const glm::vec3& wrap, const glm::vec3& joint);
+        void setMeasleCueBall(bool measle) { m_measleCueBall = measle; }
 
         // The cue stick: tip at tipPosition, the butt along buttDirection.
         void drawCue(const glm::vec3& tipPosition, const glm::vec3& buttDirection);
@@ -133,6 +141,8 @@ namespace BilliardsSaloon
 
         // Per-frame choices from the quality preset and the light rig.
         bool m_bloomEnabled {true};
+        bool m_measleCueBall {false};
+        float m_exposure {1.0f};
         bool m_shadowsEnabled {true};
         int m_shadowKernel {3};
         std::vector<glm::mat4> m_lightMatrices;
