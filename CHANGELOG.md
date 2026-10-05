@@ -27,6 +27,12 @@ All notable changes to Billiards Saloon. The format follows
   measle cue ball), three cues and three lighting moods (Tournament Arena,
   Classic Saloon, Night Final). Original designs, no brands.
 - `--screen locker` for captures.
+- Two halls, chosen by the Locker's lighting: the Tournament Arena (dark
+  carpet and a blue playing area, barrier boards with a gold line, tiered
+  stands with seats, a scorer's desk and players' chairs, and a canopy
+  light 1 m above the bed with glowing panels) and the Classic Saloon
+  (wood floor, panelled walls with a dado rail, hanging globe lamps). The
+  lamps move with the hall; each mood sets its own fill light.
 
 ### Fixed
 - Spheres were wound clockwise, so culling showed the inside of the far

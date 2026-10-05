@@ -67,6 +67,7 @@ namespace BilliardsSaloon
         // Lighting mood: exposure for the tone curve, and a scale on the lamps.
         float exposure {1.0f};
         float lightIntensity {2.6f};
+        float ambient {1.0f};
     };
 
     // Optional emphasis on one ball (the cue ball while aiming).

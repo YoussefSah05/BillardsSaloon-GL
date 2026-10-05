@@ -1451,7 +1451,8 @@ namespace BilliardsSaloon
         FrameSettings settings;
         settings.quality = m_renderQuality;
         const HallOption& hall = findOption(equipmentCatalog().halls, m_settings.equipment.hall);
-        settings.lights = saloonLightRig(hall.lamp);
+        settings.lights = saloonLightRig(hall.lamp, hallLayoutFromName(hall.layout));
+        settings.ambient = hall.ambient;
         settings.lightIntensity = 2.6f * hall.intensity;   // the catalogue's 4.4 is the classic saloon brightness
         settings.exposure = hall.exposure;
         settings.viewportWidth = m_window.width();

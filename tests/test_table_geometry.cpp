@@ -81,3 +81,26 @@ TEST_CASE("table geometry: pocket openings are cut out of the rail")
         }
     }
 }
+
+#include "scene/hall_geometry.h"
+
+TEST_CASE("hall geometry: both layouts build valid meshes, with lamps over the table")
+{
+    for (const HallLayout layout : {HallLayout::Arena, HallLayout::Saloon})
+    {
+        const HallGeometry hall = buildHall(layout, glm::vec2(1.45f, 0.81f), -0.775f);
+        REQUIRE_FALSE(hall.parts.empty());
+        for (const HallPart& part : hall.parts)
+        {
+            CAPTURE(part.name);
+            checkMesh(part.mesh);
+        }
+        for (const glm::vec3& lamp : hall.lamps)
+        {
+            CHECK(lamp.y >= 1.0f);              // WPA: at least 40 in above the bed
+            CHECK(std::abs(lamp.x) < 1.27f);    // over the playing surface
+        }
+    }
+    CHECK(hallLayoutFromName("saloon") == HallLayout::Saloon);
+    CHECK(hallLayoutFromName("arena") == HallLayout::Arena);
+}

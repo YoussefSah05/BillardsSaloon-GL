@@ -33,6 +33,7 @@ uniform float uAlpha;
 // Lamps: inverse-square point lights of a small radius (soft highlights),
 // each with a shadow map layer seen from the lamp looking down.
 uniform float uLightIntensity;
+uniform float uAmbientScale;
 uniform float uLightRadius;
 uniform mat4 uLightMatrices[3];
 uniform sampler2DArrayShadow uShadowMaps;
@@ -377,7 +378,7 @@ void main()
 
     // The dim room: a warm floor bounce and a little sky from the ceiling.
     vec3 ambient = mix(vec3(0.030, 0.022, 0.016), vec3(0.075, 0.064, 0.055), saturate(normal.y * 0.5 + 0.5));
-    ambient *= baseColor;
+    ambient *= baseColor * uAmbientScale;
 
     vec3 reflectionDirection = reflect(-viewDirection, normal);
     vec3 environment = sampleAnalyticEnvironment(reflectionDirection);

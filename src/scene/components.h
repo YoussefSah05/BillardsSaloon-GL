@@ -48,6 +48,12 @@ namespace BilliardsSaloon
         Custom    // StaticMeshComponent::custom, built headless and uploaded on first draw
     };
 
+    // Marks scenery that belongs to the hall (rebuilt when the hall changes).
+    struct HallTagComponent
+    {
+        int layout {0};
+    };
+
     struct StaticMeshComponent
     {
         MeshPrimitive primitive {MeshPrimitive::Cube};

@@ -135,6 +135,7 @@ add_library(bs_game STATIC
     src/gameplay/game_variant.cpp
     src/gameplay/match_session.cpp
     src/rules/racking.cpp
+    src/scene/hall_geometry.cpp
     src/scene/table_geometry.cpp
     src/rules/referee.cpp
     src/rules/shot_record.cpp
