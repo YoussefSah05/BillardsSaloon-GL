@@ -12,7 +12,8 @@ namespace BilliardsSaloon
             if (value == "main") return StartScreen::MainMenu;
             if (value == "game") return StartScreen::Gameplay;
             if (value == "pause") return StartScreen::Pause;
-            throw std::invalid_argument("Unknown screen '" + std::string(value) + "' (use main, game or pause).");
+            if (value == "settings") return StartScreen::Settings;
+            throw std::invalid_argument("Unknown screen '" + std::string(value) + "' (use main, game, pause or settings).");
         }
 
         int parsePositiveInt(std::string_view option, std::string_view value)
@@ -74,7 +75,7 @@ namespace BilliardsSaloon
         return
             "Usage: BilliardsSaloon [options]\n"
             "  --fullscreen            start in fullscreen\n"
-            "  --screen main|game|pause  start on this screen\n"
+            "  --screen main|game|pause|settings  start on this screen\n"
             "  --capture FILE.png      save a screenshot after a few frames, then quit\n"
             "  --capture-frames N      frames to render before capturing (default 90)\n";
     }

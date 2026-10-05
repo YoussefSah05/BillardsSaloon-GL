@@ -38,6 +38,12 @@ namespace BilliardsSaloon
         // While false (cursor captured for aiming), mouse events skip the UI.
         void setPointerEnabled(bool enabled);
 
+        // Player text/UI size on top of the display's own scale (1.0 to 1.5).
+        void setUiScale(float scale);
+
+        // Adds the reduced-motion class to every document, which turns off transitions.
+        void setReducedMotion(bool enabled);
+
         // True when the last key event was used by the UI (e.g. menu navigation).
         [[nodiscard]] bool consumedLastKey() const { return m_consumedLastKey; }
 
@@ -61,6 +67,9 @@ namespace BilliardsSaloon
         std::unique_ptr<RenderInterface_GL3> m_renderInterface;
         Rml::Context* m_context {nullptr};
         bool m_pointerEnabled {true};
+        float m_uiScale {1.0f};
+        float m_contentScale {1.0f};
+        bool m_reducedMotion {false};
         bool m_consumedLastKey {false};
     };
 }

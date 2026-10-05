@@ -15,7 +15,12 @@ All notable changes to Billiards Saloon. The format follows
 - Referee banners that name every foul (scratch, no ball hit, wrong ball
   first) and how the frame ended; lower thirds for ball in hand and turn
   changes; a frame-over card with Next frame and Main menu.
-- `--screen main|game|pause`, `--fullscreen` and `--capture FILE.png`
+- Settings screen (main and pause menus): fullscreen, VSync, graphics
+  quality, mouse sensitivity, text and UI size (100–150%) and reduced
+  motion. Changes apply immediately and are saved to the user's settings
+  file (`~/Library/Application Support/Billiards Saloon/settings.json` on
+  macOS, `%APPDATA%` on Windows, `~/.config` on Linux).
+- `--screen main|game|pause|settings`, `--fullscreen` and `--capture FILE.png`
   launch options; capture renders a screen, saves a PNG and quits.
 
 ### Changed
@@ -27,6 +32,9 @@ All notable changes to Billiards Saloon. The format follows
 - The voxel-text HUD and menus built from cubes.
 
 ### Fixed
+- Edited UI documents, shaders and data were only copied to the build
+  folder when code also changed.
+- The HUD reflows at large UI sizes instead of overlapping.
 - Material colours were gamma-corrected twice, washing out the whole scene.
 
 ## [0.2.0] - 2026-10-05

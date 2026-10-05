@@ -1,0 +1,58 @@
+#pragma once
+
+#include <filesystem>
+#include <string>
+
+namespace BilliardsSaloon
+{
+    enum class QualityLevel
+    {
+        Low,
+        Balanced,
+        High
+    };
+
+    // Player preferences, saved between sessions as versioned JSON.
+    struct GameSettings
+    {
+        static constexpr int CURRENT_VERSION = 1;
+
+        // Video
+        bool fullscreen {false};
+        bool vsync {true};
+        QualityLevel quality {QualityLevel::Balanced};
+
+        // Controls
+        float mouseSensitivity {1.0f};   // multiplies mouse aim, spin and stroke
+
+        // Accessibility
+        float uiScale {1.0f};            // 1.0 to 1.5
+        bool reducedMotion {false};
+
+        friend bool operator==(const GameSettings&, const GameSettings&) = default;
+    };
+
+    inline constexpr float MIN_MOUSE_SENSITIVITY = 0.25f;
+    inline constexpr float MAX_MOUSE_SENSITIVITY = 3.0f;
+    inline constexpr float MIN_UI_SCALE = 1.0f;
+    inline constexpr float MAX_UI_SCALE = 1.5f;
+
+    // Brings every value into its allowed range.
+    [[nodiscard]] GameSettings sanitized(GameSettings settings);
+
+    // Per-user folder for settings and saves, created if missing:
+    //   macOS   ~/Library/Application Support/Billiards Saloon
+    //   Windows %APPDATA%\Billiards Saloon
+    //   Linux   $XDG_CONFIG_HOME/billiards-saloon (or ~/.config/billiards-saloon)
+    // Returns an empty path if no home directory can be found.
+    [[nodiscard]] std::filesystem::path userDataDirectory();
+
+    // Missing file: defaults. Unreadable or invalid file: defaults, and
+    // outWarning explains why (the game should still start).
+    [[nodiscard]] GameSettings loadSettings(const std::filesystem::path& file, std::string* outWarning = nullptr);
+
+    // Writes atomically (temporary file, then rename). Returns false on failure.
+    bool saveSettings(const std::filesystem::path& file, const GameSettings& settings);
+
+    [[nodiscard]] const char* qualityName(QualityLevel quality);
+}

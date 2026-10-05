@@ -27,12 +27,11 @@ namespace BilliardsSaloon
     struct ShellMenuActions
     {
         std::function<void()> startMatch;
-        std::function<void()> toggleFullscreen;
+        std::function<void()> openSettings;
         std::function<void()> quit;
         std::function<void()> resume;
         std::function<void()> restartRack;
         std::function<void()> returnToMainMenu;
-        std::function<bool()> isFullscreen;
     };
 
     // The main and pause menus (assets/ui/*.rml) and their "shell" data model.
@@ -43,9 +42,6 @@ namespace BilliardsSaloon
 
         void show(MenuScreen screen);
         [[nodiscard]] MenuScreen shown() const { return m_shown; }
-
-        // Re-read values shown in the menus (e.g. after fullscreen changes).
-        void refresh();
 
         // Text for the frame-over card, e.g. "PLAYER 1 WINS THE FRAME".
         void setFrameResult(const std::string& headline, const std::string& detail);

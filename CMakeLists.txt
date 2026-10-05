@@ -113,6 +113,7 @@ endfunction()
 add_library(bs_game STATIC
     src/core/asset_paths.cpp
     src/core/launch_options.cpp
+    src/core/settings.cpp
     src/gameplay/shot_state.cpp
     src/gameplay/game_variant.cpp
     src/gameplay/match_session.cpp
@@ -137,6 +138,7 @@ add_executable(BilliardsSaloon
     src/app/application.cpp
     src/app/hud_screen.cpp
     src/app/saloon_scene.cpp
+    src/app/settings_screen.cpp
     src/app/shell_menus.cpp
     src/platform/input.cpp
     src/platform/window.cpp
@@ -172,12 +174,15 @@ target_compile_definitions(BilliardsSaloon PRIVATE
 )
 
 # Ship assets next to the executable so it runs from any working directory.
-add_custom_command(TARGET BilliardsSaloon POST_BUILD
+# A separate target runs on every build, so edited UI documents, shaders and
+# data reach the build folder even when no code changed.
+add_custom_target(bs_assets ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/assets
         $<TARGET_FILE_DIR:BilliardsSaloon>/assets
     COMMENT "Copying assets next to BilliardsSaloon"
 )
+add_dependencies(BilliardsSaloon bs_assets)
 
 if(BS_BUILD_TESTS)
     FetchContent_Declare(
@@ -197,6 +202,7 @@ if(BS_BUILD_TESTS)
         tests/test_game_variant.cpp
         tests/test_game_data.cpp
         tests/test_launch_options.cpp
+        tests/test_settings.cpp
         tests/test_physics.cpp
         tests/test_asset_paths.cpp
     )

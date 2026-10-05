@@ -13,6 +13,11 @@ body, div, h1, h2, h3, p, section, nav, header, footer {
     display: block;
 }
 
+/* Reduced Motion setting: no transitions anywhere. */
+body.reduced-motion * {
+    transition: none;
+}
+
 body {
     width: 100%;
     height: 100%;

@@ -1,0 +1,85 @@
+<rml>
+<head>
+    <title>Settings</title>
+    <link type="text/rcss" href="theme.rcss"/>
+    <style>
+        body {
+            z-index: 20;
+            background-color: rgba(8, 9, 11, 170);
+        }
+        .panel {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 600dp;
+            margin-left: -300dp;
+            margin-top: -320dp;
+        }
+        .panel h2 {
+            margin-bottom: 6dp;
+            font-weight: 800;
+            font-size: 46dp;
+            letter-spacing: 2dp;
+        }
+        .section {
+            margin: 16dp 0 8dp 4dp;
+        }
+        .setting {
+            width: 600dp;
+            height: 50dp;
+            margin-bottom: 8dp;
+            line-height: 50dp;
+            font-size: 22dp;
+            nav-left: none;
+            nav-right: none;
+        }
+        .setting .label {
+            display: block;
+            width: 540dp;
+        }
+        .setting .value {
+            float: right;
+            color: #D4A94A;
+        }
+        .setting:hover .value,
+        .setting:focus .value {
+            color: #111214;
+        }
+        .back {
+            margin-top: 18dp;
+            width: 240dp;
+        }
+        .hints {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 36dp;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="screen" data-model="settings">
+    <div class="panel">
+        <h2>SETTINGS</h2>
+
+        <div class="eyebrow section">VIDEO</div>
+        <button class="menu-item setting" id="fullscreen" autofocus data-event-click="cycle(0, 1)" data-event-keydown="key(0, ev.key_identifier)"><span class="label">FULLSCREEN<span class="value">{{ fullscreen }}</span></span></button>
+        <button class="menu-item setting" id="vsync" data-event-click="cycle(1, 1)" data-event-keydown="key(1, ev.key_identifier)"><span class="label">VSYNC<span class="value">{{ vsync }}</span></span></button>
+        <button class="menu-item setting" id="quality" data-event-click="cycle(2, 1)" data-event-keydown="key(2, ev.key_identifier)"><span class="label">GRAPHICS QUALITY<span class="value">{{ quality }}</span></span></button>
+
+        <div class="eyebrow section">CONTROLS</div>
+        <button class="menu-item setting" id="sensitivity" data-event-click="cycle(3, 1)" data-event-keydown="key(3, ev.key_identifier)"><span class="label">MOUSE SENSITIVITY<span class="value">{{ sensitivity }}</span></span></button>
+
+        <div class="eyebrow section">ACCESSIBILITY</div>
+        <button class="menu-item setting" id="uiscale" data-event-click="cycle(4, 1)" data-event-keydown="key(4, ev.key_identifier)"><span class="label">TEXT AND UI SIZE<span class="value">{{ ui_scale }}</span></span></button>
+        <button class="menu-item setting" id="motion" data-event-click="cycle(5, 1)" data-event-keydown="key(5, ev.key_identifier)"><span class="label">REDUCED MOTION<span class="value">{{ reduced_motion }}</span></span></button>
+
+        <button class="menu-item back" id="back" data-event-click="back"><span class="label">BACK</span></button>
+    </div>
+    <div class="hints">
+        <span class="hint"><span class="key">UP / DOWN</span>Select</span>
+        <span class="hint"><span class="key">LEFT / RIGHT</span>or click to change</span>
+        <span class="hint"><span class="key">ESC</span>Back</span>
+    </div>
+</body>
+</rml>

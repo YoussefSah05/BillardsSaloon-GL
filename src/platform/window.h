@@ -31,6 +31,7 @@ namespace BilliardsSaloon
         int height {900};
         std::string title {"Billiards Saloon"};
         bool fullscreen {false};
+        bool vsync {true};
     };
 
     class Window
@@ -63,6 +64,10 @@ namespace BilliardsSaloon
         void setFullscreen(bool fullscreen);
         void toggleFullscreen();
         [[nodiscard]] bool isFullscreen() const;
+
+        // Synchronise buffer swaps with the display refresh.
+        void setVsync(bool enabled);
+        [[nodiscard]] bool vsyncEnabled() const { return m_vsync; }
 
         [[nodiscard]] bool isFocused() const;
 
@@ -99,6 +104,7 @@ namespace BilliardsSaloon
         int m_height {0};
 
         bool m_fullscreen {false};
+        bool m_vsync {true};
         bool m_cursorCaptured {false};
         float m_scrollDelta {0.0f};
         WindowEventSink* m_sink {nullptr};

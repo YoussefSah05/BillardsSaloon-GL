@@ -1,6 +1,8 @@
 #pragma once
 
 #include "app/hud_screen.h"
+#include "app/settings_screen.h"
+#include "core/settings.h"
 #include "app/shell_menus.h"
 #include "core/launch_options.h"
 #include "ecs/entity.h"
@@ -22,7 +24,8 @@ namespace BilliardsSaloon
         MainMenu,
         Gameplay,
         PauseMenu,
-        FrameOver
+        FrameOver,
+        Settings
     };
 
     // Owns the window and main loop, routes input to the active screen,
@@ -41,6 +44,11 @@ namespace BilliardsSaloon
 
         void setShellState(ApplicationShellState state);
         void toggleFullscreen();
+
+        // Applies settings to the window, renderer, input and UI, then saves them.
+        void applySettings(const GameSettings& settings);
+        void openSettings();
+        void closeSettings();
 
         void updateFixed(double deltaTimeSeconds);
         void updateCameraRig(double deltaTimeSeconds);
@@ -66,6 +74,10 @@ namespace BilliardsSaloon
         LaunchOptions m_options;
         std::uint64_t m_frameCount {0};
 
+        // Loaded before the window so it opens with the saved size mode and vsync.
+        std::filesystem::path m_settingsFile;
+        GameSettings m_settings;
+
         Window m_window;
         Timer m_timer;
         Input m_input;
@@ -76,6 +88,8 @@ namespace BilliardsSaloon
         std::unique_ptr<UiSystem> m_ui;
         std::unique_ptr<HudScreen> m_hud;
         std::unique_ptr<ShellMenus> m_menus;
+        std::unique_ptr<SettingsScreen> m_settingsScreen;
+        ApplicationShellState m_settingsReturnState {ApplicationShellState::MainMenu};
 
         ApplicationShellState m_shellState {ApplicationShellState::MainMenu};
         RenderQualityPreset m_renderQuality {RenderQualityPreset::Balanced};
