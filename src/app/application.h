@@ -8,6 +8,7 @@
 #include "app/shell_menus.h"
 #include "core/launch_options.h"
 #include "ecs/entity.h"
+#include "gameplay/director.h"
 #include "gameplay/match_session.h"
 #include "platform/input.h"
 #include "platform/timer.h"
@@ -145,6 +146,15 @@ namespace BilliardsSaloon
         };
         CuePose m_cuePose;
         float m_followThroughSeconds {-1.0f};
+
+        // The director's plan for the shot or replay on screen.
+        std::vector<DirectorCut> m_directorCuts;
+        std::uint32_t m_plannedPlayback {0};
+        std::ptrdiff_t m_directorCut {-1};
+
+        // A frame-winning pot is replayed in slow motion before the result card.
+        bool m_replayBeforeCard {false};
+        bool m_cardAfterReplay {false};
         std::optional<CameraViewMode> m_cameraBeforePlacing;
         ShotPhase m_previousShotPhase {ShotPhase::Aiming};
         float m_chargeBeforeShot {0.0f};

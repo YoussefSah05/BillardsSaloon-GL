@@ -6,6 +6,7 @@
 #include "gameplay/shot_state.h"
 #include "rules/match_score.h"
 #include "rules/referee.h"
+#include "scene/components.h"
 #include "sim/simulate.h"
 
 #include <glm/glm.hpp>
@@ -106,6 +107,22 @@ namespace BilliardsSaloon
         {
             return m_trajectory ? &*m_trajectory : nullptr;
         }
+
+        // The trajectory on screen (the live shot or a replay) and how far
+        // into it playback is, in simulated seconds.
+        [[nodiscard]] const Sim::ShotTrajectory* playbackTrajectory() const;
+        [[nodiscard]] double playbackSeconds() const { return m_replay ? m_replay->seconds : m_playbackSeconds; }
+        // Changes whenever a new shot or replay starts playing.
+        [[nodiscard]] std::uint32_t playbackId() const { return m_playbackId; }
+
+        // ---- Replays ---------------------------------------------------------
+        // The last shot played again at speed (1 = real time), then the table
+        // is put back exactly as it was. Allowed between shots and after the frame.
+        [[nodiscard]] bool canReplay() const;
+        bool startReplay(double speed);
+        void stopReplay();
+        [[nodiscard]] bool replaying() const { return m_replay.has_value(); }
+        [[nodiscard]] double replaySpeed() const { return m_replay ? m_replay->speed : 1.0; }
 
         [[nodiscard]] Registry& registry() { return m_registry; }
         [[nodiscard]] const Registry& registry() const { return m_registry; }
@@ -261,6 +278,21 @@ namespace BilliardsSaloon
         std::vector<glm::vec3> m_pocketPositions;
         std::optional<Sim::ShotTrajectory> m_trajectory;
         double m_playbackSeconds {0.0};
+
+        struct BallSnapshot
+        {
+            TransformComponent transform;
+            bool pocketed {false};
+        };
+        struct Replay
+        {
+            double seconds {0.0};
+            double speed {1.0};
+            std::vector<BallSnapshot> table;   // to restore afterwards
+        };
+        std::optional<Sim::ShotTrajectory> m_lastTrajectory;
+        std::optional<Replay> m_replay;
+        std::uint32_t m_playbackId {0};
 
         ShotPreview m_preview;
         glm::vec4 m_previewKey {-1.0f};      // aim, tip right, tip forward, power

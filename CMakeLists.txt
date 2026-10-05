@@ -130,6 +130,7 @@ add_library(bs_game STATIC
     src/core/launch_options.cpp
     src/core/settings.cpp
     src/gameplay/shot_state.cpp
+    src/gameplay/director.cpp
     src/gameplay/game_variant.cpp
     src/gameplay/match_session.cpp
     src/rules/racking.cpp
@@ -219,6 +220,7 @@ if(BS_BUILD_TESTS)
         tests/test_racking.cpp
         tests/test_match_session.cpp
         tests/test_match_rules.cpp
+        tests/test_director.cpp
         tests/test_game_variant.cpp
         tests/test_game_data.cpp
         tests/test_launch_options.cpp

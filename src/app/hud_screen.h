@@ -52,6 +52,9 @@ namespace BilliardsSaloon
         bool calling {false};
         bool pushOutAvailable {false};
         bool pushOutDeclared {false};
+        bool replaying {false};
+        bool replaySlow {false};
+        bool canReplay {false};
 
         float power01 {0.0f};
         float strikeRight01 {0.0f};
@@ -116,6 +119,9 @@ namespace BilliardsSaloon
         std::string m_callText;
         bool m_pushAvailable {false};
         bool m_pushDeclared {false};
+        bool m_replaying {false};
+        bool m_replaySlow {false};
+        bool m_canReplay {false};
         bool m_gamepad {false};
         bool m_showPrompts {true};
         float m_power {0.0f};

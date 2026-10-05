@@ -130,7 +130,7 @@ namespace BilliardsSaloon
 
     bool MatchSession::acceptsShotInput() const
     {
-        return !frameOver() && (m_frame.choice == Rules::Choice::None) &&
+        return !frameOver() && !m_replay && (m_frame.choice == Rules::Choice::None) &&
                ((m_shotState.phase == ShotPhase::Aiming) || (m_shotState.phase == ShotPhase::Charging));
     }
 
@@ -214,6 +214,8 @@ namespace BilliardsSaloon
 
     void MatchSession::rackBalls()
     {
+        m_replay.reset();
+        m_lastTrajectory.reset();
         m_trajectory.reset();
         m_holdWasActive = false;
         m_chargingByStroke = false;
@@ -391,7 +393,7 @@ namespace BilliardsSaloon
 
     bool MatchSession::canPlaceCueBall() const
     {
-        return !frameOver() && (m_frame.choice == Rules::Choice::None) &&
+        return !frameOver() && !m_replay && (m_frame.choice == Rules::Choice::None) &&
                (m_frame.ballInHand != Rules::BallInHand::None) &&
                ((m_shotState.phase == ShotPhase::Aiming) || (m_shotState.phase == ShotPhase::PlacingCueBall));
     }
@@ -732,6 +734,8 @@ namespace BilliardsSaloon
         std::vector<Sim::BallState> balls = simBallStates();
 
         m_trajectory = Sim::simulateShot(m_simTable, std::move(balls), 0, strike, table.simBall);
+        m_lastTrajectory = m_trajectory;
+        ++m_playbackId;
         m_playbackSeconds = 0.0;
         m_record = Rules::recordShot(*m_trajectory, m_simNumbers);
 
@@ -899,6 +903,7 @@ namespace BilliardsSaloon
                 continue;
             }
 
+            ball.pocketed = false;
             transform.position = SimBridge::toGamePosition(state.r, table.clothWidth, table.clothDepth);
             ball.linearVelocity = SimBridge::toGameVector(state.v);
             ball.angularVelocity = SimBridge::toGameVector(state.w);
@@ -930,8 +935,80 @@ namespace BilliardsSaloon
         }
     }
 
+    const Sim::ShotTrajectory* MatchSession::playbackTrajectory() const
+    {
+        if (m_replay && m_lastTrajectory)
+        {
+            return &*m_lastTrajectory;
+        }
+        return activeTrajectory();
+    }
+
+    bool MatchSession::canReplay() const
+    {
+        const bool betweenShots = frameOver() ||
+            (m_frame.choice != Rules::Choice::None) ||
+            (m_shotState.phase == ShotPhase::Aiming) || (m_shotState.phase == ShotPhase::PlacingCueBall);
+        return m_lastTrajectory.has_value() && !m_trajectory && !m_replay && betweenShots;
+    }
+
+    bool MatchSession::startReplay(double speed)
+    {
+        if (!canReplay())
+        {
+            return false;
+        }
+
+        Replay replay;
+        replay.speed = std::max(speed, 0.05);
+        for (const Entity entity : m_simBalls)
+        {
+            replay.table.push_back({m_registry.get<TransformComponent>(entity), m_registry.get<BallComponent>(entity).pocketed});
+        }
+        m_replay = std::move(replay);
+        ++m_playbackId;
+        m_shotState.charge01 = 0.0f;
+        applySimStates(m_lastTrajectory->states.front(), 0.0);
+        return true;
+    }
+
+    void MatchSession::stopReplay()
+    {
+        if (!m_replay)
+        {
+            return;
+        }
+        for (std::size_t i = 0; i < m_simBalls.size(); ++i)
+        {
+            const BallSnapshot& snapshot = m_replay->table[i];
+            m_registry.get<TransformComponent>(m_simBalls[i]) = snapshot.transform;
+            m_registry.get<TransformComponent>(m_simBalls[i]).syncPrevious();
+            BallComponent& ball = m_registry.get<BallComponent>(m_simBalls[i]);
+            ball.pocketed = snapshot.pocketed;
+            ball.linearVelocity = glm::vec3(0.0f);
+            ball.angularVelocity = glm::vec3(0.0f);
+        }
+        m_replay.reset();
+        m_holdWasActive = true;   // the key that ended the replay must not start a stroke
+    }
+
     void MatchSession::step(double deltaTimeSeconds)
     {
+        if (m_replay)
+        {
+            // Hold the final frame a moment before handing the table back.
+            constexpr double HOLD_SECONDS = 0.6;
+            const double step = deltaTimeSeconds * m_replay->speed;
+            m_replay->seconds += step;
+            const double end = m_lastTrajectory->duration();
+            applySimStates(m_lastTrajectory->stateAt(std::min(m_replay->seconds, end)), step);
+            if (m_replay->seconds >= end + HOLD_SECONDS * m_replay->speed)
+            {
+                stopReplay();
+            }
+            return;
+        }
+
         playBack(deltaTimeSeconds);
 
         if ((m_shotState.phase == ShotPhase::BallsInMotion) && !ballsInMotion())

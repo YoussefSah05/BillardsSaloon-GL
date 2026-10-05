@@ -71,6 +71,11 @@ namespace BilliardsSaloon
         // Let the referee's banner play before a question or the frame card.
         constexpr float CHOICE_DELAY_SECONDS = 1.4f;
 
+        // Replays: on demand at a little under real time; a frame-winning pot
+        // in slow motion.
+        constexpr double INSTANT_REPLAY_SPEED = 0.7;
+        constexpr double WINNING_REPLAY_SPEED = 0.4;
+
         CameraViewMode nextCameraViewMode(CameraViewMode mode)
         {
             switch (mode)
@@ -82,10 +87,12 @@ namespace BilliardsSaloon
                 case CameraViewMode::ShotFollow:
                     return CameraViewMode::FreeLook;
                 case CameraViewMode::FreeLook:
+                    return CameraViewMode::Broadcast;
+                case CameraViewMode::Broadcast:
                     return CameraViewMode::PlayerAim;
             }
 
-            return CameraViewMode::PlayerAim;
+            return CameraViewMode::Broadcast;
         }
 
         float keyAxis(const Input& input, int negativeKey, int positiveKey)
@@ -178,6 +185,8 @@ namespace BilliardsSaloon
                 const auto restart = [this]()
                 {
                     m_session->restartFrame();
+                    m_cardAfterReplay = false;
+                    m_replayBeforeCard = false;
                     m_hud->clearAnnouncements();
                     setShellState(ApplicationShellState::Gameplay);
                 };
@@ -213,6 +222,8 @@ namespace BilliardsSaloon
                 {
                     m_session->startNextFrame();
                 }
+                m_cardAfterReplay = false;
+                m_replayBeforeCard = false;
                 m_hud->clearAnnouncements();
                 setShellState(ApplicationShellState::Gameplay);
             }
@@ -265,10 +276,17 @@ namespace BilliardsSaloon
             // Development: play a soft break the wrong way, so captures can show
             // ball in hand (9-ball foul) or the referee's question (8-ball).
             MatchSetup setup = savedMatchSetup();
-            setup.game = (options.scenario == DevScenario::Foul) ? GameDiscipline::NineBall
+            setup.game = ((options.scenario == DevScenario::Foul) || (options.scenario == DevScenario::Replay)) ? GameDiscipline::NineBall
                 : (options.scenario == DevScenario::Call) ? GameDiscipline::TenBall
                 : GameDiscipline::EightBall;
             startMatch(setup);
+            const glm::vec2 replayObject(0.5f * 2.54f - 0.7071f, 0.5f * 1.27f - 0.7071f);
+            const glm::vec2 replayCue = replayObject - glm::vec2(0.2121f, 0.2121f);
+            if (options.scenario == DevScenario::Replay)
+            {
+                // A slow, long pot of the 9: it wins the frame and gets replayed.
+                m_session->setLayout(replayCue, {{9, replayObject}});
+            }
             if (options.scenario == DevScenario::Call)
             {
                 // Pot the 1 off a layout "break" (legal, shooter stays), then aim at the 2.
@@ -284,11 +302,14 @@ namespace BilliardsSaloon
             };
             aim.aimDeltaRadians = (options.scenario == DevScenario::Call)
                 ? angleTo({0.9165f, 0.2815f}, {1.1286f, 0.4936f}) - m_session->shotState().aimAngleRadians
+                : (options.scenario == DevScenario::Replay)
+                ? angleTo(replayCue, replayObject) - m_session->shotState().aimAngleRadians
                 : -3.14159265f;
             m_session->applyShotControls(aim, 0.0f);
             ShotControls hold;
             hold.shootHeld = true;
-            for (int i = 0; i < 20; ++i)
+            const int holdFrames = (options.scenario == DevScenario::Replay) ? 11 : 20;
+            for (int i = 0; i < holdFrames; ++i)
             {
                 m_session->applyShotControls(hold, 1.0f / 120.0f);
             }
@@ -346,6 +367,10 @@ namespace BilliardsSaloon
             m_hud->clearAnnouncements();
         }
         m_announcedShots = 0;
+        m_cardAfterReplay = false;
+        m_replayBeforeCard = false;
+        m_plannedPlayback = 0;
+        m_directorCuts.clear();
         m_choiceDelay = -1.0f;
         m_frameOverDelay = -1.0f;
         m_cameraBeforePlacing.reset();
@@ -705,6 +730,11 @@ namespace BilliardsSaloon
             setCameraViewMode(CameraViewMode::FreeLook);
         }
 
+        if (m_input.wasPressed(GLFW_KEY_5))
+        {
+            setCameraViewMode(CameraViewMode::Broadcast);
+        }
+
         const bool freeLook = (m_cameraRigState.mode == CameraViewMode::FreeLook);
 
         // Mouse motion only counts while the cursor is captured by the game.
@@ -729,11 +759,34 @@ namespace BilliardsSaloon
         }
 
 #if defined(BS_DEBUG)
-        if (m_input.isDown(GLFW_KEY_R))
+        if (m_input.isDown(GLFW_KEY_F9))
         {
             m_session->debugRespotCueBall();
         }
 #endif
+
+        // Replays: R (left stick click) plays the last shot again; any shot
+        // key skips to the end.
+        if (m_session->replaying())
+        {
+            const bool skip =
+                m_input.wasPressed(GLFW_KEY_SPACE) || m_input.wasPressed(GLFW_KEY_ENTER) || m_input.wasPressed(GLFW_KEY_R) ||
+                m_input.wasMousePressed(GLFW_MOUSE_BUTTON_LEFT) || m_input.gamepadPressed(GLFW_GAMEPAD_BUTTON_A) ||
+                m_input.gamepadPressed(GLFW_GAMEPAD_BUTTON_LEFT_THUMB);
+            if (skip)
+            {
+                m_session->stopReplay();
+                m_waitForShotRelease = true;
+            }
+            return;
+        }
+        if ((m_input.wasPressed(GLFW_KEY_R) || m_input.gamepadPressed(GLFW_GAMEPAD_BUTTON_LEFT_THUMB)) &&
+            m_session->canReplay())
+        {
+            m_session->cancelHeldShot();
+            m_session->startReplay(INSTANT_REPLAY_SPEED);
+            return;
+        }
 
         if (m_waitForShotRelease)
         {
@@ -1067,6 +1120,7 @@ namespace BilliardsSaloon
         }
 
         CameraPose targetPose;
+        bool hardCut = false;
 
         if (m_shellState == ApplicationShellState::Gameplay)
         {
@@ -1076,6 +1130,51 @@ namespace BilliardsSaloon
             }
 
             targetPose = desiredCameraPose(m_cameraRigState, buildGameplayCameraContext());
+
+            // The director: broadcast cuts while a shot (or replay) plays.
+            const Sim::ShotTrajectory* trajectory = m_session->playbackTrajectory();
+            if (m_session->playbackId() != m_plannedPlayback)
+            {
+                m_plannedPlayback = m_session->playbackId();
+                m_directorCut = -1;
+                m_directorCuts.clear();
+                if (trajectory != nullptr)
+                {
+                    DirectorTable table;
+                    table.length = m_session->variant().table.clothWidth;
+                    table.width = m_session->variant().table.clothDepth;
+                    table.ballRadius = m_session->variant().table.ballRadius;
+                    table.pockets = m_session->pocketPositions();
+                    m_directorCuts = planShotCoverage(*trajectory, table);
+                }
+            }
+
+            const bool directing = (trajectory != nullptr) && !m_directorCuts.empty() &&
+                ((m_cameraRigState.mode == CameraViewMode::Broadcast) || m_session->replaying());
+            if (directing)
+            {
+                const DirectorCut& cut = cutAt(m_directorCuts, m_session->playbackSeconds());
+                const std::ptrdiff_t index = &cut - m_directorCuts.data();
+                // A new camera angle is a cut, as on television, not a glide.
+                hardCut = (index != m_directorCut) && ((index > 0) || (m_directorCut > 0));
+                m_directorCut = index;
+
+                CameraRigState shotState = m_cameraRigState;
+                switch (cut.shot)
+                {
+                    case DirectorShot::Player:
+                        shotState.mode = CameraViewMode::PlayerAim;
+                        targetPose = desiredCameraPose(shotState, buildGameplayCameraContext());
+                        break;
+                    case DirectorShot::Wide:
+                        shotState.mode = CameraViewMode::TableOverview;
+                        targetPose = desiredCameraPose(shotState, buildGameplayCameraContext());
+                        break;
+                    case DirectorShot::Pocket:
+                        targetPose = lookAtPose(cut.position, cut.target);
+                        break;
+                }
+            }
         }
         else if (isInMatch())
         {
@@ -1107,9 +1206,9 @@ namespace BilliardsSaloon
         const float blendRate =
             (m_shellState == ApplicationShellState::Gameplay) ? 10.0f : 7.0f;
         const float blendAlpha =
-            (deltaTimeSeconds > 0.0)
-            ? (1.0f - std::exp(-blendRate * static_cast<float>(deltaTimeSeconds)))
-            : 1.0f;
+            (hardCut || (deltaTimeSeconds <= 0.0))
+            ? 1.0f
+            : (1.0f - std::exp(-blendRate * static_cast<float>(deltaTimeSeconds)));
 
         cameraTransform->syncPrevious();
 
@@ -1125,6 +1224,10 @@ namespace BilliardsSaloon
 
         cameraTransform->position = blendedPose.position;
         cameraTransform->rotation = blendedPose.rotation;
+        if (hardCut)
+        {
+            cameraTransform->syncPrevious();   // no in-between frame across a cut
+        }
     }
 
     HudSnapshot Application::buildHudSnapshot() const
@@ -1148,6 +1251,9 @@ namespace BilliardsSaloon
         snapshot.behindHeadString = frame.ballInHand == Rules::BallInHand::BehindHeadString;
         snapshot.pushOutAvailable = m_session->pushOutAvailable();
         snapshot.pushOutDeclared = m_session->pushOutDeclared();
+        snapshot.replaying = m_session->replaying();
+        snapshot.replaySlow = m_session->replaySpeed() < 0.6;
+        snapshot.canReplay = playing && m_session->canReplay();
         snapshot.power01 = shot.charge01;
         snapshot.strikeRight01 = shot.strikeRight01;
         snapshot.strikeForward01 = shot.strikeForward01;
@@ -1221,7 +1327,8 @@ namespace BilliardsSaloon
             if (outcome.verdict.frameOver && (outcome.verdict.winner >= 0))
             {
                 setFrameResultText(outcome, snapshot);
-                m_frameOverDelay = 1.8f;   // let the referee banner play first
+                m_replayBeforeCard = outcome.verdict.end == Rules::FrameEnd::GameBallPotted;
+                m_frameOverDelay = m_replayBeforeCard ? 1.3f : 1.8f;   // let the referee banner play first
             }
             else if (outcome.verdict.choice != Rules::Choice::None)
             {
@@ -1248,8 +1355,23 @@ namespace BilliardsSaloon
             m_frameOverDelay -= frameTimeSeconds;
             if (m_frameOverDelay <= 0.0f)
             {
-                setShellState(ApplicationShellState::FrameOver);
+                if (m_replayBeforeCard && m_session->startReplay(WINNING_REPLAY_SPEED))
+                {
+                    m_replayBeforeCard = false;
+                    m_cardAfterReplay = true;
+                    m_frameOverDelay = -1.0f;
+                }
+                else
+                {
+                    setShellState(ApplicationShellState::FrameOver);
+                }
             }
+        }
+
+        if (m_cardAfterReplay && (m_shellState == ApplicationShellState::Gameplay) && !m_session->replaying())
+        {
+            m_cardAfterReplay = false;
+            setShellState(ApplicationShellState::FrameOver);
         }
     }
 

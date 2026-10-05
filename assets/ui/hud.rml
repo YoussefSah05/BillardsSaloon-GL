@@ -103,6 +103,45 @@
             color: #A9A39A;
         }
 
+        /* ---- Replay bug ---------------------------------------------- */
+        .replay {
+            position: absolute;
+            right: 40dp;
+            top: 84dp;
+            display: flex;
+            height: 40dp;
+            font-family: "Barlow Condensed";
+        }
+        .replay .tag {
+            padding: 0 16dp;
+            background-color: #C9443A;
+            color: #FFFFFF;
+            font-weight: 800;
+            font-size: 20dp;
+            line-height: 40dp;
+            letter-spacing: 3dp;
+        }
+        .replay .speed {
+            padding: 0 14dp;
+            background-color: rgba(16, 18, 21, 240);
+            font-weight: 700;
+            font-size: 16dp;
+            line-height: 40dp;
+            letter-spacing: 2dp;
+            color: #C9C3B9;
+        }
+        .skip {
+            position: absolute;
+            left: 50%;
+            bottom: 40dp;
+            width: 300dp;
+            margin-left: -150dp;
+            text-align: center;
+            font-size: 14dp;
+            color: #C9C3B9;
+        }
+        .skip .k { color: #F2EEE6; font-weight: 600; }
+
         /* ---- Power meter ------------------------------------------ */
         .power { position: absolute; right: 60dp; bottom: 180dp; width: 60dp; text-align: center; }
         .power .label { font-family: "Barlow Condensed"; font-size: 14dp; letter-spacing: 2dp; color: #A9A39A; margin-bottom: 10dp; }
@@ -255,6 +294,14 @@
 
     <div class="camera-chip">{{ camera_label }}</div>
 
+    <div class="replay" data-if="replaying">
+        <div class="tag">REPLAY</div>
+        <div class="speed">{{ replay_slow ? 'SLOW MOTION' : 'LAST SHOT' }}</div>
+    </div>
+    <div class="skip" data-if="replaying">
+        <span class="k" data-if="!gamepad">Space</span><span class="k" data-if="gamepad">A</span> skip
+    </div>
+
     <div class="power" data-visible="aiming">
         <div class="label">POWER</div>
         <div class="track">
@@ -305,11 +352,12 @@
         <span class="hint"><span class="k">Tab</span> camera</span>
     </div>
 
-    <div class="prompts" data-visible="aiming &amp;&amp; gamepad &amp;&amp; (show_prompts || calling || push_available || can_place)">
+    <div class="prompts" data-visible="aiming &amp;&amp; gamepad &amp;&amp; (show_prompts || calling || push_available || can_place || can_replay)">
         <span class="hint" data-if="calling"><span class="k">D-pad left/right</span> pocket</span>
         <span class="hint" data-if="calling &amp;&amp; rotation"><span class="k">D-pad up</span> ball</span>
         <span class="hint" data-if="push_available"><span class="k">View</span> {{ push_declared ? 'cancel push out' : 'push out' }}</span>
         <span class="hint" data-if="can_place"><span class="k">RB</span> move cue ball</span>
+        <span class="hint" data-if="can_replay"><span class="k">L3</span> replay</span>
         <span class="hint" data-if="show_prompts"><span class="k">Left stick</span> aim</span>
         <span class="hint" data-if="show_prompts"><span class="k">LB</span> fine aim</span>
         <span class="hint" data-if="show_prompts"><span class="k">Hold A</span> power</span>
@@ -319,11 +367,12 @@
         <span class="hint" data-if="show_prompts"><span class="k">Start</span> pause</span>
     </div>
 
-    <div class="prompts" data-visible="aiming &amp;&amp; !gamepad &amp;&amp; (show_prompts || calling || push_available || can_place)">
+    <div class="prompts" data-visible="aiming &amp;&amp; !gamepad &amp;&amp; (show_prompts || calling || push_available || can_place || can_replay)">
         <span class="hint" data-if="calling"><span class="k">Q / E</span> pocket</span>
         <span class="hint" data-if="calling &amp;&amp; rotation"><span class="k">Z</span> ball</span>
         <span class="hint" data-if="push_available"><span class="k">P</span> {{ push_declared ? 'cancel push out' : 'push out' }}</span>
         <span class="hint" data-if="can_place"><span class="k">B</span> move cue ball</span>
+        <span class="hint" data-if="can_replay"><span class="k">R</span> replay</span>
         <span class="hint" data-if="show_prompts"><span class="k">Mouse</span> aim</span>
         <span class="hint" data-if="show_prompts"><span class="k">Shift</span> fine aim</span>
         <span class="hint" data-if="show_prompts"><span class="k">Hold, drag back</span> power</span>
