@@ -257,7 +257,8 @@ Playable 8-ball prototype: local two-player 8-ball with fouls and turn
 resolution, a fixed-step physics model with sliding and rolling, camera modes,
 and main and pause menus.
 
-[Unreleased]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.4.0...v0.5.0

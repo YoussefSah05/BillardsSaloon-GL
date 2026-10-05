@@ -59,8 +59,8 @@ mouse / keyboard ──► Input ──► ShotControls ──► MatchSession (
 | M5 Shot input and broadcast presentation | done (v0.5.0); jump shots wait for airborne-ball physics |
 | M6 Hall visuals, realism, equipment customization | done (v0.6.0) |
 | M7 Audio | done (v0.7.0); referee voice later |
-| M8 AI v1: classical search | next |
-| M9 Intelligence: self-play learning (starts after M3, runs in parallel) | planned |
+| M8 AI v1: classical search | done (v0.8.0) |
+| M9 Intelligence: self-play learning | next |
 | M10 Modes: Quick Match, Practice, Trick Shots, The Tour | planned |
 | M11 Ship: settings, packaging, release | planned |
 
