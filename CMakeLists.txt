@@ -108,6 +108,16 @@ function(bs_set_warnings target)
     endif()
 endfunction()
 
+# Event-based billiards simulator: double precision, no graphics, no game
+# state. Linked by the game, the tests and (later) the Python bindings.
+add_library(bs_sim STATIC
+    src/sim/motion.cpp
+    src/sim/roots.cpp
+)
+target_include_directories(bs_sim PUBLIC src)
+target_link_libraries(bs_sim PUBLIC glm::glm)
+bs_set_warnings(bs_sim)
+
 # Headless game library: ECS, gameplay rules and physics. No OpenGL or GLFW,
 # so it can be linked by unit tests, tools and (later) the AI.
 add_library(bs_game STATIC
@@ -126,7 +136,7 @@ add_library(bs_game STATIC
 
 target_include_directories(bs_game PUBLIC src)
 target_link_libraries(bs_game
-    PUBLIC glm::glm
+    PUBLIC glm::glm bs_sim
     PRIVATE nlohmann_json::nlohmann_json
 )
 target_compile_definitions(bs_game PRIVATE
@@ -206,6 +216,8 @@ if(BS_BUILD_TESTS)
         tests/test_launch_options.cpp
         tests/test_settings.cpp
         tests/test_gamepad_math.cpp
+        tests/test_sim_roots.cpp
+        tests/test_sim_motion.cpp
         tests/test_physics.cpp
         tests/test_asset_paths.cpp
     )
