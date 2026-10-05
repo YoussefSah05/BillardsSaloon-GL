@@ -189,7 +189,8 @@ void main()
     vec3 normal = normalize(vWorldNormal);
     vec3 viewDirection = normalize(uViewPosition - vWorldPosition);
 
-    vec3 baseColor = uMaterialAlbedo;
+    // Material colours are authored in sRGB; light them in linear space.
+    vec3 baseColor = pow(max(uMaterialAlbedo, vec3(0.0)), vec3(2.2));
     if (uMaterialSurfaceType == SURFACE_CLOTH)
     {
         baseColor = applyClothFinish(baseColor);
