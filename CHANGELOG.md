@@ -9,13 +9,22 @@ All notable changes to Billiards Saloon. The format follows
 ### Added
 - Main and pause menus rebuilt with RmlUi: broadcast-style slanted bars,
   Barlow typefaces, hover and keyboard focus states, a blurred pause overlay.
+- In-match HUD rebuilt with RmlUi: broadcast scorebug with the player at the
+  table, ball trays once groups are set, power meter with a marker for the
+  last shot's power, spin widget, control prompts and camera label.
+- Referee banners that name every foul (scratch, no ball hit, wrong ball
+  first) and how the frame ended; lower thirds for ball in hand and turn
+  changes; a frame-over card with Next frame and Main menu.
 - `--screen main|game|pause`, `--fullscreen` and `--capture FILE.png`
   launch options; capture renders a screen, saves a PNG and quits.
 
 ### Changed
 - Starting or resuming a match ignores the click or key that triggered it
   until it is released, so a menu click never starts a shot.
-- The HUD stays visible under the pause overlay.
+- The scorebug stays readable under the pause overlay, which dims and blurs the table.
+
+### Removed
+- The voxel-text HUD and menus built from cubes.
 
 ### Fixed
 - Material colours were gamma-corrected twice, washing out the whole scene.

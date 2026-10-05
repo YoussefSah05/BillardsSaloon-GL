@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 namespace BilliardsSaloon
 {
@@ -290,7 +291,31 @@ namespace BilliardsSaloon
             return;
         }
 
+        const int shooter = m_matchState.activePlayerIndex;
+        const MatchFlowPhase phaseBefore = m_matchState.flowPhase;
+
         Rules::resolveShot(*m_variant, m_matchState, m_registry, m_currentShotResult);
+
+        ShotOutcome outcome;
+        outcome.shooter = shooter;
+        outcome.nextPlayer = m_matchState.activePlayerIndex;
+        outcome.foul = m_matchState.lastFoul;
+        outcome.turnPassed = m_matchState.activePlayerIndex != shooter;
+        outcome.groupsAssigned =
+            (phaseBefore != MatchFlowPhase::GroupsAssigned) &&
+            (m_matchState.flowPhase == MatchFlowPhase::GroupsAssigned);
+        outcome.frameOver = m_matchState.flowPhase == MatchFlowPhase::FrameOver;
+        outcome.winner = outcome.frameOver ? m_matchState.winnerPlayerIndex : -1;
+        outcome.frameEnd = m_matchState.frameEnd;
+        for (const PocketedBallRecord& record : m_currentShotResult.pocketedBalls)
+        {
+            if (!record.isCueBall)
+            {
+                outcome.pottedNumbers.push_back(record.number);
+            }
+        }
+        m_lastOutcome = std::move(outcome);
+        ++m_resolvedShotCount;
 
         if (m_matchState.flowPhase != MatchFlowPhase::FrameOver)
         {

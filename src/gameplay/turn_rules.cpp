@@ -128,26 +128,28 @@ namespace BilliardsSaloon
                 const int activePlayer = matchState.activePlayerIndex;
                 const int otherPlayer = otherPlayerIndex(activePlayer);
 
-                bool foul = false;
                 bool continueTurn = false;
-
-                if (shotResult.cueBallPocketed)
-                {
-                    foul = true;
-                }
 
                 const std::optional<BallRuleTag> requiredTag =
                     requiredFirstContactTag(matchState, registry);
 
-                if (shotResult.firstObjectBallNumber < 0)
+                // When several fouls happen on one shot, report the most visible one.
+                FoulReason foulReason = FoulReason::None;
+                if (shotResult.cueBallPocketed)
                 {
-                    foul = true;
+                    foulReason = FoulReason::CueBallPocketed;
+                }
+                else if (shotResult.firstObjectBallNumber < 0)
+                {
+                    foulReason = FoulReason::NoBallHit;
                 }
                 else if (requiredTag.has_value() && (shotResult.firstObjectBallTag != *requiredTag))
                 {
-                    foul = true;
+                    foulReason = FoulReason::WrongBallFirst;
                 }
 
+                const bool foul = foulReason != FoulReason::None;
+                matchState.lastFoul = foulReason;
                 matchState.foulCommittedThisTurn = foul;
                 matchState.ballInHand = foul;
 
@@ -167,6 +169,10 @@ namespace BilliardsSaloon
 
                     matchState.flowPhase = MatchFlowPhase::FrameOver;
                     matchState.winnerPlayerIndex = legalEightBall ? activePlayer : otherPlayer;
+                    matchState.frameEnd =
+                        legalEightBall ? FrameEndReason::EightBallPotted
+                        : foul ? FrameEndReason::EightBallPottedOnFoul
+                        : FrameEndReason::EightBallPottedEarly;
                     return;
                 }
 

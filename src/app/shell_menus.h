@@ -3,6 +3,7 @@
 #include <RmlUi/Core/DataModelHandle.h>
 
 #include <functional>
+#include <string>
 
 namespace Rml
 {
@@ -17,7 +18,8 @@ namespace BilliardsSaloon
     {
         None,
         Main,
-        Pause
+        Pause,
+        FrameOver
     };
 
     // What the menus can ask the game to do. Called from inside UI event
@@ -45,11 +47,17 @@ namespace BilliardsSaloon
         // Re-read values shown in the menus (e.g. after fullscreen changes).
         void refresh();
 
+        // Text for the frame-over card, e.g. "PLAYER 1 WINS THE FRAME".
+        void setFrameResult(const std::string& headline, const std::string& detail);
+
     private:
         ShellMenuActions m_actions;
         Rml::DataModelHandle m_model;
         Rml::ElementDocument* m_mainMenu {nullptr};
         Rml::ElementDocument* m_pauseMenu {nullptr};
+        Rml::ElementDocument* m_frameOver {nullptr};
+        std::string m_frameWinner;
+        std::string m_frameDetail;
         MenuScreen m_shown {MenuScreen::None};
     };
 }

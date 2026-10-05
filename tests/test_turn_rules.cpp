@@ -176,3 +176,81 @@ TEST_CASE("scratching while potting the 8 loses the frame")
 
     CHECK(table.match.winnerPlayerIndex == 1);
 }
+
+TEST_CASE("each foul records its reason")
+{
+    SUBCASE("scratch wins over a missed contact")
+    {
+        EightBallTable table;
+        ShotResult shot;
+        table.pocket(shot, 0);
+        table.resolve(shot);
+        CHECK(table.match.lastFoul == FoulReason::CueBallPocketed);
+    }
+
+    SUBCASE("hitting nothing")
+    {
+        EightBallTable table;
+        table.match.flowPhase = MatchFlowPhase::TableOpen;
+        table.resolve(ShotResult{});
+        CHECK(table.match.lastFoul == FoulReason::NoBallHit);
+    }
+
+    SUBCASE("hitting the wrong group first")
+    {
+        EightBallTable table;
+        table.assignGroups(PlayerTargetGroup::Stripes);
+        table.resolve(firstContact(4, BallRuleTag::Solid));
+        CHECK(table.match.lastFoul == FoulReason::WrongBallFirst);
+    }
+
+    SUBCASE("a legal shot clears the reason")
+    {
+        EightBallTable table;
+        table.match.lastFoul = FoulReason::NoBallHit;
+        table.resolve(firstContact(1, BallRuleTag::Solid));
+        CHECK(table.match.lastFoul == FoulReason::None);
+    }
+}
+
+TEST_CASE("the frame end records how the 8 went down")
+{
+    SUBCASE("early")
+    {
+        EightBallTable table;
+        table.assignGroups(PlayerTargetGroup::Solids);
+        ShotResult shot = firstContact(2, BallRuleTag::Solid);
+        table.pocket(shot, 8);
+        table.resolve(shot);
+        CHECK(table.match.frameEnd == FrameEndReason::EightBallPottedEarly);
+    }
+
+    SUBCASE("legally")
+    {
+        EightBallTable table;
+        table.assignGroups(PlayerTargetGroup::Solids);
+        for (int number = 1; number <= 7; ++number)
+        {
+            table.registry.get<BallComponent>(table.balls.at(number)).pocketed = true;
+        }
+        ShotResult shot = firstContact(8, BallRuleTag::Eight);
+        table.pocket(shot, 8);
+        table.resolve(shot);
+        CHECK(table.match.frameEnd == FrameEndReason::EightBallPotted);
+    }
+
+    SUBCASE("with a scratch")
+    {
+        EightBallTable table;
+        table.assignGroups(PlayerTargetGroup::Solids);
+        for (int number = 1; number <= 7; ++number)
+        {
+            table.registry.get<BallComponent>(table.balls.at(number)).pocketed = true;
+        }
+        ShotResult shot = firstContact(8, BallRuleTag::Eight);
+        table.pocket(shot, 8);
+        table.pocket(shot, 0);
+        table.resolve(shot);
+        CHECK(table.match.frameEnd == FrameEndReason::EightBallPottedOnFoul);
+    }
+}

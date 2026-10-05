@@ -5,7 +5,6 @@
 #include "render/light_rig.h"
 #include "render/mesh.h"
 #include "render/shader.h"
-#include "render/ui_overlay.h"
 #include "scene/components.h"
 
 #include <glm/glm.hpp>
@@ -32,7 +31,6 @@ namespace BilliardsSaloon
         glm::vec3 forward {0.0f, 0.0f, -1.0f};
         glm::vec3 up {0.0f, 1.0f, 0.0f};
         glm::vec3 right {1.0f, 0.0f, 0.0f};
-        UiOverlayFrame overlayFrame {};
         glm::mat4 viewProjection {1.0f};
     };
 

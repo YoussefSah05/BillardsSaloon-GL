@@ -121,6 +121,13 @@ TEST_CASE("the break resolves once the balls stop and play continues")
     CHECK_FALSE(session.ballsInMotion());
     CHECK(session.matchState().flowPhase != MatchFlowPhase::BreakShot);
 
+    REQUIRE(session.resolvedShotCount() == 1);
+    const ShotOutcome& outcome = session.lastOutcome();
+    CHECK(outcome.shooter == 0);
+    CHECK(outcome.nextPlayer == session.matchState().activePlayerIndex);
+    CHECK(outcome.turnPassed == (outcome.nextPlayer != 0));
+    CHECK(outcome.foul == session.matchState().lastFoul);
+
     if (session.matchState().flowPhase != MatchFlowPhase::FrameOver)
     {
         CHECK(session.shotState().phase == ShotPhase::Aiming);

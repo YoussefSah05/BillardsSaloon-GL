@@ -1,5 +1,6 @@
 #pragma once
 
+#include "app/hud_screen.h"
 #include "app/shell_menus.h"
 #include "core/launch_options.h"
 #include "ecs/entity.h"
@@ -20,7 +21,8 @@ namespace BilliardsSaloon
     {
         MainMenu,
         Gameplay,
-        PauseMenu
+        PauseMenu,
+        FrameOver
     };
 
     // Owns the window and main loop, routes input to the active screen,
@@ -43,6 +45,9 @@ namespace BilliardsSaloon
         void updateFixed(double deltaTimeSeconds);
         void updateCameraRig(double deltaTimeSeconds);
         [[nodiscard]] CameraRigContext buildGameplayCameraContext() const;
+
+        void updateHud(float frameTimeSeconds);
+        [[nodiscard]] HudSnapshot buildHudSnapshot() const;
 
         void render(double alpha);
         void updateWindowTitle(double frameTimeSeconds, std::uint32_t fixedStepsThisFrame);
@@ -69,6 +74,7 @@ namespace BilliardsSaloon
         Entity m_cameraEntity;
         std::unique_ptr<SceneRenderer> m_renderer;
         std::unique_ptr<UiSystem> m_ui;
+        std::unique_ptr<HudScreen> m_hud;
         std::unique_ptr<ShellMenus> m_menus;
 
         ApplicationShellState m_shellState {ApplicationShellState::MainMenu};
@@ -80,6 +86,11 @@ namespace BilliardsSaloon
         // A click or key that started the match (or resumed it) may still be
         // held; ignore shot input until it is released.
         bool m_waitForShotRelease {false};
+
+        std::uint32_t m_announcedShots {0};
+        float m_frameOverDelay {-1.0f};      // seconds until the frame-over card
+        ShotPhase m_previousShotPhase {ShotPhase::Aiming};
+        float m_chargeBeforeShot {0.0f};
 
         double m_accumulator {0.0};
 

@@ -3,6 +3,7 @@
     <title>Main menu</title>
     <link type="text/rcss" href="theme.rcss"/>
     <style>
+        body { z-index: 10; }
         /* Keeps the menu readable over any hall lighting. */
         .scrim {
             position: absolute;

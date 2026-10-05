@@ -9,6 +9,7 @@
 
 #include <glm/glm.hpp>
 
+#include <cstdint>
 #include <vector>
 
 namespace BilliardsSaloon
@@ -49,6 +50,20 @@ namespace BilliardsSaloon
     };
 
     [[nodiscard]] glm::vec3 aimDirectionFromAngle(float angleRadians);
+
+    // What happened on the last resolved shot, for the referee and the HUD.
+    struct ShotOutcome
+    {
+        int shooter {0};
+        int nextPlayer {0};
+        FoulReason foul {FoulReason::None};
+        bool turnPassed {false};
+        bool groupsAssigned {false};
+        bool frameOver {false};
+        int winner {-1};
+        FrameEndReason frameEnd {FrameEndReason::None};
+        std::vector<int> pottedNumbers;   // object balls only
+    };
 
     // Headless owner of one rack of play: the ECS world with table and balls,
     // the shot state machine, physics stepping and rule resolution.
@@ -92,6 +107,10 @@ namespace BilliardsSaloon
         // Advances physics; resolves the shot by the rules once all balls stop.
         void step(double deltaTimeSeconds);
 
+        // Increments each time a shot is resolved; compare to detect new outcomes.
+        [[nodiscard]] std::uint32_t resolvedShotCount() const { return m_resolvedShotCount; }
+        [[nodiscard]] const ShotOutcome& lastOutcome() const { return m_lastOutcome; }
+
     private:
         void spawnTable();
         void spawnBalls();
@@ -109,6 +128,8 @@ namespace BilliardsSaloon
         MatchState m_matchState {};
         ShotState m_shotState {};
         ShotResult m_currentShotResult {};
+        ShotOutcome m_lastOutcome {};
+        std::uint32_t m_resolvedShotCount {0};
         bool m_holdWasActive {false};
         bool m_chargingByStroke {false};
     };
