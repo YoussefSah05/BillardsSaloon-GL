@@ -97,6 +97,8 @@ namespace BilliardsSaloon
         model.BindFunc("ui_scale", [this](Rml::Variant& v) { v = formatted("%.0f%%", static_cast<double>(m_settings.uiScale * 100.0f)); });
         model.BindFunc("reduced_motion", [this](Rml::Variant& v) { v = Rml::String(onOff(m_settings.reducedMotion)); });
 
+        model.Bind("gamepad", &m_gamepad);
+
         model.BindEventCallback("cycle", [this](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& arguments)
         {
             if (arguments.size() == 2)
@@ -152,6 +154,12 @@ namespace BilliardsSaloon
         {
             m_document->Hide();
         }
+    }
+
+    void SettingsScreen::setGamepadPrompts(bool gamepad)
+    {
+        m_gamepad = gamepad;
+        m_model.DirtyVariable("gamepad");
     }
 
     bool SettingsScreen::isVisible() const

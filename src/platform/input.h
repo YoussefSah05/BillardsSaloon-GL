@@ -8,6 +8,12 @@ namespace BilliardsSaloon
 {
     class Window;
 
+    enum class InputDevice
+    {
+        KeyboardMouse,
+        Gamepad
+    };
+
     // Per-frame keyboard and mouse snapshot with press/release edge detection.
     // Call update() once per frame after polling events.
     class Input
@@ -24,8 +30,20 @@ namespace BilliardsSaloon
         [[nodiscard]] bool wasMousePressed(int button) const;
         [[nodiscard]] bool wasMouseReleased(int button) const;
 
-        // Any key or mouse button went down this frame.
+        // Any key, mouse button or gamepad button went down this frame.
         [[nodiscard]] bool anyPressed() const;
+
+        // The first connected gamepad (GLFW's standard mapping, Xbox layout).
+        // Buttons and axes are GLFW_GAMEPAD_* codes.
+        [[nodiscard]] bool hasGamepad() const { return m_hasGamepad; }
+        [[nodiscard]] bool gamepadDown(int button) const;
+        [[nodiscard]] bool gamepadPressed(int button) const;
+
+        // Sticks: -1..1 with a dead zone applied. Triggers: 0 (released) to 1.
+        [[nodiscard]] float gamepadAxis(int axis) const;
+
+        // The device the player touched last, for choosing prompt glyphs.
+        [[nodiscard]] InputDevice lastDevice() const { return m_lastDevice; }
 
         // Cursor position in window coordinates (origin top-left).
         [[nodiscard]] glm::vec2 cursorPosition() const { return m_cursor; }
@@ -46,6 +64,10 @@ namespace BilliardsSaloon
     private:
         static constexpr int KEY_COUNT = 349; // GLFW_KEY_LAST + 1
         static constexpr int MOUSE_BUTTON_COUNT = 3;
+        static constexpr int GAMEPAD_BUTTON_COUNT = 15;   // GLFW_GAMEPAD_BUTTON_LAST + 1
+        static constexpr int GAMEPAD_AXIS_COUNT = 6;      // GLFW_GAMEPAD_AXIS_LAST + 1
+
+        void updateGamepad();
 
         [[nodiscard]] static bool keyInRange(int key);
         [[nodiscard]] static bool buttonInRange(int button);
@@ -59,6 +81,12 @@ namespace BilliardsSaloon
         glm::vec2 m_cursorNdc {0.0f};
         glm::vec2 m_mouseDelta {0.0f};
         float m_scrollDelta {0.0f};
+        std::array<bool, GAMEPAD_BUTTON_COUNT> m_padDown {};
+        std::array<bool, GAMEPAD_BUTTON_COUNT> m_padPrevious {};
+        std::array<float, GAMEPAD_AXIS_COUNT> m_padAxes {};
+        bool m_hasGamepad {false};
+        InputDevice m_lastDevice {InputDevice::KeyboardMouse};
+
         bool m_hasCursor {false};
         bool m_discardMouseDelta {true};
     };

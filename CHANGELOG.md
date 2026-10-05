@@ -24,6 +24,12 @@ All notable changes to Billiards Saloon. The format follows
   the main hub with the table framed beside the menu. The menu camera moves
   slowly over the table (still with Reduced Motion); pause and frame-over
   keep the match view.
+- Gamepad support (standard mapping, Xbox layout): menus by D-pad or
+  stick with hold-to-repeat, A to confirm, B to go back; left stick aims
+  (LB for fine aim), right stick sets spin or orbits the free-look camera,
+  hold A to charge, Y cycles cameras, Start pauses.
+- Prompts and hints switch between keyboard/mouse and gamepad wording
+  depending on the device used last.
 - `--screen title|main|game|pause|settings`, `--fullscreen` and `--capture FILE.png`
   launch options; capture renders a screen, saves a PNG and quits.
 

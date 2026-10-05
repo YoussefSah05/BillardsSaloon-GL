@@ -57,7 +57,8 @@
             <h1>BILLIARDS SALOON</h1>
             <div class="rule"></div>
         </div>
-        <div class="press">PRESS ANY KEY</div>
+        <div class="press" data-visible="!gamepad">PRESS ANY KEY</div>
+        <div class="press" data-visible="gamepad">PRESS ANY BUTTON</div>
     </div>
     <div class="version">{{ version }}</div>
 </body>

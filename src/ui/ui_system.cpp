@@ -152,6 +152,13 @@ namespace BilliardsSaloon
         }
     }
 
+    void UiSystem::injectKey(int key)
+    {
+        const auto identifier = static_cast<Rml::Input::KeyIdentifier>(key);
+        m_context->ProcessKeyDown(identifier, 0);
+        m_context->ProcessKeyUp(identifier, 0);
+    }
+
     void UiSystem::update()
     {
         m_context->Update();

@@ -76,10 +76,15 @@
 
         <button class="menu-item back" id="back" data-event-click="back"><span class="label">BACK</span></button>
     </div>
-    <div class="hints">
+    <div class="hints" data-visible="!gamepad">
         <span class="hint"><span class="key">UP / DOWN</span>Select</span>
         <span class="hint"><span class="key">LEFT / RIGHT</span>or click to change</span>
         <span class="hint"><span class="key">ESC</span>Back</span>
+    </div>
+    <div class="hints" data-visible="gamepad">
+        <span class="hint"><span class="key">D-PAD</span>Select and change</span>
+        <span class="hint"><span class="key pad">A</span>Change</span>
+        <span class="hint"><span class="key pad">B</span>Back</span>
     </div>
 </body>
 </rml>

@@ -49,10 +49,15 @@
         <button class="menu-item" id="settings" data-event-click="open_settings"><span class="label">SETTINGS</span></button>
         <button class="menu-item" id="mainmenu" data-event-click="main_menu"><span class="label">MAIN MENU</span></button>
     </div>
-    <div class="hints">
+    <div class="hints" data-visible="!gamepad">
         <span class="hint"><span class="key">UP / DOWN</span>Select</span>
         <span class="hint"><span class="key">ENTER</span>or click to confirm</span>
         <span class="hint"><span class="key">ESC</span>Resume</span>
+    </div>
+    <div class="hints" data-visible="gamepad">
+        <span class="hint"><span class="key">D-PAD</span>Select</span>
+        <span class="hint"><span class="key pad">A</span>Confirm</span>
+        <span class="hint"><span class="key pad">B</span>Resume</span>
     </div>
 </body>
 </rml>

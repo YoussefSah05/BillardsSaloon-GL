@@ -141,6 +141,10 @@ h1, h2, h3, .display {
     margin-right: 24dp;
 }
 
+.key.pad {
+    border-radius: 9dp;
+}
+
 .key {
     display: inline-block;
     padding: 1dp 7dp;
