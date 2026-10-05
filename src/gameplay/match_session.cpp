@@ -1,5 +1,6 @@
 #include "gameplay/match_session.h"
 
+#include "gameplay/sim_bridge.h"
 #include "gameplay/turn_rules.h"
 #include "physics/billiards_physics.h"
 #include "scene/components.h"
@@ -12,8 +13,7 @@ namespace BilliardsSaloon
 {
     namespace
     {
-        // Distance of the cue ball start spot from the table centre, towards the player.
-        constexpr float CUE_BALL_START_Z = 0.42f;
+        constexpr float PI = 3.14159265358979323846f;
 
         TransformComponent restingTransform(const glm::vec3& position)
         {
@@ -42,9 +42,11 @@ namespace BilliardsSaloon
         return glm::normalize(glm::vec3(std::sin(angleRadians), 0.0f, -std::cos(angleRadians)));
     }
 
-    MatchSession::MatchSession(const GameVariantDefinition& variant, ShotInputTuning tuning)
+    MatchSession::MatchSession(const GameVariantDefinition& variant, ShotInputTuning tuning, PhysicsBackend backend)
         : m_variant(&variant)
         , m_tuning(tuning)
+        , m_backend(backend)
+        , m_simTable(Sim::buildPocketTable(variant.table.pocketGeometry))
     {
         spawnTable();
         spawnBalls();
@@ -58,7 +60,8 @@ namespace BilliardsSaloon
 
     glm::vec3 MatchSession::cueBallStartPosition() const
     {
-        return glm::vec3(0.0f, m_variant->table.ballRadius, CUE_BALL_START_Z);
+        // The head spot: a quarter of the table's length from the centre.
+        return glm::vec3(-0.25f * m_variant->table.clothWidth, m_variant->table.ballRadius, 0.0f);
     }
 
     bool MatchSession::acceptsShotInput() const
@@ -69,6 +72,10 @@ namespace BilliardsSaloon
 
     bool MatchSession::ballsInMotion() const
     {
+        if (m_backend == PhysicsBackend::EventBased)
+        {
+            return m_trajectory.has_value();
+        }
         // anyBallInMotion only reads, but the registry view API is non-const.
         return Physics::anyBallInMotion(const_cast<Registry&>(m_registry));
     }
@@ -119,6 +126,9 @@ namespace BilliardsSaloon
         {
             m_objectBallEntities.push_back(spawn(definition));
         }
+
+        m_simBalls.push_back(m_cueBallEntity);
+        m_simBalls.insert(m_simBalls.end(), m_objectBallEntities.begin(), m_objectBallEntities.end());
     }
 
     void MatchSession::resetRack()
@@ -127,7 +137,9 @@ namespace BilliardsSaloon
         m_matchState.discipline = m_variant->discipline;
 
         m_shotState = ShotState{};
+        m_shotState.aimAngleRadians = 0.5f * PI;   // towards the rack, along +x
         m_currentShotResult.clear();
+        m_trajectory.reset();
         m_holdWasActive = false;
         m_chargingByStroke = false;
 
@@ -247,6 +259,7 @@ namespace BilliardsSaloon
 
     void MatchSession::debugRespotCueBall()
     {
+        m_trajectory.reset();
         resetCueBall();
         m_shotState.phase = ShotPhase::Aiming;
         m_shotState.charge01 = 0.0f;
@@ -256,6 +269,11 @@ namespace BilliardsSaloon
 
     bool MatchSession::fireShot()
     {
+        if (m_backend == PhysicsBackend::EventBased)
+        {
+            return fireSimulatedShot();
+        }
+
         BallComponent& ball = m_registry.get<BallComponent>(m_cueBallEntity);
         if (ball.pocketed)
         {
@@ -282,9 +300,131 @@ namespace BilliardsSaloon
         return true;
     }
 
+    bool MatchSession::fireSimulatedShot()
+    {
+        const TableSpecification& table = m_variant->table;
+        const double length = table.clothWidth;
+        const double width = table.clothDepth;
+
+        std::vector<Sim::BallState> balls;
+        balls.reserve(m_simBalls.size());
+        for (const Entity entity : m_simBalls)
+        {
+            const BallComponent& ball = m_registry.get<BallComponent>(entity);
+            Sim::BallState state;
+            state.r = SimBridge::toSimPosition(m_registry.get<TransformComponent>(entity).position, length, width);
+            state.r.z = table.simBall.R;
+            state.s = ball.pocketed ? Sim::MotionState::Pocketed : Sim::MotionState::Stationary;
+            balls.push_back(state);
+        }
+
+        if (balls.front().s == Sim::MotionState::Pocketed)
+        {
+            return false;
+        }
+
+        const Sim::CueStrike strike {
+            .speed = m_tuning.minCueSpeed + (m_tuning.maxCueSpeed - m_tuning.minCueSpeed) * m_shotState.charge01,
+            .phiDegrees = SimBridge::aimToPhiDegrees(aimDirection()),
+            .thetaDegrees = 0.0,
+            // The simulator's a > 0 is left english; the game's strikeRight01 > 0 is right.
+            .a = -m_shotState.strikeRight01 * m_tuning.tipOffsetPerStrikeUnit,
+            .b = m_shotState.strikeForward01 * m_tuning.tipOffsetPerStrikeUnit
+        };
+
+        m_trajectory = Sim::simulateShot(m_simTable, std::move(balls), 0, strike, table.simBall);
+        m_playbackSeconds = 0.0;
+
+        // What the referee needs, read from the events.
+        m_currentShotResult.clear();
+        m_currentShotResult.shotActive = true;
+        for (const Sim::ShotEvent& event : m_trajectory->events)
+        {
+            if ((event.type == Sim::EventType::BallBall) && (m_currentShotResult.firstObjectBallNumber < 0) &&
+                ((event.ball == 0) || (event.other == 0)))
+            {
+                const int object = (event.ball == 0) ? event.other : event.ball;
+                const BallComponent& hit = m_registry.get<BallComponent>(m_simBalls[static_cast<std::size_t>(object)]);
+                m_currentShotResult.firstObjectBallNumber = hit.number;
+                m_currentShotResult.firstObjectBallTag = hit.ruleTag;
+            }
+            else if (event.type == Sim::EventType::Pocket)
+            {
+                const BallComponent& potted = m_registry.get<BallComponent>(m_simBalls[static_cast<std::size_t>(event.ball)]);
+                m_currentShotResult.pocketedBalls.push_back({potted.number, potted.ruleTag, potted.isCueBall});
+                if (potted.isCueBall)
+                {
+                    m_currentShotResult.cueBallPocketed = true;
+                }
+            }
+        }
+
+        applySimStates(m_trajectory->states.front(), 0.0);
+        return true;
+    }
+
+    void MatchSession::applySimStates(const std::vector<Sim::BallState>& states, double deltaTimeSeconds)
+    {
+        const TableSpecification& table = m_variant->table;
+        const float dt = static_cast<float>(deltaTimeSeconds);
+
+        for (std::size_t i = 0; i < states.size(); ++i)
+        {
+            const Sim::BallState& state = states[i];
+            TransformComponent& transform = m_registry.get<TransformComponent>(m_simBalls[i]);
+            BallComponent& ball = m_registry.get<BallComponent>(m_simBalls[i]);
+
+            transform.syncPrevious();
+
+            if (state.s == Sim::MotionState::Pocketed)
+            {
+                ball.pocketed = true;
+                ball.linearVelocity = glm::vec3(0.0f);
+                ball.angularVelocity = glm::vec3(0.0f);
+                continue;
+            }
+
+            transform.position = SimBridge::toGamePosition(state.r, table.clothWidth, table.clothDepth);
+            ball.linearVelocity = SimBridge::toGameVector(state.v);
+            ball.angularVelocity = SimBridge::toGameVector(state.w);
+
+            // Turn the ball by its spin so the numbers roll naturally.
+            const float spin = glm::length(ball.angularVelocity);
+            if ((spin > 1.0e-6f) && (dt > 0.0f))
+            {
+                const glm::quat turn = glm::angleAxis(spin * dt, ball.angularVelocity / spin);
+                transform.rotation = glm::normalize(turn * transform.rotation);
+            }
+        }
+    }
+
+    void MatchSession::playBack(double deltaTimeSeconds)
+    {
+        if (!m_trajectory)
+        {
+            return;
+        }
+
+        m_playbackSeconds += deltaTimeSeconds;
+        const double end = m_trajectory->duration();
+        applySimStates(m_trajectory->stateAt(std::min(m_playbackSeconds, end)), deltaTimeSeconds);
+
+        if (m_playbackSeconds >= end)
+        {
+            m_trajectory.reset();   // the table is at rest
+        }
+    }
+
     void MatchSession::step(double deltaTimeSeconds)
     {
-        Physics::stepBilliardsWorld(m_registry, deltaTimeSeconds, m_currentShotResult);
+        if (m_backend == PhysicsBackend::EventBased)
+        {
+            playBack(deltaTimeSeconds);
+        }
+        else
+        {
+            Physics::stepBilliardsWorld(m_registry, deltaTimeSeconds, m_currentShotResult);
+        }
 
         if ((m_shotState.phase != ShotPhase::BallsInMotion) || ballsInMotion())
         {

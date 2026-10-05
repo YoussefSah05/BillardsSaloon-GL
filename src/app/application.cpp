@@ -140,7 +140,8 @@ namespace BilliardsSaloon
         , m_settingsFile(settingsFilePath())
         , m_settings(loadStartupSettings(m_settingsFile, options))
         , m_window(WindowDesc{.fullscreen = m_settings.fullscreen, .vsync = m_settings.vsync})
-        , m_session(eightBallVariant())
+        , m_session(eightBallVariant(), ShotInputTuning{},
+                    options.legacyPhysics ? PhysicsBackend::Legacy : PhysicsBackend::EventBased)
     {
         const GameVariantDefinition& variant = m_session.variant();
 

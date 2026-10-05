@@ -1,14 +1,14 @@
 {
   "discipline": "eight_ball",
   "displayName": "8-Ball",
-  "table": "table_10ft",
+  "table": "table_9ft",
   "rack": {
     "pattern": "triangle",
     "apex": [
-      0.0,
-      -0.18
+      0.635,
+      0.0
     ],
-    "spacingScale": 1.0
+    "spacingScale": 1.0002
   },
   "cueBall": {
     "name": "Cue Ball",

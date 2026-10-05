@@ -6,10 +6,12 @@
 #include "gameplay/match_state.h"
 #include "gameplay/shot_result.h"
 #include "gameplay/shot_state.h"
+#include "sim/simulate.h"
 
 #include <glm/glm.hpp>
 
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 namespace BilliardsSaloon
@@ -22,8 +24,14 @@ namespace BilliardsSaloon
         float strikeOffsetPerSecond {0.9f};
         float chargePerSecond {0.9f};
         float maxStrikeRadius01 {0.75f};
-        float minShotSpeed {0.4f};
+        float minShotSpeed {0.4f};        // legacy solver: ball speed, m/s
         float maxShotSpeed {3.8f};
+
+        // Event-based simulator: cue speed at impact (the ball leaves at about
+        // 1.5x this) and how far the tip can move from centre, as a fraction of R.
+        float minCueSpeed {0.5f};
+        float maxCueSpeed {7.0f};
+        float tipOffsetPerStrikeUnit {0.7f};
 
         // Releasing a mouse stroke below this power cancels instead of shooting.
         float strokeCancelBelow {0.03f};
@@ -51,6 +59,12 @@ namespace BilliardsSaloon
 
     [[nodiscard]] glm::vec3 aimDirectionFromAngle(float angleRadians);
 
+    enum class PhysicsBackend
+    {
+        Legacy,       // fixed-step impulse solver (prototype)
+        EventBased    // exact event simulation of the whole shot (bs_sim)
+    };
+
     // What happened on the last resolved shot, for the referee and the HUD.
     struct ShotOutcome
     {
@@ -71,7 +85,18 @@ namespace BilliardsSaloon
     class MatchSession
     {
     public:
-        explicit MatchSession(const GameVariantDefinition& variant, ShotInputTuning tuning = {});
+        explicit MatchSession(
+            const GameVariantDefinition& variant,
+            ShotInputTuning tuning = {},
+            PhysicsBackend backend = PhysicsBackend::EventBased);
+
+        [[nodiscard]] PhysicsBackend backend() const { return m_backend; }
+
+        // The shot being played back (event-based backend only).
+        [[nodiscard]] const Sim::ShotTrajectory* activeTrajectory() const
+        {
+            return m_trajectory ? &*m_trajectory : nullptr;
+        }
 
         [[nodiscard]] Registry& registry() { return m_registry; }
         [[nodiscard]] const Registry& registry() const { return m_registry; }
@@ -116,6 +141,9 @@ namespace BilliardsSaloon
         void spawnBalls();
         void resetCueBall();
         bool fireShot();
+        bool fireSimulatedShot();
+        void playBack(double deltaTimeSeconds);
+        void applySimStates(const std::vector<Sim::BallState>& states, double deltaTimeSeconds);
 
         const GameVariantDefinition* m_variant {nullptr};
         ShotInputTuning m_tuning;
@@ -128,6 +156,12 @@ namespace BilliardsSaloon
         MatchState m_matchState {};
         ShotState m_shotState {};
         ShotResult m_currentShotResult {};
+        PhysicsBackend m_backend {PhysicsBackend::EventBased};
+        Sim::Table m_simTable;
+        std::vector<Entity> m_simBalls;   // simulator ball index -> entity (cue first)
+        std::optional<Sim::ShotTrajectory> m_trajectory;
+        double m_playbackSeconds {0.0};
+
         ShotOutcome m_lastOutcome {};
         std::uint32_t m_resolvedShotCount {0};
         bool m_holdWasActive {false};

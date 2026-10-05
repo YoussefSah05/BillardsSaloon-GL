@@ -25,8 +25,9 @@ materials are scheduled for the hall-visuals milestone.
 - 8-ball against a second local player: break, open table, group assignment,
   first-contact and scratch fouls, turn changes, win/loss on the 8.
 - Cue strike with power and tip offset (english, follow, draw).
-- Physics: sliding→rolling cloth model with spin, ball-ball and cushion
-  impulses with friction, pocket capture.
+- Event-based physics on a WPA 9 ft table: each shot is simulated exactly
+  (sliding, rolling and spinning in closed form, ball-ball throw, Han 2005
+  cushions, pocket jaws, squirt) and played back in real time.
 - Camera modes: aim, table overview, shot follow, free look.
 - Broadcast-style main menu, pause menu and in-match HUD (RmlUi): scorebug,
   ball trays, power meter, spin widget, referee banners that name each foul,
