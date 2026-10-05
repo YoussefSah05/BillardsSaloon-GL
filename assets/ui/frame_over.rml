@@ -27,6 +27,14 @@
             font-size: 42dp;
             letter-spacing: 1dp;
         }
+        .card .score {
+            margin-bottom: 8dp;
+            font-family: "Barlow Condensed";
+            font-weight: 700;
+            font-size: 24dp;
+            letter-spacing: 2dp;
+            color: #D4A94A;
+        }
         .card .detail {
             margin-bottom: 24dp;
             font-size: 16dp;
@@ -41,10 +49,11 @@
 </head>
 <body class="screen" data-model="shell">
     <div class="card">
-        <div class="eyebrow">FRAME OVER</div>
+        <div class="eyebrow">{{ frame_eyebrow }}</div>
         <h2>{{ frame_winner }}</h2>
+        <div class="score" data-if="frame_score != ''">{{ frame_score }}</div>
         <div class="detail">{{ frame_detail }}</div>
-        <button class="menu-item" id="nextframe" autofocus data-event-click="restart_rack"><span class="label">NEXT FRAME</span></button>
+        <button class="menu-item" id="nextframe" autofocus data-event-click="frame_continue"><span class="label">{{ frame_primary }}</span></button>
         <button class="menu-item" id="framemenu" data-event-click="main_menu"><span class="label">MAIN MENU</span></button>
     </div>
 </body>

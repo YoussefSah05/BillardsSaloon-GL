@@ -1,0 +1,57 @@
+<rml>
+<head>
+    <title>Referee choice</title>
+    <link type="text/rcss" href="theme.rcss"/>
+    <style>
+        body {
+            z-index: 25;
+            background-color: rgba(8, 9, 11, 90);
+        }
+        .card {
+            position: absolute;
+            left: 50%;
+            bottom: 140dp;
+            width: 640dp;
+            margin-left: -320dp;
+            padding: 22dp 32dp 24dp;
+            box-sizing: border-box;
+            background-color: rgba(16, 18, 21, 248);
+            border-top: 4dp #5B9BD5;
+        }
+        .card .eyebrow { color: #5B9BD5; }
+        .card h2 {
+            margin: 6dp 0 4dp;
+            font-weight: 800;
+            font-size: 32dp;
+            letter-spacing: 1dp;
+        }
+        .card .detail {
+            margin-bottom: 18dp;
+            font-size: 15dp;
+            color: #C9C3B9;
+        }
+        .card .menu-item {
+            width: 576dp;
+            height: 48dp;
+            line-height: 48dp;
+            font-size: 22dp;
+            margin-bottom: 8dp;
+            background-color: rgba(242, 238, 230, 30);
+        }
+        .card .menu-item:hover,
+        .card .menu-item:focus {
+            background-color: #D4A94A;
+        }
+    </style>
+</head>
+<body class="screen" data-model="shell">
+    <div class="card">
+        <div class="eyebrow">REFEREE · {{ choice_player }} TO DECIDE</div>
+        <h2>{{ choice_title }}</h2>
+        <div class="detail">{{ choice_detail }}</div>
+        <button class="menu-item" id="choice0" data-visible="choice_count > 0" data-event-click="choice_pick(0)"><span class="label">{{ choice_option0 }}</span></button>
+        <button class="menu-item" id="choice1" data-visible="choice_count > 1" data-event-click="choice_pick(1)"><span class="label">{{ choice_option1 }}</span></button>
+        <button class="menu-item" id="choice2" data-visible="choice_count > 2" data-event-click="choice_pick(2)"><span class="label">{{ choice_option2 }}</span></button>
+    </div>
+</body>
+</rml>

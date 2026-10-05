@@ -132,10 +132,11 @@ add_library(bs_game STATIC
     src/gameplay/shot_state.cpp
     src/gameplay/game_variant.cpp
     src/gameplay/match_session.cpp
-    src/gameplay/match_state.cpp
     src/gameplay/shot_result.cpp
-    src/gameplay/turn_rules.cpp
     src/physics/billiards_physics.cpp
+    src/rules/racking.cpp
+    src/rules/referee.cpp
+    src/rules/shot_record.cpp
 )
 
 target_include_directories(bs_game PUBLIC src)
@@ -152,6 +153,7 @@ add_executable(BilliardsSaloon
     src/app/main.cpp
     src/app/application.cpp
     src/app/hud_screen.cpp
+    src/app/match_setup_screen.cpp
     src/app/saloon_scene.cpp
     src/app/settings_screen.cpp
     src/app/shell_menus.cpp
@@ -213,8 +215,12 @@ if(BS_BUILD_TESTS)
     add_executable(bs_tests
         tests/test_main.cpp
         tests/test_registry.cpp
-        tests/test_turn_rules.cpp
+        tests/test_rules_eight_ball.cpp
+        tests/test_rules_rotation.cpp
+        tests/test_shot_record.cpp
+        tests/test_racking.cpp
         tests/test_match_session.cpp
+        tests/test_match_rules.cpp
         tests/test_game_variant.cpp
         tests/test_game_data.cpp
         tests/test_launch_options.cpp

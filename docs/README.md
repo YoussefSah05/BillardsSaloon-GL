@@ -20,6 +20,7 @@ presented like a televised tournament. Four pillars:
 | Document | Answers |
 |----------|---------|
 | [design/GDD.md](design/GDD.md) | What the player does: modes, rules, shot input, presentation, equipment and customization |
+| [design/RULES.md](design/RULES.md) | The referee: WPA clauses enforced, simplifications, code and tests |
 | [design/UX.md](design/UX.md) | How it looks and feels: design language, frontend flow, HUD states, accessibility, RmlUi approach |
 | [design/PHYSICS.md](design/PHYSICS.md) | The physics: today's solver with its equations and parameters, and the event-based simulator that replaces it |
 | [design/INTELLIGENCE.md](design/INTELLIGENCE.md) | The AI/ML plan: why search plus learned value and policy networks, the self-play pipeline, ONNX shipping, evaluation |
@@ -34,12 +35,12 @@ presented like a televised tournament. Four pillars:
 mouse / keyboard ──► Input ──► ShotControls ──► MatchSession (aim, spin, power)
                                                     │ release
                                                     ▼
-                                    physics: today a fixed-step solver,
-                                    from M3 a full-shot event simulation
+                                    sim: the whole shot is simulated, then
+                                    played back (ShotTrajectory)
                                                     │ balls stop
                                                     ▼
-                                    Rules (8-ball today, WPA RuleSet in M4)
-                                                    │ ShotOutcome
+                                    Rules::judgeShot (WPA 8/9/10-ball)
+                                                    │ Verdict → ShotOutcome
                           ┌─────────────────────────┼──────────────────────────┐
                           ▼                         ▼                          ▼
                  HUD: referee banner,       camera rig / director       frame over card,
@@ -53,8 +54,8 @@ mouse / keyboard ──► Input ──► ShotControls ──► MatchSession (
 | M0 Housekeeping, docs, knowledge graph | done |
 | M1 Foundation: library split, tests, CI, JSON data, mouse controls, fullscreen | done (v0.2.0) |
 | M2 UX foundation: RmlUi menus and HUD, settings, frontend flow, gamepad, accessibility | done (v0.3.0) |
-| M3 Event-based physics | next |
-| M4 WPA rules and referee | planned |
+| M3 Event-based physics | merged; golden shots vs pooltool and play-test before tagging |
+| M4 WPA rules and referee | in progress (referee, ball in hand, match setup done) |
 | M5 Shot input and broadcast presentation | planned |
 | M6 Hall visuals, realism, equipment customization | planned |
 | M7 Audio | planned |

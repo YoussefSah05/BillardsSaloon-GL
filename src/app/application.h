@@ -1,6 +1,7 @@
 #pragma once
 
 #include "app/hud_screen.h"
+#include "app/match_setup_screen.h"
 #include "app/settings_screen.h"
 #include "core/gamepad_math.h"
 #include "core/settings.h"
@@ -17,6 +18,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 
 namespace BilliardsSaloon
 {
@@ -27,7 +29,9 @@ namespace BilliardsSaloon
         Gameplay,
         PauseMenu,
         FrameOver,
-        Settings
+        Settings,
+        MatchSetup,       // discipline and race length before a quick match
+        RefereeChoice     // a player answers the referee (re-rack, push-out reply...)
     };
 
     // Owns the window and main loop, routes input to the active screen,
@@ -42,6 +46,13 @@ namespace BilliardsSaloon
         void processInput(float frameTimeSeconds);
         void processGlobalShortcuts();
         void processGameplayInput(float frameTimeSeconds);
+        void processPlacementInput(float frameTimeSeconds, const glm::vec2& mouse, bool fine);
+
+        // Builds a new match for the setup (discipline, race) and its scene.
+        void startMatch(const MatchSetup& setup);
+        [[nodiscard]] MatchSetup savedMatchSetup() const;
+        void openRefereeChoice();
+        void setFrameResultText(const ShotOutcome& outcome, const HudSnapshot& snapshot);
 
         // D-pad / left stick / A / B drive the menus through the UI's own
         // keyboard navigation. Returns true when B (back) was pressed.
@@ -89,13 +100,14 @@ namespace BilliardsSaloon
         Timer m_timer;
         Input m_input;
 
-        MatchSession m_session;
+        std::unique_ptr<MatchSession> m_session;
         Entity m_cameraEntity;
         std::unique_ptr<SceneRenderer> m_renderer;
         std::unique_ptr<UiSystem> m_ui;
         std::unique_ptr<HudScreen> m_hud;
         std::unique_ptr<ShellMenus> m_menus;
         std::unique_ptr<SettingsScreen> m_settingsScreen;
+        std::unique_ptr<MatchSetupScreen> m_matchSetup;
         ApplicationShellState m_settingsReturnState {ApplicationShellState::MainMenu};
 
         ApplicationShellState m_shellState {ApplicationShellState::MainMenu};
@@ -121,6 +133,8 @@ namespace BilliardsSaloon
 
         std::uint32_t m_announcedShots {0};
         float m_frameOverDelay {-1.0f};      // seconds until the frame-over card
+        float m_choiceDelay {-1.0f};         // seconds until the referee's question
+        std::optional<CameraViewMode> m_cameraBeforePlacing;
         ShotPhase m_previousShotPhase {ShotPhase::Aiming};
         float m_chargeBeforeShot {0.0f};
 

@@ -64,6 +64,7 @@ namespace BilliardsSaloon
         {
             if (discipline == "eight_ball") return GameDiscipline::EightBall;
             if (discipline == "nine_ball") return GameDiscipline::NineBall;
+            if (discipline == "ten_ball") return GameDiscipline::TenBall;
             throw std::invalid_argument("unknown discipline \"" + discipline + "\"");
         }
 
@@ -335,6 +336,27 @@ namespace BilliardsSaloon
         static const GameVariantDefinition variant =
             loadGameVariant(resolveAssetPath("data/variants/nine_ball.json"));
         return variant;
+    }
+
+    const GameVariantDefinition& tenBallVariant()
+    {
+        static const GameVariantDefinition variant =
+            loadGameVariant(resolveAssetPath("data/variants/ten_ball.json"));
+        return variant;
+    }
+
+    const GameVariantDefinition& variantFor(GameDiscipline discipline)
+    {
+        switch (discipline)
+        {
+            case GameDiscipline::EightBall:
+                return eightBallVariant();
+            case GameDiscipline::NineBall:
+                return nineBallVariant();
+            case GameDiscipline::TenBall:
+                return tenBallVariant();
+        }
+        return eightBallVariant();
     }
 
     std::vector<glm::vec3> buildRackPositions(const GameVariantDefinition& variant)

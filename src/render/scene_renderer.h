@@ -96,6 +96,11 @@ namespace BilliardsSaloon
             float strikeRight01,
             float strikeForward01);
 
+        // A glowing marker: an ellipsoid with half-extents `size` in metres
+        // (a flat y makes a disc) or, with box = true, a box with full extents
+        // `size` (for lines such as the head string).
+        void drawMarker(const glm::vec3& position, const glm::vec3& size, const glm::vec3& color, bool box = false);
+
         [[nodiscard]] Shader& shader() { return *m_shader; }
         [[nodiscard]] Mesh& cubeMesh() { return *m_cubeMesh; }
 
@@ -106,5 +111,6 @@ namespace BilliardsSaloon
         std::unique_ptr<Mesh> m_cubeMesh;
         std::unique_ptr<Mesh> m_planeMesh;
         std::unique_ptr<Mesh> m_sphereMesh;
+        float m_sphereRadius {1.0f};
     };
 }

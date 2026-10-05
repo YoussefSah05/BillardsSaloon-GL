@@ -6,6 +6,7 @@
 #include <RmlUi/Core/DataModelHandle.h>
 #include <RmlUi/Core/ElementDocument.h>
 
+#include <algorithm>
 #include <stdexcept>
 #include <utility>
 
@@ -55,8 +56,34 @@ namespace BilliardsSaloon
                 action();
             }
         });
-        model.Bind("frame_winner", &m_frameWinner);
-        model.Bind("frame_detail", &m_frameDetail);
+        model.Bind("frame_eyebrow", &m_frame.eyebrow);
+        model.Bind("frame_winner", &m_frame.headline);
+        model.Bind("frame_detail", &m_frame.detail);
+        model.Bind("frame_score", &m_frame.score);
+        model.Bind("frame_primary", &m_frame.primary);
+        model.BindEventCallback("frame_continue", callback(m_actions.frameContinue));
+
+        model.Bind("choice_player", &m_choicePlayer);
+        model.Bind("choice_title", &m_choiceTitle);
+        model.Bind("choice_detail", &m_choiceDetail);
+        model.Bind("choice_option0", &m_choiceOptions[0]);
+        model.Bind("choice_option1", &m_choiceOptions[1]);
+        model.Bind("choice_option2", &m_choiceOptions[2]);
+        model.Bind("choice_count", &m_choiceCount);
+        model.BindEventCallback("choice_pick", [this](Rml::DataModelHandle, Rml::Event&, const Rml::VariantList& arguments)
+        {
+            if (arguments.empty())
+            {
+                return;
+            }
+            const int index = arguments[0].Get<int>();
+            std::function<void(int)> pick = std::move(m_onPick);
+            hideChoice();
+            if (pick && (index >= 0) && (index < m_choiceCount))
+            {
+                pick(index);
+            }
+        });
 
         model.BindEventCallback("start_match", callback(m_actions.startMatch));
         model.BindEventCallback("open_settings", callback(m_actions.openSettings));
@@ -72,6 +99,7 @@ namespace BilliardsSaloon
         m_pauseMenu = &ui.loadDocument("ui/pause_menu.rml");
         m_frameOver = &ui.loadDocument("ui/frame_over.rml");
         m_confirm = &ui.loadDocument("ui/confirm.rml");
+        m_choice = &ui.loadDocument("ui/choice.rml");
     }
 
     void ShellMenus::show(MenuScreen screen)
@@ -152,11 +180,52 @@ namespace BilliardsSaloon
         m_model.DirtyVariable("gamepad");
     }
 
-    void ShellMenus::setFrameResult(const std::string& headline, const std::string& detail)
+    void ShellMenus::setFrameResult(const FrameResultText& text)
     {
-        m_frameWinner = headline;
-        m_frameDetail = detail;
-        m_model.DirtyVariable("frame_winner");
-        m_model.DirtyVariable("frame_detail");
+        m_frame = text;
+        for (const char* name : {"frame_eyebrow", "frame_winner", "frame_detail", "frame_score", "frame_primary"})
+        {
+            m_model.DirtyVariable(name);
+        }
+    }
+
+    void ShellMenus::showChoice(const std::string& player, const std::string& title, const std::string& detail,
+                                const std::vector<std::string>& options, std::function<void(int)> onPick)
+    {
+        m_choicePlayer = player;
+        m_choiceTitle = title;
+        m_choiceDetail = detail;
+        m_choiceCount = static_cast<int>(std::min<std::size_t>(options.size(), m_choiceOptions.size()));
+        for (std::size_t i = 0; i < m_choiceOptions.size(); ++i)
+        {
+            m_choiceOptions[i] = (i < options.size()) ? options[i] : std::string();
+        }
+        m_onPick = std::move(onPick);
+        for (const char* name : {"choice_player", "choice_title", "choice_detail", "choice_option0",
+                                 "choice_option1", "choice_option2", "choice_count"})
+        {
+            m_model.DirtyVariable(name);
+        }
+
+        m_choice->Show(Rml::ModalFlag::Modal, Rml::FocusFlag::Document);
+        // The first answer takes focus, so Enter or A picks it.
+        if (Rml::Element* first = m_choice->GetElementById("choice0"))
+        {
+            first->Focus(true);
+        }
+    }
+
+    bool ShellMenus::choiceOpen() const
+    {
+        return m_choice->IsVisible();
+    }
+
+    void ShellMenus::hideChoice()
+    {
+        m_onPick = nullptr;
+        if (m_choice->IsVisible())
+        {
+            m_choice->Hide();
+        }
     }
 }

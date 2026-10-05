@@ -31,6 +31,25 @@
             line-height: 52dp;
             letter-spacing: 1dp;
         }
+        .bug .frames {
+            width: 40dp;
+            height: 52dp;
+            background-color: rgba(30, 33, 38, 245);
+            font-weight: 800;
+            font-size: 26dp;
+            line-height: 52dp;
+            text-align: center;
+            color: #F2EEE6;
+        }
+        .bug .player .group.warn { color: #E0675C; }
+        .race {
+            margin-top: 4dp;
+            padding-left: 12dp;
+            font-family: "Barlow Condensed";
+            font-size: 13dp;
+            letter-spacing: 2.5dp;
+            color: #A9A39A;
+        }
         .tray { display: flex; margin-top: 8dp; padding-left: 12dp; }
         .tray .side { display: flex; margin-right: 32dp; }
         .tray .ball {
@@ -41,6 +60,36 @@
             background-color: #F7F4EC;
         }
         .tray .band { margin-top: 4dp; height: 8dp; }
+        .tray .ball.on { width: 20dp; height: 20dp; margin-top: -2dp; border-radius: 10dp; border: 2dp #F2EEE6; }
+        .tray .ball.on .band { margin-top: 4dp; }
+
+        /* ---- Callouts: ball in hand, called shot, push-out ---------- */
+        .callouts { position: absolute; left: 40dp; top: 150dp; }
+        .callout {
+            display: flex;
+            height: 40dp;
+            margin-top: 8dp;
+            font-family: "Barlow Condensed";
+        }
+        .callout .tag {
+            padding: 0 14dp;
+            background-color: #D4A94A;
+            color: #111214;
+            font-weight: 800;
+            font-size: 16dp;
+            line-height: 40dp;
+            letter-spacing: 2dp;
+        }
+        .callout.alert .tag { background-color: #C9443A; color: #FFFFFF; }
+        .callout.info .tag { background-color: #5B9BD5; color: #0B0D0F; }
+        .callout .text {
+            padding: 0 16dp;
+            background-color: rgba(16, 18, 21, 240);
+            font-weight: 700;
+            font-size: 18dp;
+            line-height: 40dp;
+            letter-spacing: 1dp;
+        }
 
         .camera-chip {
             position: absolute;
@@ -173,16 +222,24 @@
             <div class="marker" data-class-on="active == 0"></div>
             <div class="player" data-class-active="active == 0">
                 <div class="name">{{ p1_name }}</div>
-                <div class="group">{{ p1_group }}</div>
+                <div class="group" data-class-warn="rotation &amp;&amp; p1_group == '2 FOULS'">{{ p1_group }}</div>
             </div>
+            <div class="frames" data-if="show_frames">{{ p1_frames }}</div>
             <div class="middle">{{ discipline }}</div>
+            <div class="frames" data-if="show_frames">{{ p2_frames }}</div>
             <div class="player" data-class-active="active == 1">
                 <div class="name">{{ p2_name }}</div>
-                <div class="group">{{ p2_group }}</div>
+                <div class="group" data-class-warn="rotation &amp;&amp; p2_group == '2 FOULS'">{{ p2_group }}</div>
             </div>
             <div class="marker" data-class-on="active == 1"></div>
         </div>
+        <div class="race" data-if="show_frames">{{ race }}</div>
         <div class="tray">
+            <div class="side" data-if="rotation">
+                <div class="ball" data-for="ball : tray_table" data-class-on="ball.on" data-style-background-color="ball.fill">
+                    <div class="band" data-if="ball.stripe" data-style-background-color="ball.color"></div>
+                </div>
+            </div>
             <div class="side" data-if="groups_assigned">
                 <div class="ball" data-for="ball : tray1" data-style-background-color="ball.fill">
                     <div class="band" data-if="ball.stripe" data-style-background-color="ball.color"></div>
@@ -220,23 +277,59 @@
         </div>
     </div>
 
-    <div class="prompts" data-visible="aiming &amp;&amp; show_prompts &amp;&amp; gamepad">
-        <span class="hint"><span class="k">Left stick</span> aim</span>
-        <span class="hint"><span class="k">LB</span> fine aim</span>
-        <span class="hint"><span class="k">Hold A</span> power</span>
-        <span class="hint"><span class="k">Release A</span> shoot</span>
-        <span class="hint"><span class="k">Right stick</span> spin</span>
-        <span class="hint"><span class="k">Y</span> camera</span>
-        <span class="hint"><span class="k">Start</span> pause</span>
+    <div class="callouts">
+        <div class="callout" data-class-alert="!placement_valid" data-if="placing">
+            <div class="tag">BALL IN HAND</div>
+            <div class="text">{{ placement_valid ? place_text : 'BLOCKED · MOVE AWAY FROM THE BALLS' }}</div>
+        </div>
+        <div class="callout info" data-if="push_declared">
+            <div class="tag">PUSH OUT</div>
+            <div class="text">NO CONTACT NEEDED · OPPONENT CHOOSES</div>
+        </div>
+        <div class="callout" data-if="calling &amp;&amp; !placing">
+            <div class="tag">CALLED</div>
+            <div class="text">{{ call_text }}</div>
+        </div>
     </div>
 
-    <div class="prompts" data-visible="aiming &amp;&amp; show_prompts &amp;&amp; !gamepad">
-        <span class="hint"><span class="k">Mouse</span> aim</span>
-        <span class="hint"><span class="k">Shift</span> fine aim</span>
-        <span class="hint"><span class="k">Hold, drag back</span> power</span>
-        <span class="hint"><span class="k">Release</span> shoot</span>
-        <span class="hint"><span class="k">Right-drag</span> spin</span>
+    <div class="prompts" data-visible="placing &amp;&amp; gamepad">
+        <span class="hint"><span class="k">Left stick</span> move the cue ball</span>
+        <span class="hint"><span class="k">LB</span> fine</span>
+        <span class="hint"><span class="k">A</span> place</span>
+        <span class="hint"><span class="k">Y</span> camera</span>
+    </div>
+    <div class="prompts" data-visible="placing &amp;&amp; !gamepad">
+        <span class="hint"><span class="k">Mouse / WASD</span> move the cue ball</span>
+        <span class="hint"><span class="k">Shift</span> fine</span>
+        <span class="hint"><span class="k">Click / Space</span> place</span>
         <span class="hint"><span class="k">Tab</span> camera</span>
+    </div>
+
+    <div class="prompts" data-visible="aiming &amp;&amp; gamepad &amp;&amp; (show_prompts || calling || push_available || can_place)">
+        <span class="hint" data-if="calling"><span class="k">D-pad left/right</span> pocket</span>
+        <span class="hint" data-if="calling &amp;&amp; rotation"><span class="k">D-pad up</span> ball</span>
+        <span class="hint" data-if="push_available"><span class="k">View</span> {{ push_declared ? 'cancel push out' : 'push out' }}</span>
+        <span class="hint" data-if="can_place"><span class="k">RB</span> move cue ball</span>
+        <span class="hint" data-if="show_prompts"><span class="k">Left stick</span> aim</span>
+        <span class="hint" data-if="show_prompts"><span class="k">LB</span> fine aim</span>
+        <span class="hint" data-if="show_prompts"><span class="k">Hold A</span> power</span>
+        <span class="hint" data-if="show_prompts"><span class="k">Release A</span> shoot</span>
+        <span class="hint" data-if="show_prompts"><span class="k">Right stick</span> spin</span>
+        <span class="hint" data-if="show_prompts"><span class="k">Y</span> camera</span>
+        <span class="hint" data-if="show_prompts"><span class="k">Start</span> pause</span>
+    </div>
+
+    <div class="prompts" data-visible="aiming &amp;&amp; !gamepad &amp;&amp; (show_prompts || calling || push_available || can_place)">
+        <span class="hint" data-if="calling"><span class="k">Q / E</span> pocket</span>
+        <span class="hint" data-if="calling &amp;&amp; rotation"><span class="k">Z</span> ball</span>
+        <span class="hint" data-if="push_available"><span class="k">P</span> {{ push_declared ? 'cancel push out' : 'push out' }}</span>
+        <span class="hint" data-if="can_place"><span class="k">B</span> move cue ball</span>
+        <span class="hint" data-if="show_prompts"><span class="k">Mouse</span> aim</span>
+        <span class="hint" data-if="show_prompts"><span class="k">Shift</span> fine aim</span>
+        <span class="hint" data-if="show_prompts"><span class="k">Hold, drag back</span> power</span>
+        <span class="hint" data-if="show_prompts"><span class="k">Release</span> shoot</span>
+        <span class="hint" data-if="show_prompts"><span class="k">Right-drag</span> spin</span>
+        <span class="hint" data-if="show_prompts"><span class="k">Tab</span> camera</span>
     </div>
 
     <div class="banner" data-class-visible="banner_visible" data-class-foul="banner_foul" data-class-legal="banner_legal">

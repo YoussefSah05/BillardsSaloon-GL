@@ -14,14 +14,14 @@ tests link, and the `BilliardsSaloon` executable.
 | `src/ecs/` | bs_game | Sparse-set `Registry` with `view<...>().each(...)`. |
 | `src/scene/components.h` | bs_game | Transform (with previous state for interpolation), Ball, Material, TableBounds, Camera tags. |
 | `src/gameplay/game_variant.*` | bs_game | Variant/table types, JSON loaders, rack layouts. |
-| `src/gameplay/match_session.*` | bs_game | One rack of play: ECS world, shot state machine (aim, tip offset, charge, fire), physics step, rule resolution. |
-| `src/gameplay/turn_rules.*` | bs_game | `Rules::resolveShot` (8-ball only; 9-ball currently reuses it). |
+| `src/gameplay/match_session.*` | bs_game | A match: ECS world, shot state machine (place, aim, tip offset, charge, fire), physics playback, referee, ball in hand, spotting, calls, push-outs, race to N. |
+| `src/rules/` | bs_game | WPA referee for 8-, 9- and 10-ball as pure functions (`judgeShot`, `applyChoice`), shot records from simulator events, racking, match score. See design/RULES.md. |
 | `src/sim/` | bs_sim | Event-based simulator: roots, motion, table geometry, event detection, collision models, `simulateShot` → `ShotTrajectory`. Default physics. See design/PHYSICS.md. |
 | `src/gameplay/sim_bridge.h` | bs_game | Game ↔ simulator frame conversion. |
 | `src/physics/billiards_physics.*` | bs_game | Prototype fixed-step solver, kept behind `--physics legacy` until removal. |
 | `src/platform/` | app | `Window` (GLFW, vsync on), `Input` (key edge detection), `Timer`. |
 | `src/render/` | app | `SceneRenderer` (frame setup, world, aim guide), `Shader`, `Mesh`, `Camera`, `camera_rig`, `ui_overlay` (voxel-font text). |
-| `src/app/` | app | `Application` (loop, screens, camera rig), `saloon_scene` (room, lamps, ball materials), `overlay_screens` (HUD and menus). |
+| `src/app/` | app | `Application` (loop, screens, camera rig), `saloon_scene` (room, lamps, ball materials), RmlUi screens: `shell_menus` (title, hub, pause, frame over, confirm, referee choice), `match_setup_screen`, `settings_screen`, `hud_screen`. |
 | `assets/data/` | — | Game data: `variants/*.json` (rules discipline, rack, balls) and `tables/*.json` (dimensions, pockets, physics coefficients). |
 | `assets/shaders/basic.*` | — | Single forward shader with procedural cloth/wood finishes and ball patterns. |
 | `tests/` | bs_tests | doctest suite: ECS, rules, physics characterization, session, data loading. |

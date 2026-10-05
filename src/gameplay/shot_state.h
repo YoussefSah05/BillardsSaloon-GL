@@ -4,6 +4,7 @@ namespace BilliardsSaloon
 {
     enum class ShotPhase
     {
+        PlacingCueBall,   // ball in hand: moving the cue ball before aiming
         Aiming,
         Charging,
         BallsInMotion

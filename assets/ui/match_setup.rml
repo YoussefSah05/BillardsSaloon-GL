@@ -1,0 +1,95 @@
+<rml>
+<head>
+    <title>Match setup</title>
+    <link type="text/rcss" href="theme.rcss"/>
+    <style>
+        body {
+            z-index: 20;
+            background-color: rgba(8, 9, 11, 170);
+        }
+        .panel {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 600dp;
+            margin-left: -300dp;
+            margin-top: -260dp;
+        }
+        .panel h2 {
+            margin-bottom: 6dp;
+            font-weight: 800;
+            font-size: 46dp;
+            letter-spacing: 2dp;
+        }
+        .section {
+            margin: 16dp 0 8dp 4dp;
+        }
+        .setting {
+            width: 600dp;
+            height: 50dp;
+            margin-bottom: 8dp;
+            line-height: 50dp;
+            font-size: 22dp;
+            nav-left: none;
+            nav-right: none;
+        }
+        .setting .label {
+            display: block;
+            width: 540dp;
+        }
+        .setting .value {
+            float: right;
+            color: #D4A94A;
+        }
+        .setting:hover .value,
+        .setting:focus .value {
+            color: #111214;
+        }
+        .about {
+            margin: 4dp 4dp 18dp;
+            font-size: 14dp;
+            color: #C9C3B9;
+        }
+        .actions .menu-item {
+            display: inline-block;
+            width: 290dp;
+            margin-right: 10dp;
+        }
+        .hints {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 36dp;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="screen" data-model="setup">
+    <div class="panel">
+        <div class="eyebrow">QUICK MATCH · TWO PLAYERS</div>
+        <h2>MATCH SETUP</h2>
+
+        <div class="eyebrow section">GAME</div>
+        <button class="menu-item setting" id="game" autofocus data-event-click="cycle(0, 1)" data-event-keydown="key(0, ev.key_identifier)"><span class="label">DISCIPLINE<span class="value">{{ game }}</span></span></button>
+        <div class="about">{{ about }}</div>
+
+        <div class="eyebrow section">MATCH</div>
+        <button class="menu-item setting" id="race" data-event-click="cycle(1, 1)" data-event-keydown="key(1, ev.key_identifier)"><span class="label">RACE TO<span class="value">{{ race }}</span></span></button>
+        <button class="menu-item setting" id="breaks" data-event-click="cycle(2, 1)" data-event-keydown="key(2, ev.key_identifier)"><span class="label">BREAK<span class="value">{{ breaks }}</span></span></button>
+
+        <div class="actions">
+            <button class="menu-item" id="start" data-event-click="start"><span class="label">START MATCH</span></button><button class="menu-item" id="setupback" data-event-click="back"><span class="label">BACK</span></button>
+        </div>
+    </div>
+    <div class="hints" data-visible="!gamepad">
+        <span class="hint"><span class="key">UP / DOWN</span>Select</span>
+        <span class="hint"><span class="key">LEFT / RIGHT</span>or click to change</span>
+        <span class="hint"><span class="key">ESC</span>Back</span>
+    </div>
+    <div class="hints" data-visible="gamepad">
+        <span class="hint"><span class="key">D-PAD</span>Select and change</span>
+        <span class="hint"><span class="key pad">A</span>Change or start</span>
+        <span class="hint"><span class="key pad">B</span>Back</span>
+    </div>
+</body>
+</rml>

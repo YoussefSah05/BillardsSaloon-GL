@@ -44,7 +44,8 @@ TEST_CASE("a new session racks the balls and waits for the break")
     MatchSession session(eightBallVariant());
 
     CHECK(session.objectBallEntities().size() == 15);
-    CHECK(session.matchState().flowPhase == MatchFlowPhase::BreakShot);
+    CHECK(session.frame().phase == Rules::Phase::Break);
+    CHECK(session.frame().ballInHand == Rules::BallInHand::BehindHeadString);
     CHECK(session.shotState().phase == ShotPhase::Aiming);
     CHECK(session.acceptsShotInput());
     CHECK_FALSE(session.ballsInMotion());
@@ -120,20 +121,18 @@ TEST_CASE("the break resolves once the balls stop and play continues")
     stepUntilSettled(session);
 
     CHECK_FALSE(session.ballsInMotion());
-    CHECK(session.matchState().flowPhase != MatchFlowPhase::BreakShot);
+    CHECK(session.frame().phase != Rules::Phase::Break);
 
     REQUIRE(session.resolvedShotCount() == 1);
     const ShotOutcome& outcome = session.lastOutcome();
-    CHECK(outcome.shooter == 0);
-    CHECK(outcome.nextPlayer == session.matchState().activePlayerIndex);
-    CHECK(outcome.turnPassed == (outcome.nextPlayer != 0));
-    CHECK(outcome.foul == session.matchState().lastFoul);
+    CHECK(outcome.verdict.shooter == 0);
+    CHECK(outcome.verdict.breakShot);
+    CHECK(outcome.nextPlayer == session.frame().shooter);
+    CHECK(outcome.verdict.turnPassed == (outcome.nextPlayer != 0));
 
-    if (session.matchState().flowPhase != MatchFlowPhase::FrameOver)
+    if (!session.frameOver() && (session.pendingChoice() == Rules::Choice::None))
     {
-        CHECK(session.shotState().phase == ShotPhase::Aiming);
-        CHECK(session.acceptsShotInput());
-
+        CHECK((session.acceptsShotInput() || session.placingCueBall()));
         const BallComponent& cueBall = session.registry().get<BallComponent>(session.cueBallEntity());
         CHECK_FALSE(cueBall.pocketed);
     }
@@ -217,16 +216,17 @@ TEST_CASE("releasing a mouse stroke with almost no power cancels it")
     CHECK_FALSE(session.ballsInMotion());
 }
 
-TEST_CASE("resetting the rack restores the opening position")
+TEST_CASE("restarting the frame restores the opening position")
 {
     MatchSession session(eightBallVariant());
     chargeAndRelease(session, 1.0f, 60.0f);
     stepUntilSettled(session);
 
-    session.resetRack();
+    session.restartFrame();
 
-    CHECK(session.matchState().flowPhase == MatchFlowPhase::BreakShot);
-    CHECK(session.matchState().activePlayerIndex == 0);
+    CHECK(session.frame().phase == Rules::Phase::Break);
+    CHECK(session.frame().shooter == 0);
+    CHECK(session.frameNumber() == 1);
     for (const Entity ball : session.objectBallEntities())
     {
         CHECK_FALSE(session.registry().get<BallComponent>(ball).pocketed);
@@ -263,7 +263,7 @@ TEST_CASE("an event-simulated break plays back, syncs pots and records first con
     CHECK(session.activeTrajectory() == nullptr);
 
     // The break hits the apex ball (the 1) first.
-    CHECK(session.lastOutcome().foul != FoulReason::NoBallHit);
+    CHECK(session.lastOutcome().verdict.foul != Rules::Foul::NoBallHit);
 
     std::size_t pocketedOnTable = 0;
     for (const Entity ball : session.objectBallEntities())
@@ -271,7 +271,7 @@ TEST_CASE("an event-simulated break plays back, syncs pots and records first con
         pocketedOnTable += session.registry().get<BallComponent>(ball).pocketed ? 1U : 0U;
     }
     const bool cuePotted = session.registry().get<BallComponent>(session.cueBallEntity()).pocketed ||
-                           session.lastOutcome().foul == FoulReason::CueBallPocketed;
+                           session.lastOutcome().verdict.foul == Rules::Foul::CueBallPocketed;
     CHECK(pocketedOnTable + (cuePotted ? 1U : 0U) == potted);
 }
 

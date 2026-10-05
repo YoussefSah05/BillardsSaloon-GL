@@ -15,7 +15,8 @@ namespace BilliardsSaloon
     enum class GameDiscipline
     {
         EightBall,
-        NineBall
+        NineBall,
+        TenBall
     };
 
     enum class RackPattern
@@ -97,6 +98,8 @@ namespace BilliardsSaloon
     // Built-in variants from assets/data/variants, loaded once on first use.
     const GameVariantDefinition& eightBallVariant();
     const GameVariantDefinition& nineBallVariant();
+    const GameVariantDefinition& tenBallVariant();
+    const GameVariantDefinition& variantFor(GameDiscipline discipline);
 
     // Rest positions of the object balls, in the order of variant.objectBalls.
     [[nodiscard]] std::vector<glm::vec3> buildRackPositions(const GameVariantDefinition& variant);
