@@ -39,6 +39,7 @@ Launch ─► Studio splash (≤2 s, skippable)
             │        ├─ The Tour ───► Season hub (bracket, rankings, next opponent)
             │        ├─ Practice ───► Table setup ─► Free table
             │        └─ Trick Shots ► Challenge list (stars) ─► Challenge
+            ├─ Locker (equipment: table, cloth, balls, cue, hall)
             ├─ Profile & Stats
             ├─ Settings (Gameplay · Controls · Video · Audio · Accessibility)
             └─ Quit
@@ -51,6 +52,12 @@ Launch ─► Studio splash (≤2 s, skippable)
   Esc / right-click / B.
 - **Match setup:** discipline, race length, opponent card (AI pro nameplate,
   skill tier, play style), table cloth colour, aim-assist level.
+- **Locker:** the camera moves close to the table and every equipment choice
+  previews live on it (cloth colour, rails, pockets, ball set, cue); locked
+  items show how to earn them.
+- **AI Coach panel** (Practice, and after a frame on request): the shot the AI
+  would have played, a heatmap of where the cue ball should have finished, and
+  shot difficulty as a percentage, drawn on the table in 3D.
 - **Player intro:** lower-third nameplates for both players with their record,
   then a crane shot down to the table; skippable.
 

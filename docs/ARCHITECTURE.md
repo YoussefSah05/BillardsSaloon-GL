@@ -42,6 +42,8 @@ src/
   ui/        RmlUi menus/HUD bound to view models (assets/ui/*.rml, *.rcss); Dear ImGui for debug tools only
   audio/     miniaudio, driven by sim events
   ecs/       existing Registry
+  python/    pybind11 bindings of the simulator and rules (optional build)
+ml/          Python training project: env, agents, self-play, ONNX export (see design/INTELLIGENCE.md)
 tests/       doctest unit, golden-shot and rules tests
 ```
 
@@ -80,7 +82,9 @@ Following Leckie & Greenspan (2006) and pooltool (Kiefl, JOSS 2024):
 
 M0 housekeeping ✅ · M1 foundation ✅ · M2 UX foundation and broadcast
 frontend · M3 event-based physics · M4 WPA rules and referee · M5 shot input
-and presentation · M6 hall visuals · M7 audio · M8 AI · M9 modes · M10 ship.
+and presentation · M6 hall visuals, realism and customization · M7 audio ·
+M8 AI v1 (classical search) · M9 intelligence (self-play learning, starts
+after M3 and runs in parallel) · M10 modes · M11 ship.
 UX comes before physics because every later milestone presents itself
 through it (referee banners, ball in hand, opponent cards, season hub).
 
