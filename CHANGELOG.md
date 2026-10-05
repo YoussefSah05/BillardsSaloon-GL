@@ -6,6 +6,10 @@ All notable changes to Billiards Saloon. The format follows
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-06
+
+Shot input and broadcast presentation (M5).
+
 ### Added
 - Aim guides from the simulator (M5): the shot is simulated as you aim, and
   the guide shows the ghost ball at first contact, the object ball's line and
@@ -176,7 +180,8 @@ Playable 8-ball prototype: local two-player 8-ball with fouls and turn
 resolution, a fixed-step physics model with sliding and rolling, camera modes,
 and main and pause menus.
 
-[Unreleased]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.1.0-prototype...v0.2.0

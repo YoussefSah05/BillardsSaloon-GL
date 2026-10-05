@@ -44,7 +44,7 @@ mouse / keyboard ──► Input ──► ShotControls ──► MatchSession (
                           ┌─────────────────────────┼──────────────────────────┐
                           ▼                         ▼                          ▼
                  HUD: referee banner,       camera rig / director       frame over card,
-                 lower third, scorebug      (replays in M5)             match flow (M10)
+                 lower third, scorebug      director cuts, replays             match flow (M10)
 ```
 
 ## Roadmap
@@ -56,8 +56,8 @@ mouse / keyboard ──► Input ──► ShotControls ──► MatchSession (
 | M2 UX foundation: RmlUi menus and HUD, settings, frontend flow, gamepad, accessibility | done (v0.3.0) |
 | M3 Event-based physics | done (v0.4.0) |
 | M4 WPA rules and referee | done (v0.4.0) |
-| M5 Shot input and broadcast presentation | next |
-| M6 Hall visuals, realism, equipment customization | planned |
+| M5 Shot input and broadcast presentation | done (v0.5.0); jump shots wait for airborne-ball physics |
+| M6 Hall visuals, realism, equipment customization | next |
 | M7 Audio | planned |
 | M8 AI v1: classical search | planned |
 | M9 Intelligence: self-play learning (starts after M3, runs in parallel) | planned |

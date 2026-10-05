@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.28)
 
 project(BilliardsSaloon
-    VERSION 0.4.0
+    VERSION 0.5.0
     DESCRIPTION "A 3D billiards game built from scratch in C++ and OpenGL"
     LANGUAGES C CXX
 )
