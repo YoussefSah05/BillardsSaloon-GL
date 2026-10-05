@@ -6,6 +6,13 @@ All notable changes to Billiards Saloon. The format follows
 
 ## [Unreleased]
 
+Deferred from M2: remappable controls (with the M11 settings work) and UI
+sound cues (with M7 audio).
+
+## [0.3.0] - 2026-10-05
+
+Milestone M2: UX foundation and broadcast frontend.
+
 ### Added
 - Main and pause menus rebuilt with RmlUi: broadcast-style slanted bars,
   Barlow typefaces, hover and keyboard focus states, a blurred pause overlay.
@@ -84,6 +91,7 @@ Playable 8-ball prototype: local two-player 8-ball with fouls and turn
 resolution, a fixed-step physics model with sliding and rolling, camera modes,
 and main and pause menus.
 
-[Unreleased]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.1.0-prototype...v0.2.0
 [0.1.0-prototype]: https://github.com/YoussefSah05/BillardsSaloon-GL/releases/tag/v0.1.0-prototype

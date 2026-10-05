@@ -3,17 +3,19 @@
 A realism-first 3D pool game presented like a televised tournament.
 Built from scratch in C++20 and OpenGL 4.1 — no game engine.
 
-> **Status:** early development. The `v0.1.0-prototype` tag is a playable
-> 8-ball prototype. Work toward v1.0 (event-based physics, full WPA rules,
+> **Status:** early development. `v0.3.0` is a playable two-player 8-ball
+> game with the broadcast frontend. Work toward v1.0 (event-based physics, full WPA rules,
 > AI opponents, career mode) is tracked in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Screenshots
 
-| Main menu | Aiming |
-|-----------|--------|
-| ![Main menu over the live table](docs/media/main.jpg) | ![Aiming with the broadcast HUD](docs/media/game.jpg) |
-| **Referee call after a scratch** | **Pause** |
-| ![Foul banner and ball-in-hand lower third](docs/media/foul.jpg) | ![Pause menu over the blurred table](docs/media/pause.jpg) |
+| Title | Main hub |
+|-------|----------|
+| ![Title screen over the live hall](docs/media/title.jpg) | ![Main hub with the table beside the menu](docs/media/main.jpg) |
+| **Aiming** | **Referee call after a scratch** |
+| ![Aiming with the broadcast HUD](docs/media/game.jpg) | ![Foul banner and ball-in-hand lower third](docs/media/foul.jpg) |
+| **Settings** | **Pause** |
+| ![Settings screen](docs/media/settings.jpg) | ![Pause menu over the blurred table](docs/media/pause.jpg) |
 
 Work in progress: the menus and HUD are final in style; table lighting and
 materials are scheduled for the hall-visuals milestone.
