@@ -3,6 +3,8 @@
 #include "ecs/entity.h"
 #include "ecs/registry.h"
 #include "gameplay/game_variant.h"
+#include "ai/ai_table.h"
+#include "gameplay/shot_input.h"
 #include "gameplay/shot_state.h"
 #include "rules/match_score.h"
 #include "rules/referee.h"
@@ -19,28 +21,6 @@
 
 namespace BilliardsSaloon
 {
-    // Shot input rates are per second so aiming and charging feel identical at
-    // any frame rate. Values match the prototype's feel at 60 fps.
-    struct ShotInputTuning
-    {
-        float aimRadiansPerSecond {0.9f};
-        float strikeOffsetPerSecond {0.9f};
-        float chargePerSecond {0.9f};
-        float maxStrikeRadius01 {0.75f};
-
-        // Cue speed at impact (the ball leaves at about 1.5x this) and how far
-        // the tip can move from centre, as a fraction of R.
-        float minCueSpeed {0.5f};
-        float maxCueSpeed {7.0f};
-        float tipOffsetPerStrikeUnit {0.7f};
-
-        float elevationDegreesPerSecond {30.0f};
-        float maxElevationDegrees {60.0f};
-
-        // Releasing a mouse stroke below this power cancels instead of shooting.
-        float strokeCancelBelow {0.03f};
-    };
-
     // One frame of player intent, already mapped from devices.
     // *Axis fields are rates (-1..1, scaled by frame time); *Delta fields are
     // direct changes this frame (from mouse motion).
@@ -62,8 +42,6 @@ namespace BilliardsSaloon
         bool strokeHeld {false};
         float strokeDelta {0.0f};         // power change this frame; 1.0 = full range
     };
-
-    [[nodiscard]] glm::vec3 aimDirectionFromAngle(float angleRadians);
 
     struct MatchSettings
     {
@@ -216,6 +194,16 @@ namespace BilliardsSaloon
         [[nodiscard]] bool pushOutAvailable() const;
         [[nodiscard]] bool pushOutDeclared() const { return m_pushOut; }
         void setPushOut(bool declared);
+
+        // ---- Computer players -------------------------------------------------------
+        // A copy of the table for planning (safe to use on another thread).
+        [[nodiscard]] Ai::AiTable aiView() const;
+        // Plays a shot directly (aim, power, spin, elevation, call, push-out),
+        // as if the player had set it all up and struck. False if no shot can be played.
+        bool playShot(const ShotInput& input);
+        // Puts the cue ball at a spot (x, z) with ball in hand and confirms it.
+        // False if the spot is not allowed.
+        bool placeCueBallAt(const glm::vec2& position);
 
         // Applies aiming, tip offset and the hold-to-charge / release-to-shoot
         // gesture for one frame of length deltaTimeSeconds.

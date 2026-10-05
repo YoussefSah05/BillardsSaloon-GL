@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "note": "Fictional players. Noise is one standard deviation of execution error.",
+  "players": [
+    {"id": "sam_whitlock", "name": "SAM WHITLOCK", "tier": "Club", "style": "Keen club player; goes for everything.",
+     "aimNoiseDegrees": 1.1, "powerNoise": 0.14, "spinNoise": 0.18, "safetyBias": -8, "powerStyle": 0.4, "breakPower": 0.85, "thinkSeconds": 0.9, "samples": 6},
+    {"id": "dani_reyes", "name": "DANI REYES", "tier": "Regional", "style": "Steady regional winner; plays the percentages.",
+     "aimNoiseDegrees": 0.6, "powerNoise": 0.09, "spinNoise": 0.12, "safetyBias": 0, "powerStyle": 0.0, "breakPower": 0.9, "thinkSeconds": 1.1, "samples": 8},
+    {"id": "iris_lindqvist", "name": "IRIS LINDQVIST", "tier": "Pro", "style": "Patient tactician; loves a safety battle.",
+     "aimNoiseDegrees": 0.32, "powerNoise": 0.06, "spinNoise": 0.08, "safetyBias": 6, "powerStyle": -0.4, "breakPower": 0.88, "thinkSeconds": 1.5, "samples": 10},
+    {"id": "marta_okafor", "name": "MARTA OKAFOR", "tier": "Pro", "style": "Attacking shot-maker; firm cue ball, big runs.",
+     "aimNoiseDegrees": 0.3, "powerNoise": 0.06, "spinNoise": 0.08, "safetyBias": -4, "powerStyle": 0.5, "breakPower": 0.97, "thinkSeconds": 1.2, "samples": 10},
+    {"id": "viktor_hale", "name": "VIKTOR HALE", "tier": "Champion", "style": "Reigning champion; rarely misses, never rushes.",
+     "aimNoiseDegrees": 0.16, "powerNoise": 0.04, "spinNoise": 0.05, "safetyBias": 2, "powerStyle": 0.0, "breakPower": 0.95, "thinkSeconds": 1.6, "samples": 12}
+  ]
+}
