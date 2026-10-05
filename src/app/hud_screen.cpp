@@ -49,34 +49,53 @@ namespace BilliardsSaloon
             return buffer;
         }
 
-        const char* groupLabel(PlayerTargetGroup group)
+        const char* groupLabel(Rules::Group group)
         {
             switch (group)
             {
-                case PlayerTargetGroup::Solids:
+                case Rules::Group::Solids:
                     return "SOLIDS";
-                case PlayerTargetGroup::Stripes:
+                case Rules::Group::Stripes:
                     return "STRIPES";
-                case PlayerTargetGroup::None:
+                case Rules::Group::None:
                     return "OPEN TABLE";
             }
             return "";
         }
 
-        const char* foulText(FoulReason reason)
+        const char* foulText(Rules::Foul foul)
         {
-            switch (reason)
+            switch (foul)
             {
-                case FoulReason::CueBallPocketed:
+                case Rules::Foul::CueBallPocketed:
                     return "CUE BALL SCRATCHED";
-                case FoulReason::NoBallHit:
+                case Rules::Foul::NoBallHit:
                     return "NO BALL HIT";
-                case FoulReason::WrongBallFirst:
+                case Rules::Foul::WrongBallFirst:
                     return "WRONG BALL HIT FIRST";
-                case FoulReason::None:
+                case Rules::Foul::NoRail:
+                    return "NO CUSHION AFTER CONTACT";
+                case Rules::Foul::IllegalBreak:
+                    return "ILLEGAL BREAK";
+                case Rules::Foul::None:
                     return "";
             }
             return "";
+        }
+
+        std::string foulsLabel(int fouls)
+        {
+            return (fouls <= 0) ? std::string() : (fouls == 1) ? std::string("1 FOUL") : std::to_string(fouls) + " FOULS";
+        }
+
+        std::string ballList(const std::vector<int>& numbers)
+        {
+            std::string text;
+            for (const int number : numbers)
+            {
+                text += (text.empty() ? "" : ", ") + std::to_string(number);
+            }
+            return text;
         }
 
         // Updates a bound variable and marks it dirty only when it changes.
@@ -91,23 +110,17 @@ namespace BilliardsSaloon
         }
     }
 
+    std::string pocketName(const glm::vec3& pocketPosition)
+    {
+        // Seen from the head end, looking down the table (+x) towards the rack.
+        const char* end = (pocketPosition.x > 0.3f) ? "FOOT" : (pocketPosition.x < -0.3f) ? "HEAD" : "SIDE";
+        const char* side = (pocketPosition.z < 0.0f) ? "RIGHT" : "LEFT";
+        return std::string(end) + " " + side;
+    }
+
     HudScreen::HudScreen(UiSystem& ui, const GameVariantDefinition& variant)
     {
-        auto styleFor = [](const BallSpawnDefinition& definition)
-        {
-            HudBall ball;
-            ball.color = hexColor(definition.albedo);
-            ball.stripe = definition.ruleTag == BallRuleTag::Stripe;
-            ball.fill = ball.stripe ? "#F7F4EC" : ball.color;
-            return ball;
-        };
-        for (const BallSpawnDefinition& definition : variant.objectBalls)
-        {
-            if ((definition.number >= 0) && (definition.number < static_cast<int>(m_ballStyles.size())))
-            {
-                m_ballStyles[static_cast<std::size_t>(definition.number)] = styleFor(definition);
-            }
-        }
+        setVariant(variant);
 
         Rml::DataModelConstructor model = ui.context().CreateDataModel("hud");
         if (!model)
@@ -120,6 +133,7 @@ namespace BilliardsSaloon
             ball.RegisterMember("fill", &HudBall::fill);
             ball.RegisterMember("color", &HudBall::color);
             ball.RegisterMember("stripe", &HudBall::stripe);
+            ball.RegisterMember("on", &HudBall::on);
         }
         model.RegisterArray<std::vector<HudBall>>();
 
@@ -129,7 +143,21 @@ namespace BilliardsSaloon
         model.Bind("p2_group", &m_groupLabels[1]);
         model.Bind("tray1", &m_trays[0]);
         model.Bind("tray2", &m_trays[1]);
+        model.Bind("tray_table", &m_trays[2]);
         model.Bind("groups_assigned", &m_groupsAssigned);
+        model.Bind("rotation", &m_rotation);
+        model.Bind("show_frames", &m_showFrames);
+        model.Bind("p1_frames", &m_frames[0]);
+        model.Bind("p2_frames", &m_frames[1]);
+        model.Bind("race", &m_race);
+        model.Bind("placing", &m_placing);
+        model.Bind("placement_valid", &m_placementValid);
+        model.Bind("can_place", &m_canPlace);
+        model.Bind("place_text", &m_placeText);
+        model.Bind("calling", &m_calling);
+        model.Bind("call_text", &m_callText);
+        model.Bind("push_available", &m_pushAvailable);
+        model.Bind("push_declared", &m_pushDeclared);
         model.Bind("active", &m_active);
         model.Bind("discipline", &m_discipline);
         model.Bind("camera_label", &m_cameraLabel);
@@ -208,41 +236,89 @@ namespace BilliardsSaloon
         }
     }
 
-    void HudScreen::setTray(int player, const std::vector<int>& numbers)
+    void HudScreen::setVariant(const GameVariantDefinition& variant)
     {
-        const std::size_t index = static_cast<std::size_t>(player);
-        if (m_trayNumbers[index] == numbers)
+        m_ballStyles = {};
+        for (const BallSpawnDefinition& definition : variant.objectBalls)
+        {
+            if ((definition.number >= 0) && (definition.number < static_cast<int>(m_ballStyles.size())))
+            {
+                HudBall ball;
+                ball.color = hexColor(definition.albedo);
+                ball.stripe = definition.ruleTag == BallRuleTag::Stripe;
+                ball.fill = ball.stripe ? "#F7F4EC" : ball.color;
+                m_ballStyles[static_cast<std::size_t>(definition.number)] = ball;
+            }
+        }
+        for (std::vector<int>& numbers : m_trayNumbers)
+        {
+            numbers.clear();   // rebuild the trays with the new colours
+        }
+        for (int& on : m_trayOn)
+        {
+            on = -2;
+        }
+    }
+
+    void HudScreen::setTray(int tray, const std::vector<int>& numbers, int onBall)
+    {
+        const std::size_t index = static_cast<std::size_t>(tray);
+        if ((m_trayNumbers[index] == numbers) && (m_trayOn[index] == onBall))
         {
             return;
         }
 
         m_trayNumbers[index] = numbers;
+        m_trayOn[index] = onBall;
         m_trays[index].clear();
         for (const int number : numbers)
         {
             if ((number >= 0) && (number < static_cast<int>(m_ballStyles.size())))
             {
-                m_trays[index].push_back(m_ballStyles[static_cast<std::size_t>(number)]);
+                HudBall ball = m_ballStyles[static_cast<std::size_t>(number)];
+                ball.on = number == onBall;
+                m_trays[index].push_back(ball);
             }
         }
-        m_model.DirtyVariable(player == 0 ? "tray1" : "tray2");
+        static const char* const NAMES[3] = {"tray1", "tray2", "tray_table"};
+        m_model.DirtyVariable(NAMES[index]);
     }
 
     void HudScreen::update(const HudSnapshot& snapshot, float deltaTimeSeconds)
     {
         assign(m_model, m_names[0], snapshot.playerNames[0], "p1_name");
         assign(m_model, m_names[1], snapshot.playerNames[1], "p2_name");
-        assign(m_model, m_groupLabels[0], std::string(groupLabel(snapshot.groups[0])), "p1_group");
-        assign(m_model, m_groupLabels[1], std::string(groupLabel(snapshot.groups[1])), "p2_group");
-        assign(m_model, m_groupsAssigned, snapshot.groups[0] != PlayerTargetGroup::None, "groups_assigned");
+        const bool rotation = snapshot.game != GameDiscipline::EightBall;
+        for (int player = 0; player < 2; ++player)
+        {
+            const std::size_t i = static_cast<std::size_t>(player);
+            const std::string label = rotation ? foulsLabel(snapshot.fouls[i]) : std::string(groupLabel(snapshot.groups[i]));
+            assign(m_model, m_groupLabels[i], label, player == 0 ? "p1_group" : "p2_group");
+            assign(m_model, m_frames[i], std::to_string(snapshot.frames[i]), player == 0 ? "p1_frames" : "p2_frames");
+        }
+        assign(m_model, m_rotation, rotation, "rotation");
+        assign(m_model, m_groupsAssigned, !rotation && (snapshot.groups[0] != Rules::Group::None), "groups_assigned");
+        assign(m_model, m_showFrames, snapshot.raceTo > 1, "show_frames");
+        assign(m_model, m_race, "RACE TO " + std::to_string(snapshot.raceTo), "race");
+        assign(m_model, m_placing, snapshot.placing, "placing");
+        assign(m_model, m_placementValid, snapshot.placementValid, "placement_valid");
+        assign(m_model, m_canPlace, snapshot.canPlace && !snapshot.placing, "can_place");
+        assign(m_model, m_placeText,
+            std::string(snapshot.behindHeadString ? "BEHIND THE HEAD STRING" : "ANYWHERE ON THE TABLE"), "place_text");
+        assign(m_model, m_calling, snapshot.calling, "calling");
+        assign(m_model, m_callText, snapshot.callText, "call_text");
+        assign(m_model, m_pushAvailable, snapshot.pushOutAvailable, "push_available");
+        assign(m_model, m_pushDeclared, snapshot.pushOutDeclared, "push_declared");
         assign(m_model, m_active, snapshot.activePlayer, "active");
         assign(m_model, m_discipline, snapshot.discipline, "discipline");
         assign(m_model, m_cameraLabel, snapshot.cameraLabel, "camera_label");
         assign(m_model, m_aiming, snapshot.aiming, "aiming");
         assign(m_model, m_gamepad, snapshot.gamepadPrompts, "gamepad");
         assign(m_model, m_showPrompts, snapshot.showPrompts, "show_prompts");
-        setTray(0, snapshot.remainingBalls[0]);
-        setTray(1, snapshot.remainingBalls[1]);
+        setTray(0, rotation ? std::vector<int>{} : snapshot.remainingBalls[0], -1);
+        setTray(1, rotation ? std::vector<int>{} : snapshot.remainingBalls[1], -1);
+        setTray(2, rotation ? snapshot.tableBalls : std::vector<int>{},
+                (rotation && !snapshot.tableBalls.empty()) ? snapshot.tableBalls.front() : -1);
 
         if (m_power != snapshot.power01)
         {
@@ -308,50 +384,124 @@ namespace BilliardsSaloon
         m_lowerTimer = seconds;
     }
 
+    void HudScreen::clearAnnouncements()
+    {
+        assign(m_model, m_bannerVisible, false, "banner_visible");
+        assign(m_model, m_lowerVisible, false, "lower_visible");
+        m_bannerTimer = 0.0f;
+        m_lowerTimer = 0.0f;
+    }
+
     void HudScreen::announce(const ShotOutcome& outcome, const HudSnapshot& snapshot)
     {
+        const Rules::Verdict& verdict = outcome.verdict;
         const auto name = [&](int player) { return snapshot.playerNames[static_cast<std::size_t>(player)]; };
+        const std::string game = std::to_string(Rules::gameBall(snapshot.game));
 
-        if (outcome.frameOver)
+        if (verdict.frameOver)
         {
-            const bool legal = outcome.frameEnd == FrameEndReason::EightBallPotted;
-            const std::string how =
-                legal ? name(outcome.shooter) + " POTS THE 8"
-                : (outcome.frameEnd == FrameEndReason::EightBallPottedOnFoul) ? "8-BALL POTTED ON A FOUL"
-                : "8-BALL POTTED EARLY";
-            showBanner("FRAME", how, !legal, legal, BANNER_SECONDS);
+            const bool won = verdict.end == Rules::FrameEnd::GameBallPotted;
+            std::string how;
+            switch (verdict.end)
+            {
+                case Rules::FrameEnd::GameBallPotted:
+                    how = name(verdict.shooter) + " POTS THE " + game;
+                    break;
+                case Rules::FrameEnd::EightBallEarly:
+                    how = "8-BALL POTTED EARLY";
+                    break;
+                case Rules::FrameEnd::EightBallOnFoul:
+                    how = "8-BALL POTTED ON A FOUL";
+                    break;
+                case Rules::FrameEnd::EightBallWrongPocket:
+                    how = "8-BALL IN AN UNCALLED POCKET";
+                    break;
+                case Rules::FrameEnd::ThreeFouls:
+                    how = "THIRD FOUL IN A ROW";
+                    break;
+                case Rules::FrameEnd::None:
+                    break;
+            }
+            showBanner(outcome.matchOver ? "MATCH" : "FRAME", how, !won, won, BANNER_SECONDS);
             return;
         }
 
-        if (outcome.foul != FoulReason::None)
+        if (verdict.pushOut && (verdict.foul == Rules::Foul::None))
         {
-            showBanner("FOUL", foulText(outcome.foul), true, false, BANNER_SECONDS);
+            showBanner("PUSH OUT", name(verdict.shooter) + " PUSHES OUT", false, false, BANNER_SECONDS);
+            return;
+        }
 
-            const std::size_t next = static_cast<std::size_t>(outcome.nextPlayer);
+        if (verdict.illegalBreak)
+        {
+            showBanner("BREAK", verdict.foul == Rules::Foul::None ? "ILLEGAL BREAK" : "ILLEGAL BREAK · SCRATCH",
+                       true, false, BANNER_SECONDS);
+            return;
+        }
+
+        const std::string spotted = verdict.spot.empty()
+            ? std::string()
+            : "The " + ballList(verdict.spot) + " goes back on the foot spot";
+
+        if (verdict.foul != Rules::Foul::None)
+        {
+            showBanner("FOUL", foulText(verdict.foul), true, false, BANNER_SECONDS);
+
+            const bool rotation = snapshot.game != GameDiscipline::EightBall;
+            if (rotation && (verdict.foulsInRow == 2))
+            {
+                showLowerThird("ON TWO FOULS", name(verdict.shooter), "One more foul in a row loses the frame",
+                               LOWER_THIRD_SECONDS + 0.6f);
+                return;
+            }
+
+            const bool kitchen = snapshot.behindHeadString;
             showLowerThird(
                 "BALL IN HAND",
-                name(outcome.nextPlayer) + " · " + groupLabel(snapshot.groups[next]),
-                "The cue ball goes back to the head spot",
+                name(outcome.nextPlayer),
+                !spotted.empty() ? spotted : kitchen ? "Behind the head string" : "Anywhere on the table",
                 LOWER_THIRD_SECONDS
             );
             return;
         }
 
-        if (outcome.groupsAssigned)
+        if (verdict.choice == Rules::Choice::EightOnBreak)
         {
-            const std::size_t shooter = static_cast<std::size_t>(outcome.shooter);
-            showBanner("GROUPS", name(outcome.shooter) + " · " + groupLabel(snapshot.groups[shooter]), false, true, BANNER_SECONDS);
+            showBanner("BREAK", "8-BALL ON THE BREAK", false, true, BANNER_SECONDS);
             return;
         }
 
-        if (outcome.turnPassed)
+        if (verdict.groupsAssigned)
+        {
+            const std::size_t shooter = static_cast<std::size_t>(verdict.shooter);
+            showBanner("GROUPS", name(verdict.shooter) + " · " + groupLabel(snapshot.groups[shooter]), false, true, BANNER_SECONDS);
+            return;
+        }
+
+        if (!spotted.empty())
+        {
+            showLowerThird("SPOTTED", "THE " + ballList(verdict.spot), spotted, LOWER_THIRD_SECONDS);
+            return;
+        }
+
+        if (verdict.turnPassed)
         {
             const std::size_t next = static_cast<std::size_t>(outcome.nextPlayer);
-            const std::size_t left = snapshot.remainingBalls[next].size();
-            const std::string sub =
-                (snapshot.groups[next] == PlayerTargetGroup::None)
-                    ? std::string("Open table")
+            std::string sub;
+            if (snapshot.game != GameDiscipline::EightBall)
+            {
+                sub = snapshot.tableBalls.empty() ? std::string() : "On the " + std::to_string(snapshot.tableBalls.front());
+            }
+            else if (snapshot.groups[next] == Rules::Group::None)
+            {
+                sub = "Open table";
+            }
+            else
+            {
+                const std::size_t left = snapshot.remainingBalls[next].size();
+                sub = (left == 0) ? std::string("On the 8")
                     : std::to_string(left) + (left == 1 ? " ball left" : " balls left") + " before the 8";
+            }
             showLowerThird("AT THE TABLE", name(outcome.nextPlayer), sub, LOWER_THIRD_SECONDS);
         }
     }

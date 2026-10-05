@@ -3,9 +3,9 @@
 A realism-first 3D pool game presented like a televised tournament.
 Built from scratch in C++20 and OpenGL 4.1 — no game engine.
 
-> **Status:** early development. `v0.3.0` is a playable two-player 8-ball
-> game with the broadcast frontend. Work toward v1.0 (event-based physics, full WPA rules,
-> AI opponents, career mode) is tracked in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+> **Status:** early development. `main` has event-based physics and WPA
+> 8-, 9- and 10-ball for two local players. Work toward v1.0 (AI opponents,
+> broadcast presentation, career mode) is tracked in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Screenshots
 
@@ -22,8 +22,11 @@ materials are scheduled for the hall-visuals milestone.
 
 ## What works today
 
-- 8-ball against a second local player: break, open table, group assignment,
-  first-contact and scratch fouls, turn changes, win/loss on the 8.
+- 8-ball, 9-ball and 10-ball for two local players, refereed by WPA rules:
+  legal-break checks, ball in hand with placement, push-outs, called shots,
+  spotted balls, three-foul rule, and the referee's choices (re-rack, hand the
+  shot back). Races to N frames from a match setup screen.
+  See [`docs/design/RULES.md`](docs/design/RULES.md).
 - Cue strike with power and tip offset (english, follow, draw).
 - Event-based physics on a WPA 9 ft table: each shot is simulated exactly
   (sliding, rolling and spinning in closed form, ball-ball throw, Han 2005
@@ -53,6 +56,10 @@ ctest --test-dir build --output-on-failure   # unit tests
 | Aim | Move the mouse (Shift: fine) | A / D (Shift: fine) | Left stick (LB: fine) |
 | Shoot | Hold left button, drag back, release | Hold Space, release | Hold A, release |
 | Cancel a shot | Push forward again and release | — | — |
+| Ball in hand: move / place | Move the mouse, click | WASD or arrows, Space | Left stick, A |
+| Move the cue ball again (before shooting) | — | B | RB |
+| Called pocket / called ball | — | Q / E pocket, Z ball | D-pad left/right, D-pad up |
+| Push out (9- and 10-ball, after the break) | — | P | View |
 | Spin (cue tip offset) | Hold right button and move | Arrow keys, C to centre | Right stick, X to centre |
 | Camera views | — | Tab cycles; 1 aim, 2 overview, 3 follow, 4 free look | Y cycles |
 | Free look | Right-drag to orbit, wheel to zoom | J/L orbit, I/K tilt, U/O zoom | Right stick orbit, triggers zoom |
@@ -69,6 +76,8 @@ depending on the device used last.
 ```bash
 ./build/BilliardsSaloon --screen game                      # skip the main menu
 ./build/BilliardsSaloon --screen pause --capture pause.png # save a screenshot and quit
+./build/BilliardsSaloon --scenario foul|choice|call        # script a shot: ball in hand, a referee choice, a called shot
+./build/BilliardsSaloon --physics legacy                   # the prototype solver, for comparison
 ```
 
 ## Project layout
@@ -77,8 +86,10 @@ depending on the device used last.
 |------|----------|
 | `src/app` | Main loop, menus, input, drawing |
 | `src/ecs` | Sparse-set entity/component registry |
-| `src/physics` | Ball, cushion and pocket simulation |
-| `src/gameplay` | Game variants, match state, 8-ball rules |
+| `src/sim` | Event-based physics simulator (headless, double precision) |
+| `src/rules` | WPA referee, shot records, racking, match score |
+| `src/physics` | Prototype fixed-step solver (`--physics legacy`) |
+| `src/gameplay` | Game variants, the match session (shot input, playback, ball in hand) |
 | `src/render` | Shaders, meshes, cameras, overlay text, screenshots |
 | `src/ui` | RmlUi integration (fonts, input, rendering) |
 | `assets/ui` | Menu documents (`.rml`) and the shared stylesheet (`theme.rcss`) |

@@ -43,3 +43,12 @@ TEST_CASE("bad arguments are rejected with a reason")
     CHECK_THROWS_AS(static_cast<void>(parse({"--physics", "magic"})), std::invalid_argument);
     CHECK(parse({"--physics", "legacy"}).legacyPhysics);
 }
+
+TEST_CASE("development scenarios start in the game")
+{
+    const LaunchOptions options = parse({"--scenario", "call"});
+    CHECK(options.scenario == DevScenario::Call);
+    CHECK(options.startScreen == StartScreen::Gameplay);
+    CHECK(parse({"--screen", "setup"}).startScreen == StartScreen::MatchSetup);
+    CHECK_THROWS_AS(static_cast<void>(parse({"--scenario", "trickshot"})), std::invalid_argument);
+}

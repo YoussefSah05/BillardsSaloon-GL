@@ -29,6 +29,9 @@ tournament. Four pillars drive every decision:
 
 ## Rules scope (WPA)
 
+Implemented in M4; the clause-by-clause reference, with the game's
+simplifications, is [`RULES.md`](RULES.md).
+
 - **8-ball:** open table after break; groups assigned on legal pot; optional
   call-pocket; 8 on a legal break → breaker chooses spot-8 or re-rack; scratch on
   break → ball in hand behind the head string; early 8 / 8 + scratch loses.

@@ -14,7 +14,8 @@ namespace BilliardsSaloon
             if (value == "game") return StartScreen::Gameplay;
             if (value == "pause") return StartScreen::Pause;
             if (value == "settings") return StartScreen::Settings;
-            throw std::invalid_argument("Unknown screen '" + std::string(value) + "' (use title, main, game, pause or settings).");
+            if (value == "setup") return StartScreen::MatchSetup;
+            throw std::invalid_argument("Unknown screen '" + std::string(value) + "' (use title, main, setup, game, pause or settings).");
         }
 
         int parsePositiveInt(std::string_view option, std::string_view value)
@@ -67,6 +68,15 @@ namespace BilliardsSaloon
                 }
                 options.legacyPhysics = (value == "legacy");
             }
+            else if (argument == "--scenario")
+            {
+                const std::string_view value = nextValue();
+                if (value == "foul") options.scenario = DevScenario::Foul;
+                else if (value == "choice") options.scenario = DevScenario::Choice;
+                else if (value == "call") options.scenario = DevScenario::Call;
+                else throw std::invalid_argument("--scenario needs 'foul', 'choice' or 'call'.");
+                options.startScreen = StartScreen::Gameplay;
+            }
             else if (argument == "--capture-frames")
             {
                 options.captureAfterFrames = parsePositiveInt(argument, nextValue());
@@ -85,7 +95,8 @@ namespace BilliardsSaloon
         return
             "Usage: BilliardsSaloon [options]\n"
             "  --fullscreen            start in fullscreen\n"
-            "  --screen title|main|game|pause|settings  start on this screen\n"
+            "  --screen title|main|setup|game|pause|settings  start on this screen\n"
+            "  --scenario foul|choice|call  (development) script a state: ball in hand, a referee choice, a called shot\n"
             "  --capture FILE.png      save a screenshot after a few frames, then quit\n"
             "  --capture-frames N      frames to render before capturing (default 90)\n"
             "  --physics event|legacy  event-based simulator (default) or the prototype solver\n";

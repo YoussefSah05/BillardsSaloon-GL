@@ -14,6 +14,23 @@ All notable changes to Billiards Saloon. The format follows
   mouths with rounded jaws, and squirt from side spin. No tunnelling at any
   speed; full power now reaches break speed (about 10.8 m/s ball speed).
 - `--physics legacy` runs the prototype solver for comparison.
+- WPA referee (M4) for 8-ball, 9-ball and 10-ball: legal-break checks,
+  no-cushion-after-contact foul, push-outs, called shots, spotted balls,
+  three fouls in a row, and the referee's choices (accept the table or
+  re-rack, play on or hand the shot back). Clause-by-clause tests.
+- 9-ball rules are real now (they used to reuse 8-ball's) and 10-ball is new.
+- Ball in hand: move the cue ball (mouse, keys or stick) with an overlap
+  check, behind the head string where required; the camera goes overhead.
+- Called pocket and ball follow the aim and can be changed by hand; the
+  pocket glows and a chip floats over the called ball.
+- Match setup screen: discipline, race length (single frame to race to 13),
+  alternate or winner breaks; remembered in settings.
+- Race to N: frame scores in the scorebug, frame and match result cards,
+  next frame and rematch.
+- WPA racking: random rack with the required positions per game.
+- Scorebug for rotation games: the balls left with the one to hit marked,
+  and the foul count with a warning on two.
+- `--screen setup` and `--scenario foul|choice|call` for captures.
 
 ### Changed
 - The table is a WPA 9 ft table (2.54 × 1.27 m) with pocket geometry and
@@ -22,6 +39,11 @@ All notable changes to Billiards Saloon. The format follows
   the foot spot and the cue ball on the head spot (the prototype broke across
   the short side).
 - Pockets are marked on the rails.
+- Releasing a held button after closing a dialog or placing the cue ball no
+  longer starts a shot.
+
+### Removed
+- The prototype 8-ball rules (`turn_rules`, `MatchState`).
 
 Deferred from M2: remappable controls (with the M11 settings work) and UI
 sound cues (with M7 audio).

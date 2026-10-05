@@ -13,7 +13,18 @@ namespace BilliardsSaloon
         MainMenu,
         Gameplay,
         Pause,
-        Settings
+        Settings,
+        MatchSetup
+    };
+
+    // Development scenarios played out before the first frame, so captures can
+    // show states that need a shot first.
+    enum class DevScenario
+    {
+        None,
+        Foul,     // 9-ball: a soft break the wrong way; the next player has ball in hand
+        Choice,   // 8-ball: an illegal break; the referee asks the other player
+        Call      // 10-ball: a layout after the break, aiming at a called ball
     };
 
     // Command-line options. Capture options exist for development and
@@ -25,6 +36,7 @@ namespace BilliardsSaloon
         std::filesystem::path capturePath;   // empty = no capture
         int captureAfterFrames {90};
         bool legacyPhysics {false};           // --physics legacy: prototype solver
+        DevScenario scenario {DevScenario::None};
     };
 
     // Parses arguments after the program name. Throws std::invalid_argument

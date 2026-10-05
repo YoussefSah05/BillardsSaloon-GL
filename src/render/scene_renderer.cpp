@@ -96,6 +96,7 @@ namespace BilliardsSaloon
         , m_cubeMesh(Mesh::createCube())
         , m_planeMesh(Mesh::createPlane(clothWidth, clothDepth))
         , m_sphereMesh(Mesh::createUVSphere(ballRadius, 40U, 20U))
+        , m_sphereRadius(ballRadius)
     {
     }
 
@@ -237,6 +238,15 @@ namespace BilliardsSaloon
                 mesh->draw();
             }
         );
+    }
+
+    void SceneRenderer::drawMarker(const glm::vec3& position, const glm::vec3& size, const glm::vec3& color, bool box)
+    {
+        const MaterialComponent material = flatMaterial(color, 0.10f, 8.0f, 0.60f, 0.0f);
+        const glm::vec3 scale = box ? size : size / m_sphereRadius;
+        m_shader->setMat4("uModel", composeMatrix(position, glm::quat(1.0f, 0.0f, 0.0f, 0.0f), scale));
+        bindMaterial(material, color * 0.55f, 0);
+        (box ? m_cubeMesh : m_sphereMesh)->draw();
     }
 
     void SceneRenderer::drawAimGuide(

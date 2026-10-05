@@ -2,8 +2,10 @@
 
 #include <RmlUi/Core/DataModelHandle.h>
 
+#include <array>
 #include <functional>
 #include <string>
+#include <vector>
 
 namespace Rml
 {
@@ -33,6 +35,17 @@ namespace BilliardsSaloon
         std::function<void()> resume;
         std::function<void()> restartRack;
         std::function<void()> returnToMainMenu;
+        std::function<void()> frameContinue;    // next frame, or a rematch once the match is over
+    };
+
+    // The frame-over card's text.
+    struct FrameResultText
+    {
+        std::string eyebrow;     // "FRAME OVER" or "MATCH OVER"
+        std::string headline;    // "PLAYER 1 WINS THE FRAME"
+        std::string detail;
+        std::string score;       // "2 – 1 · RACE TO 3", empty for a single frame
+        std::string primary;     // "NEXT FRAME" or "REMATCH"
     };
 
     // The main and pause menus (assets/ui/*.rml) and their "shell" data model.
@@ -54,8 +67,14 @@ namespace BilliardsSaloon
         // Switch hint lines between keyboard/mouse and gamepad wording.
         void setGamepadPrompts(bool gamepad);
 
-        // Text for the frame-over card, e.g. "PLAYER 1 WINS THE FRAME".
-        void setFrameResult(const std::string& headline, const std::string& detail);
+        void setFrameResult(const FrameResultText& text);
+
+        // The referee's question to a player (up to three answers), shown over
+        // the table. onPick gets the index of the chosen answer.
+        void showChoice(const std::string& player, const std::string& title, const std::string& detail,
+                        const std::vector<std::string>& options, std::function<void(int)> onPick);
+        [[nodiscard]] bool choiceOpen() const;
+        void hideChoice();
 
     private:
         ShellMenuActions m_actions;
@@ -65,12 +84,18 @@ namespace BilliardsSaloon
         Rml::ElementDocument* m_pauseMenu {nullptr};
         Rml::ElementDocument* m_frameOver {nullptr};
         Rml::ElementDocument* m_confirm {nullptr};
+        Rml::ElementDocument* m_choice {nullptr};
+        std::string m_choicePlayer;
+        std::string m_choiceTitle;
+        std::string m_choiceDetail;
+        std::array<std::string, 3> m_choiceOptions;
+        int m_choiceCount {0};
+        std::function<void(int)> m_onPick;
         std::string m_confirmTitle;
         std::string m_confirmDetail;
         std::string m_confirmAction;
         std::function<void()> m_onConfirm;
-        std::string m_frameWinner;
-        std::string m_frameDetail;
+        FrameResultText m_frame;
         std::string m_version;
         bool m_gamepad {false};
         MenuScreen m_shown {MenuScreen::None};

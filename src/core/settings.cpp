@@ -45,6 +45,8 @@ namespace BilliardsSaloon
     {
         settings.mouseSensitivity = std::clamp(settings.mouseSensitivity, MIN_MOUSE_SENSITIVITY, MAX_MOUSE_SENSITIVITY);
         settings.uiScale = std::clamp(settings.uiScale, MIN_UI_SCALE, MAX_UI_SCALE);
+        settings.matchGame = std::clamp(settings.matchGame, 0, MATCH_GAME_COUNT - 1);
+        settings.raceTo = std::clamp(settings.raceTo, 1, MAX_RACE_TO);
         return settings;
     }
 
@@ -108,6 +110,13 @@ namespace BilliardsSaloon
             settings.mouseSensitivity = json.value("mouseSensitivity", settings.mouseSensitivity);
             settings.uiScale = json.value("uiScale", settings.uiScale);
             settings.reducedMotion = json.value("reducedMotion", settings.reducedMotion);
+            if (json.contains("match"))
+            {
+                const Json& match = json.at("match");
+                settings.matchGame = match.value("game", settings.matchGame);
+                settings.raceTo = match.value("raceTo", settings.raceTo);
+                settings.winnerBreaks = match.value("winnerBreaks", settings.winnerBreaks);
+            }
         }
         catch (const std::exception& exception)
         {
@@ -130,7 +139,12 @@ namespace BilliardsSaloon
             {"quality", qualityName(settings.quality)},
             {"mouseSensitivity", settings.mouseSensitivity},
             {"uiScale", settings.uiScale},
-            {"reducedMotion", settings.reducedMotion}
+            {"reducedMotion", settings.reducedMotion},
+            {"match", {
+                {"game", settings.matchGame},
+                {"raceTo", settings.raceTo},
+                {"winnerBreaks", settings.winnerBreaks}
+            }}
         };
 
         std::filesystem::path temporary = file;

@@ -29,6 +29,11 @@ namespace BilliardsSaloon
         float uiScale {1.0f};            // 1.0 to 1.5
         bool reducedMotion {false};
 
+        // Last match setup: 0 = 8-ball, 1 = 9-ball, 2 = 10-ball.
+        int matchGame {0};
+        int raceTo {3};
+        bool winnerBreaks {false};
+
         friend bool operator==(const GameSettings&, const GameSettings&) = default;
     };
 
@@ -36,6 +41,8 @@ namespace BilliardsSaloon
     inline constexpr float MAX_MOUSE_SENSITIVITY = 3.0f;
     inline constexpr float MIN_UI_SCALE = 1.0f;
     inline constexpr float MAX_UI_SCALE = 1.5f;
+    inline constexpr int MATCH_GAME_COUNT = 3;
+    inline constexpr int MAX_RACE_TO = 15;
 
     // Brings every value into its allowed range.
     [[nodiscard]] GameSettings sanitized(GameSettings settings);

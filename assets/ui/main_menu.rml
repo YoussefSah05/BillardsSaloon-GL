@@ -38,7 +38,7 @@
             <div class="rule"></div>
         </div>
         <div class="menu">
-            <button class="menu-item" id="play" autofocus data-event-click="start_match"><span class="label">PLAY<span class="sub">8-Ball · two players</span></span></button>
+            <button class="menu-item" id="play" autofocus data-event-click="start_match"><span class="label">PLAY<span class="sub">Quick match · 8, 9 or 10-ball</span></span></button>
             <button class="menu-item" id="settings" data-event-click="open_settings"><span class="label">SETTINGS</span></button>
             <button class="menu-item" id="quit" data-event-click="quit"><span class="label">QUIT</span></button>
         </div>
