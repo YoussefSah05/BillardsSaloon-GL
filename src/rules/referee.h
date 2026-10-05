@@ -44,7 +44,8 @@ namespace BilliardsSaloon::Rules
         NoBallHit,
         WrongBallFirst,
         NoRail,             // after contact, no ball pocketed and no ball reached a cushion
-        IllegalBreak        // 9-ball and 10-ball: fewer than four balls to a cushion and none pocketed
+        IllegalBreak,       // 9-ball and 10-ball: fewer than four balls to a cushion and none pocketed
+        TimeOut             // the shot clock ran out
     };
 
     enum class FrameEnd
@@ -165,6 +166,10 @@ namespace BilliardsSaloon::Rules
     // table before the shot. Must not be called while a choice is pending or
     // after the frame is over.
     [[nodiscard]] Verdict judgeShot(FrameState& state, const std::vector<int>& onTable, const ShotRecord& shot);
+
+    // The shot clock ran out on the shooter: a foul with ball in hand for the
+    // other player (and a step towards three fouls in 9- and 10-ball).
+    [[nodiscard]] Verdict judgeTimeFoul(FrameState& state);
 
     struct ChoiceResult
     {

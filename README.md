@@ -65,6 +65,7 @@ ctest --test-dir build --output-on-failure   # unit tests
 | Spin (cue tip offset) | Hold right button and move | Arrow keys, C to centre | Right stick, X to centre |
 | Camera views | — | Tab cycles; 1 aim, 2 overview, 3 follow, 4 free look, 5 broadcast (default: director cuts during the shot) | Y cycles |
 | Replay the last shot / skip | — | R / Space | Left stick click / A |
+| Shot clock extension | — | T | Right stick click |
 | Free look | Right-drag to orbit, wheel to zoom | J/L orbit, I/K tilt, U/O zoom | Right stick orbit, triggers zoom |
 | Menus | Point and click | Up/Down, Enter, Esc | D-pad or left stick, A, B |
 | Pause | — | Esc | Start |

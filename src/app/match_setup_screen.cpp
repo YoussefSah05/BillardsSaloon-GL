@@ -20,8 +20,11 @@ namespace BilliardsSaloon
         {
             ROW_GAME = 0,
             ROW_RACE,
-            ROW_BREAK
+            ROW_BREAK,
+            ROW_CLOCK
         };
+
+        constexpr std::array<int, 4> CLOCK_STEPS {0, 30, 45, 60};
 
         constexpr std::array<int, 8> RACE_STEPS {1, 2, 3, 5, 7, 9, 11, 13};
         constexpr std::array<GameDiscipline, 3> GAMES {GameDiscipline::EightBall, GameDiscipline::NineBall, GameDiscipline::TenBall};
@@ -87,6 +90,10 @@ namespace BilliardsSaloon
         model.BindFunc("breaks", [this](Rml::Variant& v)
         {
             v = Rml::String((m_setup.breakOrder == Rules::BreakOrder::Alternate) ? "ALTERNATE" : "WINNER BREAKS");
+        });
+        model.BindFunc("clock", [this](Rml::Variant& v)
+        {
+            v = (m_setup.shotClock == 0) ? Rml::String("OFF") : std::to_string(m_setup.shotClock) + " SECONDS";
         });
         model.Bind("gamepad", &m_gamepad);
 
@@ -171,11 +178,14 @@ namespace BilliardsSaloon
                     ? Rules::BreakOrder::WinnerBreaks
                     : Rules::BreakOrder::Alternate;
                 break;
+            case ROW_CLOCK:
+                m_setup.shotClock = CLOCK_STEPS[stepIndex<CLOCK_STEPS.size()>(indexOf(CLOCK_STEPS, m_setup.shotClock), direction)];
+                break;
             default:
                 return;
         }
 
-        for (const char* name : {"game", "about", "race", "breaks"})
+        for (const char* name : {"game", "about", "race", "breaks", "clock"})
         {
             m_model.DirtyVariable(name);
         }

@@ -209,6 +209,7 @@ namespace BilliardsSaloon
     {
         ++m_frameNumber;
         m_frame = Rules::startFrame(m_variant->discipline, breaker);
+        m_clock.extensionAvailable = {true, true};
         rackBalls();
     }
 
@@ -294,6 +295,7 @@ namespace BilliardsSaloon
         m_pushOut = false;
         m_shotState.phase = ShotPhase::Aiming;
         m_shotState.charge01 = 0.0f;
+        resetShotClock();
 
         if (frameOver() || (m_frame.choice != Rules::Choice::None))
         {
@@ -992,8 +994,63 @@ namespace BilliardsSaloon
         m_holdWasActive = true;   // the key that ended the replay must not start a stroke
     }
 
+    void MatchSession::resetShotClock()
+    {
+        m_clock.enabled = m_settings.shotClockSeconds > 0.0f;
+        m_clock.remaining = m_settings.shotClockSeconds;
+        m_clock.running = false;
+    }
+
+    bool MatchSession::useExtension()
+    {
+        const std::size_t shooter = static_cast<std::size_t>(m_frame.shooter);
+        if (!m_clock.enabled || !m_clock.running || !m_clock.extensionAvailable[shooter])
+        {
+            return false;
+        }
+        m_clock.extensionAvailable[shooter] = false;
+        m_clock.remaining += m_settings.extensionSeconds;
+        return true;
+    }
+
+    void MatchSession::tickShotClock(double deltaTimeSeconds)
+    {
+        const bool shooterUp = acceptsShotInput() || placingCueBall();
+        m_clock.running = m_clock.enabled && shooterUp && (m_frame.phase != Rules::Phase::Break);
+        if (!m_clock.running)
+        {
+            return;
+        }
+
+        m_clock.remaining -= static_cast<float>(deltaTimeSeconds);
+        if (m_clock.remaining > 0.0f)
+        {
+            return;
+        }
+
+        // Time foul: no shot is played; the referee calls it and play goes on.
+        m_clock.remaining = 0.0f;
+        ShotOutcome outcome;
+        outcome.verdict = Rules::judgeTimeFoul(m_frame);
+        if (outcome.verdict.frameOver)
+        {
+            m_nextBreaker = m_score.recordFrame(outcome.verdict.winner, m_frame.breaker);
+        }
+        outcome.nextPlayer = m_frame.shooter;
+        outcome.matchOver = m_score.over();
+        m_lastOutcome = std::move(outcome);
+        ++m_resolvedShotCount;
+        m_holdWasActive = true;
+        enterTurn();
+    }
+
     void MatchSession::step(double deltaTimeSeconds)
     {
+        if (!m_replay)
+        {
+            tickShotClock(deltaTimeSeconds);
+        }
+
         if (m_replay)
         {
             // Hold the final frame a moment before handing the table back.

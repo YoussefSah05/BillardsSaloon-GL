@@ -273,3 +273,21 @@ TEST_CASE("race to N: winner breaks")
     CHECK(score.recordFrame(1, 0) == 1);
     CHECK(score.recordFrame(1, 1) == 1);
 }
+
+TEST_CASE("shot clock: running out is a foul with ball in hand, and counts towards three fouls")
+{
+    FrameState state = inPlay(GameDiscipline::NineBall);
+    state.consecutiveFouls = {2, 0};
+    const Verdict verdict = judgeTimeFoul(state);
+    CHECK(verdict.foul == Foul::TimeOut);
+    CHECK(verdict.frameOver);
+    CHECK(verdict.end == FrameEnd::ThreeFouls);
+
+    FrameState eight = startFrame(GameDiscipline::EightBall, 0);
+    eight.phase = Phase::Groups;
+    eight.ballInHand = BallInHand::None;
+    const Verdict eightVerdict = judgeTimeFoul(eight);
+    CHECK(eightVerdict.foul == Foul::TimeOut);
+    CHECK(eight.shooter == 1);
+    CHECK(eight.ballInHand == BallInHand::Anywhere);
+}

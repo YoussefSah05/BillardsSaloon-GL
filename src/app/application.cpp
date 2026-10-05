@@ -239,6 +239,7 @@ namespace BilliardsSaloon
                 settings.matchGame = static_cast<int>(setup.game);
                 settings.raceTo = setup.raceTo;
                 settings.winnerBreaks = setup.breakOrder == Rules::BreakOrder::WinnerBreaks;
+                settings.shotClock = setup.shotClock;
                 applySettings(settings);
 
                 startMatch(setup);
@@ -279,6 +280,10 @@ namespace BilliardsSaloon
             setup.game = ((options.scenario == DevScenario::Foul) || (options.scenario == DevScenario::Replay)) ? GameDiscipline::NineBall
                 : (options.scenario == DevScenario::Call) ? GameDiscipline::TenBall
                 : GameDiscipline::EightBall;
+            if (options.scenario == DevScenario::Call)
+            {
+                setup.shotClock = 30;   // show the clock in captures
+            }
             startMatch(setup);
             const glm::vec2 replayObject(0.5f * 2.54f - 0.7071f, 0.5f * 1.27f - 0.7071f);
             const glm::vec2 replayCue = replayObject - glm::vec2(0.2121f, 0.2121f);
@@ -344,6 +349,7 @@ namespace BilliardsSaloon
         setup.game = static_cast<GameDiscipline>(std::clamp(m_settings.matchGame, 0, MATCH_GAME_COUNT - 1));
         setup.raceTo = m_settings.raceTo;
         setup.breakOrder = m_settings.winnerBreaks ? Rules::BreakOrder::WinnerBreaks : Rules::BreakOrder::Alternate;
+        setup.shotClock = m_settings.shotClock;
         return setup;
     }
 
@@ -352,6 +358,7 @@ namespace BilliardsSaloon
         MatchSettings settings;
         settings.raceTo = setup.raceTo;
         settings.breakOrder = setup.breakOrder;
+        settings.shotClockSeconds = static_cast<float>(setup.shotClock);
         settings.seed = std::random_device{}();
 
         m_session = std::make_unique<MatchSession>(variantFor(setup.game), ShotInputTuning{}, settings);
@@ -826,6 +833,10 @@ namespace BilliardsSaloon
         {
             m_session->cycleCalledBall(1);
         }
+        if (m_input.wasPressed(GLFW_KEY_T) || m_input.gamepadPressed(GLFW_GAMEPAD_BUTTON_RIGHT_THUMB))
+        {
+            (void)m_session->useExtension();
+        }
         if (m_session->pushOutAvailable() &&
             (m_input.wasPressed(GLFW_KEY_P) || m_input.gamepadPressed(GLFW_GAMEPAD_BUTTON_BACK)))
         {
@@ -1251,6 +1262,11 @@ namespace BilliardsSaloon
         snapshot.behindHeadString = frame.ballInHand == Rules::BallInHand::BehindHeadString;
         snapshot.pushOutAvailable = m_session->pushOutAvailable();
         snapshot.pushOutDeclared = m_session->pushOutDeclared();
+        const MatchSession::ShotClock& clock = m_session->shotClock();
+        snapshot.clockEnabled = clock.enabled && !m_session->frameOver();
+        snapshot.clockRunning = clock.running;
+        snapshot.clockSeconds = clock.remaining;
+        snapshot.extensions = clock.extensionAvailable;
         snapshot.replaying = m_session->replaying();
         snapshot.replaySlow = m_session->replaySpeed() < 0.6;
         snapshot.canReplay = playing && m_session->canReplay();

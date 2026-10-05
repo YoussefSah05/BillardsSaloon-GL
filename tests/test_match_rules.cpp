@@ -270,3 +270,39 @@ TEST_CASE("the shot preview is empty while the cue ball is being placed")
     session.beginCueBallPlacement();
     CHECK_FALSE(session.shotPreview().valid);
 }
+
+TEST_CASE("the shot clock runs after the break, can be extended once, and running out is a foul")
+{
+    MatchSettings settings = fixedRack();
+    settings.shotClockSeconds = 30.0f;
+    MatchSession session(nineBallVariant(), {}, settings);
+
+    // Not on the break.
+    session.step(40.0);
+    CHECK(session.shotClock().enabled);
+    CHECK_FALSE(session.shotClock().running);
+    CHECK(session.resolvedShotCount() == 0);
+
+    // A legal layout break that pots the 1 keeps player 1 at the table.
+    const CornerShot shot = cornerShot(session.variant());
+    session.setLayout(shot.cue, {{1, shot.object}, {2, glm::vec2(-0.8f, 0.0f)}, {9, glm::vec2(-0.8f, -0.4f)}});
+    aimAt(session, shot.aim);
+    shoot(session, 0.3f);
+    REQUIRE(session.frame().shooter == 0);
+    const std::uint32_t shots = session.resolvedShotCount();
+
+    session.step(20.0);
+    CHECK(session.shotClock().running);
+    CHECK(session.shotClock().remaining == doctest::Approx(10.0f));
+    CHECK(session.useExtension());
+    CHECK_FALSE(session.useExtension());   // one per frame
+    CHECK(session.shotClock().remaining == doctest::Approx(40.0f));
+
+    session.step(41.0);
+    CHECK(session.resolvedShotCount() == shots + 1);
+    CHECK(session.lastOutcome().verdict.foul == Rules::Foul::TimeOut);
+    CHECK(session.frame().shooter == 1);
+    CHECK(session.placingCueBall());
+    CHECK(session.shotClock().remaining == doctest::Approx(30.0f));   // a fresh clock for the next shot
+    CHECK(session.shotClock().extensionAvailable[1]);
+}

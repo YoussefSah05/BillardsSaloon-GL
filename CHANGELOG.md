@@ -24,6 +24,13 @@ All notable changes to Billiards Saloon. The format follows
 - `--camera broadcast|aim|overview|follow|free` and `--scenario replay`
   for captures.
 
+- Shot clock (M5): off, 30, 45 or 60 seconds, chosen in match setup and
+  remembered. It runs from the shot after the break while the shooter
+  places, aims or strokes, and pauses during pause, replays and referee
+  questions. One 30-second extension per player per frame (T, right stick
+  click). Running out is a foul: ball in hand, and it counts towards three
+  fouls in 9- and 10-ball. Shown in the scorebug, red for the last 10 s.
+
 ### Changed
 - The development cue-ball respot moved from R to F9 (debug builds).
 

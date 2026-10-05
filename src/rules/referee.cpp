@@ -541,6 +541,30 @@ namespace BilliardsSaloon::Rules
         return verdict;
     }
 
+    Verdict judgeTimeFoul(FrameState& state)
+    {
+        Verdict verdict;
+        verdict.shooter = state.shooter;
+        verdict.foulsInRow = state.consecutiveFouls[static_cast<std::size_t>(state.shooter)];
+        if ((state.phase == Phase::FrameOver) || (state.choice != Choice::None))
+        {
+            return verdict;
+        }
+
+        verdict.foul = Foul::TimeOut;
+        state.pushOutAvailable = false;
+        if (state.discipline == GameDiscipline::EightBall)
+        {
+            state.ballInHand = BallInHand::Anywhere;
+            passTurn(state, verdict);
+        }
+        else
+        {
+            rotationFoul(state, verdict);
+        }
+        return verdict;
+    }
+
     ChoiceResult applyChoice(FrameState& state, Option option)
     {
         const std::vector<Option> options = optionsFor(state.choice);

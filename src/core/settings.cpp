@@ -48,6 +48,7 @@ namespace BilliardsSaloon
         settings.matchGame = std::clamp(settings.matchGame, 0, MATCH_GAME_COUNT - 1);
         settings.aimGuide = std::clamp(settings.aimGuide, 0, AIM_GUIDE_COUNT - 1);
         settings.raceTo = std::clamp(settings.raceTo, 1, MAX_RACE_TO);
+        settings.shotClock = std::clamp(settings.shotClock, 0, MAX_SHOT_CLOCK);
         return settings;
     }
 
@@ -118,6 +119,7 @@ namespace BilliardsSaloon
                 settings.matchGame = match.value("game", settings.matchGame);
                 settings.raceTo = match.value("raceTo", settings.raceTo);
                 settings.winnerBreaks = match.value("winnerBreaks", settings.winnerBreaks);
+                settings.shotClock = match.value("shotClock", settings.shotClock);
             }
         }
         catch (const std::exception& exception)
@@ -146,7 +148,8 @@ namespace BilliardsSaloon
             {"match", {
                 {"game", settings.matchGame},
                 {"raceTo", settings.raceTo},
-                {"winnerBreaks", settings.winnerBreaks}
+                {"winnerBreaks", settings.winnerBreaks},
+                {"shotClock", settings.shotClock}
             }}
         };
 

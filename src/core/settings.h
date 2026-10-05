@@ -34,6 +34,7 @@ namespace BilliardsSaloon
         int matchGame {0};
         int raceTo {3};
         bool winnerBreaks {false};
+        int shotClock {0};               // seconds; 0 = off
 
         friend bool operator==(const GameSettings&, const GameSettings&) = default;
     };
@@ -45,6 +46,7 @@ namespace BilliardsSaloon
     inline constexpr int MATCH_GAME_COUNT = 3;
     inline constexpr int AIM_GUIDE_COUNT = 3;
     inline constexpr int MAX_RACE_TO = 15;
+    inline constexpr int MAX_SHOT_CLOCK = 120;
 
     // Brings every value into its allowed range.
     [[nodiscard]] GameSettings sanitized(GameSettings settings);

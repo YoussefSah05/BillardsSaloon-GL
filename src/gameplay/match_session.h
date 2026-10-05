@@ -66,6 +66,8 @@ namespace BilliardsSaloon
         Rules::BreakOrder breakOrder {Rules::BreakOrder::Alternate};
         int firstBreaker {0};
         bool shuffleRack {true};          // WPA racking; false keeps the variant's order
+        float shotClockSeconds {0.0f};    // 0 = no shot clock
+        float extensionSeconds {30.0f};   // one per player per frame
         std::uint32_t seed {0x5EED};
     };
 
@@ -192,6 +194,19 @@ namespace BilliardsSaloon
         void cycleCalledPocket(int direction);
         void cycleCalledBall(int direction);
 
+        // ---- Shot clock --------------------------------------------------------
+        // Runs while the shooter places, aims or strokes (not on the break,
+        // never while paused or replaying). Running out is a foul.
+        struct ShotClock
+        {
+            bool enabled {false};
+            bool running {false};
+            float remaining {0.0f};
+            std::array<bool, 2> extensionAvailable {true, true};
+        };
+        [[nodiscard]] const ShotClock& shotClock() const { return m_clock; }
+        bool useExtension();
+
         // ---- Push-out (9-ball, 10-ball) ------------------------------------------
         [[nodiscard]] bool pushOutAvailable() const;
         [[nodiscard]] bool pushOutDeclared() const { return m_pushOut; }
@@ -229,6 +244,8 @@ namespace BilliardsSaloon
         void resetCueBall();
         void enterTurn();
         void resolveShot();
+        void resetShotClock();
+        void tickShotClock(double deltaTimeSeconds);
 
         [[nodiscard]] bool positionFree(const glm::vec3& position, Entity ignore) const;
         [[nodiscard]] glm::vec3 clampToPlacementArea(const glm::vec3& position) const;
@@ -293,6 +310,7 @@ namespace BilliardsSaloon
         std::optional<Sim::ShotTrajectory> m_lastTrajectory;
         std::optional<Replay> m_replay;
         std::uint32_t m_playbackId {0};
+        ShotClock m_clock;
 
         ShotPreview m_preview;
         glm::vec4 m_previewKey {-1.0f};      // aim, tip right, tip forward, power

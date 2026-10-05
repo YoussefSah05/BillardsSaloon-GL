@@ -35,6 +35,7 @@ TEST_CASE("settings survive a save and load")
     settings.matchGame = 2;
     settings.raceTo = 7;
     settings.winnerBreaks = true;
+    settings.shotClock = 45;
 
     REQUIRE(saveSettings(file, settings));
     CHECK(loadSettings(file) == settings);
