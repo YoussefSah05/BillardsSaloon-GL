@@ -273,3 +273,55 @@ TEST_CASE("an event-simulated break plays back, syncs pots and records first con
                            session.lastOutcome().verdict.foul == Rules::Foul::CueBallPocketed;
     CHECK(pocketedOnTable + (cuePotted ? 1U : 0U) == potted);
 }
+
+TEST_CASE("cue elevation moves at a fixed rate, stays in range, and makes an off-centre hit curve")
+{
+    MatchSettings settings;
+    settings.shuffleRack = false;
+    MatchSession session(nineBallVariant(), ShotInputTuning{}, settings);
+    session.setLayout(glm::vec2(-0.9f, 0.0f), {{1, glm::vec2(1.1f, 0.5f)}});
+
+    ShotControls raise;
+    raise.elevationAxis = 1.0f;
+    session.applyShotControls(raise, 0.5f);
+    CHECK(session.shotState().elevationDegrees == doctest::Approx(15.0f));
+    for (int i = 0; i < 10; ++i)
+    {
+        session.applyShotControls(raise, 0.5f);
+    }
+    CHECK(session.shotState().elevationDegrees == doctest::Approx(60.0f));
+
+    ShotControls set;
+    set.elevationDeltaDegrees = -100.0f;
+    session.applyShotControls(set, 0.0f);
+    CHECK(session.shotState().elevationDegrees == doctest::Approx(0.0f));
+
+    // Straight down the table (+x) with right english: level, the cue ball
+    // squirts slightly; with the cue up 40 degrees it bends off the line.
+    const auto sideways = [](MatchSession& s, float elevation)
+    {
+        ShotControls setup;
+        setup.elevationDeltaDegrees = elevation - s.shotState().elevationDegrees;
+        setup.strikeDelta = glm::vec2(0.5f, 0.0f) - glm::vec2(s.shotState().strikeRight01, s.shotState().strikeForward01);
+        s.applyShotControls(setup, 0.0f);
+        const ShotPreview& preview = s.shotPreview();
+        REQUIRE(preview.cuePath.size() > 30);
+        // How far the cue ball has moved across the table 1.2 m down it.
+        for (const glm::vec3& p : preview.cuePath)
+        {
+            if (p.x > 0.3f)
+            {
+                return p.z;
+            }
+        }
+        return preview.cuePath.back().z;
+    };
+
+    const float level = sideways(session, 0.0f);
+    const float masse = sideways(session, 40.0f);
+    // The size of the curve is checked against pooltool by the golden shots;
+    // here, that elevation reaches the strike. Squirt pushes the cue ball away
+    // from the english side; the elevated hit bends it back the other way.
+    CHECK(std::abs(level) < 0.05f);
+    CHECK(std::abs(masse - level) > 0.03f);
+}

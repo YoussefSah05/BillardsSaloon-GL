@@ -21,6 +21,7 @@
    "strike": {
     "speed": 2.0,
     "phi": 90.0,
+    "theta": 0.0,
     "a": 0.0,
     "b": -0.1
    },
@@ -253,6 +254,7 @@
    "strike": {
     "speed": 2.0,
     "phi": 90.0,
+    "theta": 0.0,
     "a": 0.0,
     "b": 0.4
    },
@@ -317,6 +319,7 @@
    "strike": {
     "speed": 2.5,
     "phi": 90.0,
+    "theta": 0.0,
     "a": 0.0,
     "b": -0.5
    },
@@ -716,6 +719,7 @@
    "strike": {
     "speed": 2.2,
     "phi": 86.11843049222081,
+    "theta": 0.0,
     "a": 0.0,
     "b": 0.0
    },
@@ -790,6 +794,7 @@
    "strike": {
     "speed": 1.6,
     "phi": 10.0,
+    "theta": 0.0,
     "a": 0.4,
     "b": 0.0
    },
@@ -835,6 +840,7 @@
    "strike": {
     "speed": 2.4,
     "phi": 60.0,
+    "theta": 0.0,
     "a": -0.3,
     "b": 0.2
    },
@@ -889,6 +895,7 @@
    "strike": {
     "speed": 1.5,
     "phi": 45.0,
+    "theta": 0.0,
     "a": 0.0,
     "b": 0.0
    },
@@ -943,6 +950,7 @@
    "strike": {
     "speed": 1.8,
     "phi": 108.97040780848654,
+    "theta": 0.0,
     "a": 0.0,
     "b": 0.0
    },
@@ -1005,6 +1013,7 @@
    "strike": {
     "speed": 3.0,
     "phi": 90.0,
+    "theta": 0.0,
     "a": 0.0,
     "b": 0.0
    },
@@ -1108,6 +1117,7 @@
    "strike": {
     "speed": 3.0,
     "phi": 88.0,
+    "theta": 0.0,
     "a": 0.0,
     "b": -0.3
    },
@@ -1141,6 +1151,98 @@
      "position": [
       0.8815207175921198,
       2.3841419161017567,
+      0.028575
+     ],
+     "pocketed": false
+    }
+   ]
+  },
+  {
+   "name": "swerve with an elevated cue",
+   "balls": [
+    [
+     0.635,
+     0.4
+    ]
+   ],
+   "strike": {
+    "speed": 2.0,
+    "phi": 90.0,
+    "theta": 15.0,
+    "a": 0.3,
+    "b": 0.0
+   },
+   "duration": 2.597484441851301,
+   "events": [
+    {
+     "type": "strike",
+     "time": 0.0,
+     "ball": 0
+    },
+    {
+     "type": "linear_cushion",
+     "time": 1.1057545935241098,
+     "ball": 0
+    },
+    {
+     "type": "linear_cushion",
+     "time": 2.593303350436347,
+     "ball": 0
+    },
+    {
+     "type": "pocket",
+     "time": 2.597484441851301,
+     "ball": 0
+    }
+   ],
+   "valid_events": 4,
+   "final_valid": true,
+   "final": [
+    {
+     "position": [
+      -0.0685,
+      1.27,
+      -0.08
+     ],
+     "pocketed": true
+    }
+   ]
+  },
+  {
+   "name": "masse",
+   "balls": [
+    [
+     0.635,
+     0.9
+    ]
+   ],
+   "strike": {
+    "speed": 1.5,
+    "phi": 90.0,
+    "theta": 50.0,
+    "a": 0.4,
+    "b": -0.2
+   },
+   "duration": 5.419724014536619,
+   "events": [
+    {
+     "type": "strike",
+     "time": 0.0,
+     "ball": 0
+    },
+    {
+     "type": "linear_cushion",
+     "time": 2.226041346186173,
+     "ball": 0
+    }
+   ],
+   "valid_events": 2,
+   "final_valid": true,
+   "final": [
+    {
+     "position": [
+      0.16100717626688077,
+      2.500342197007478,
       0.028575
      ],
      "pocketed": false

@@ -24,6 +24,10 @@ All notable changes to Billiards Saloon. The format follows
 - `--camera broadcast|aim|overview|follow|free` and `--scenario replay`
   for captures.
 
+- Cue elevation (M5), 0–60°: W/S or the wheel (RT/LT on a gamepad). An
+  elevated off-centre hit tilts the spin axis and the cue ball curves (swerve,
+  massé); the guide shows the curve and the HUD reads e.g. "CUE UP 35° ·
+  MASSÉ". Two elevated golden shots match pooltool.
 - Shot clock (M5): off, 30, 45 or 60 seconds, chosen in match setup and
   remembered. It runs from the shot after the break while the shooter
   places, aims or strokes, and pauses during pause, replays and referee

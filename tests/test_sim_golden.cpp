@@ -99,7 +99,7 @@ TEST_CASE("golden shots match pooltool")
         const CueStrike strike {
             .speed = s.at("speed"),
             .phiDegrees = s.at("phi"),
-            .thetaDegrees = 0.0,
+            .thetaDegrees = s.value("theta", 0.0),
             .a = s.at("a"),
             .b = s.at("b")
         };

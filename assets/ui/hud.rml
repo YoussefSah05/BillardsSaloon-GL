@@ -189,6 +189,7 @@
         .spin .text { margin-right: 16dp; width: 150dp; }
         .spin .text .name { font-family: "Barlow Condensed"; font-weight: 700; font-size: 21dp; }
         .spin .text .hint { font-size: 14dp; color: #C9C3B9; }
+        .spin .text .elev { margin-top: 6dp; font-family: "Barlow Condensed"; font-weight: 600; font-size: 14dp; letter-spacing: 1.5dp; color: #D4A94A; }
         .spin .ball { position: relative; width: 96dp; height: 96dp; border-radius: 48dp; background-color: #EDE9E0; }
         .spin .ball .v { position: absolute; left: 47dp; top: 8dp; width: 2dp; height: 80dp; background-color: rgba(17, 18, 20, 46); }
         .spin .ball .h { position: absolute; top: 47dp; left: 8dp; height: 2dp; width: 80dp; background-color: rgba(17, 18, 20, 46); }
@@ -338,6 +339,7 @@
             <div class="eyebrow">SPIN</div>
             <div class="name">{{ spin_name }}</div>
             <div class="hint">{{ spin_hint }}</div>
+            <div class="elev">{{ elevation }}</div>
         </div>
         <div class="ball">
             <div class="v"></div>
@@ -386,6 +388,7 @@
         <span class="hint" data-if="show_prompts"><span class="k">Hold A</span> power</span>
         <span class="hint" data-if="show_prompts"><span class="k">Release A</span> shoot</span>
         <span class="hint" data-if="show_prompts"><span class="k">Right stick</span> spin</span>
+        <span class="hint" data-if="show_prompts"><span class="k">RT / LT</span> cue elevation</span>
         <span class="hint" data-if="show_prompts"><span class="k">Y</span> camera</span>
         <span class="hint" data-if="show_prompts"><span class="k">Start</span> pause</span>
     </div>
@@ -402,6 +405,7 @@
         <span class="hint" data-if="show_prompts"><span class="k">Hold, drag back</span> power</span>
         <span class="hint" data-if="show_prompts"><span class="k">Release</span> shoot</span>
         <span class="hint" data-if="show_prompts"><span class="k">Right-drag</span> spin</span>
+        <span class="hint" data-if="show_prompts"><span class="k">W / S, wheel</span> cue elevation</span>
         <span class="hint" data-if="show_prompts"><span class="k">Tab</span> camera</span>
     </div>
 

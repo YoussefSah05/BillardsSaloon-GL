@@ -215,6 +215,7 @@ namespace BilliardsSaloon
             value = hint;
         });
 
+        model.Bind("elevation", &m_elevation);
         model.Bind("banner_visible", &m_bannerVisible);
         model.Bind("banner_foul", &m_bannerFoul);
         model.Bind("banner_legal", &m_bannerLegal);
@@ -359,6 +360,13 @@ namespace BilliardsSaloon
             m_model.DirtyVariable("tip_top");
             m_model.DirtyVariable("spin_name");
             m_model.DirtyVariable("spin_hint");
+        }
+
+        {
+            const int degrees = static_cast<int>(std::lround(snapshot.elevationDegrees));
+            const std::string elevation = (degrees <= 0) ? std::string("CUE LEVEL")
+                : "CUE UP " + std::to_string(degrees) + "°" + ((degrees >= 25) ? " · MASSÉ" : (degrees >= 8) ? " · SWERVE" : "");
+            assign(m_model, m_elevation, elevation, "elevation");
         }
 
         if (m_bannerVisible)

@@ -642,6 +642,11 @@ namespace BilliardsSaloon
             m_shotState.strikeForward01 = 0.0f;
         }
 
+        m_shotState.elevationDegrees = std::clamp(
+            m_shotState.elevationDegrees + controls.elevationAxis * m_tuning.elevationDegreesPerSecond * dt +
+                controls.elevationDeltaDegrees,
+            0.0f, m_tuning.maxElevationDegrees);
+
         const glm::vec2 clampedStrike = clampStrikeOffset(
             m_shotState.strikeRight01,
             m_shotState.strikeForward01,
@@ -767,7 +772,7 @@ namespace BilliardsSaloon
         return Sim::CueStrike {
             .speed = m_tuning.minCueSpeed + (m_tuning.maxCueSpeed - m_tuning.minCueSpeed) * power01,
             .phiDegrees = SimBridge::aimToPhiDegrees(aimDirection()),
-            .thetaDegrees = 0.0,
+            .thetaDegrees = m_shotState.elevationDegrees,
             // The simulator's a > 0 is left english; the game's strikeRight01 > 0 is right.
             .a = -m_shotState.strikeRight01 * m_tuning.tipOffsetPerStrikeUnit,
             .b = m_shotState.strikeForward01 * m_tuning.tipOffsetPerStrikeUnit
@@ -789,6 +794,7 @@ namespace BilliardsSaloon
         const glm::vec3 cue = m_registry.get<TransformComponent>(m_cueBallEntity).position;
         const glm::vec4 change = glm::abs(key - m_previewKey);
         const bool unchanged = m_preview.valid && (glm::length(cue - m_previewCue) < 1.0e-5f) &&
+            (std::abs(m_shotState.elevationDegrees - m_previewElevation) < 0.05f) &&
             (change.x < 1.0e-5f) && (change.y < 1.0e-4f) && (change.z < 1.0e-4f) && (change.w < 0.01f);
         if (unchanged)
         {
@@ -796,6 +802,7 @@ namespace BilliardsSaloon
         }
         m_previewKey = key;
         m_previewCue = cue;
+        m_previewElevation = m_shotState.elevationDegrees;
 
         // A capped simulation: the guides only need the first part of the shot.
         Sim::SimulationLimits limits;

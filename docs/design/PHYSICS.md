@@ -126,7 +126,9 @@ arcs and pocket circles (pooltool's pocket geometry). Everything lives in
 | Side pocket | mouth 0.137 m, angle 7.14°, depth 0.0685 m, radius 0.0645 m, jaw radius 0.008 m |
 | Cue | mass 0.567 kg, squirt end mass m/30; game power maps to 0.5–7 m/s cue speed |
 
-Not yet modelled: cue elevation (jump and massé shots) and airborne balls.
+Cue elevation (0–60° in the game) tilts the strike's spin axis, so off-centre
+elevated hits swerve and massé; the strike's vertical velocity is dropped, so
+there are no jump shots or airborne balls yet.
 
 ### Validation
 
@@ -141,12 +143,13 @@ Not yet modelled: cue elevation (jump and massé shots) and airborne balls.
 
 ### Golden shots against pooltool
 
-`tools/golden/generate_golden_shots.py` runs ten reference shots through
+`tools/golden/generate_golden_shots.py` runs twelve reference shots through
 pooltool 0.6.0, set up like the game (9 ft table, Han 2005 cushions, the same
 ball, cue and pocket parameters). It writes `tests/data/golden_shots.json`,
 and `tests/test_sim_golden.cpp` replays the shots through `bs_sim`. The shots
 are stop, follow, draw, a thin cut, side spin into a cushion, a running-english
-bank, a pot, a jaw hit, a three-ball cluster, and a length-of-table draw.
+bank, a pot, a jaw hit, a three-ball cluster, a length-of-table draw, a swerve
+(cue up 15°) and a massé (cue up 50°).
 
 Result: the same collisions and pockets in the same order. Final positions
 agree within 0.43 mm (typically under 0.1 mm), and event times within about
