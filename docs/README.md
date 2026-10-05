@@ -52,8 +52,8 @@ mouse / keyboard ──► Input ──► ShotControls ──► MatchSession (
 |-----------|--------|
 | M0 Housekeeping, docs, knowledge graph | done |
 | M1 Foundation: library split, tests, CI, JSON data, mouse controls, fullscreen | done (v0.2.0) |
-| M2 UX foundation: RmlUi menus and HUD, settings, frontend flow, gamepad, accessibility | in progress |
-| M3 Event-based physics | planned |
+| M2 UX foundation: RmlUi menus and HUD, settings, frontend flow, gamepad, accessibility | done (v0.3.0) |
+| M3 Event-based physics | next |
 | M4 WPA rules and referee | planned |
 | M5 Shot input and broadcast presentation | planned |
 | M6 Hall visuals, realism, equipment customization | planned |
