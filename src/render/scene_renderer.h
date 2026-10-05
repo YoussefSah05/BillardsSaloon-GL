@@ -4,6 +4,8 @@
 #include "ecs/registry.h"
 #include "render/light_rig.h"
 #include "render/mesh.h"
+#include "render/number_atlas.h"
+#include "render/render_targets.h"
 #include "render/shader.h"
 #include "scene/components.h"
 
@@ -74,6 +76,7 @@ namespace BilliardsSaloon
     {
     public:
         SceneRenderer(float clothWidth, float clothDepth, float ballRadius);
+        ~SceneRenderer();
 
         // Clears the frame and uploads camera, lights and quality uniforms.
         // Returns false if the camera entity is missing its components.
@@ -84,8 +87,13 @@ namespace BilliardsSaloon
             const FrameSettings& settings,
             FrameView& outView);
 
-        // Draws every entity with a mesh and material; pocketed balls are skipped.
+        // Renders the lamps' shadow maps, then every entity with a mesh and
+        // material into the HDR scene buffer; pocketed balls are skipped.
         void drawWorld(Registry& registry, float alpha, const BallHighlight& highlight);
+
+        // Resolves the scene, adds bloom, tone maps and writes the result to the
+        // window (framebuffer 0), ready for the UI to draw on top.
+        void endFrame(int framebufferWidth, int framebufferHeight);
 
         // The cue stick: tip at tipPosition, the butt along buttDirection.
         void drawCue(const glm::vec3& tipPosition, const glm::vec3& buttDirection);
@@ -105,9 +113,27 @@ namespace BilliardsSaloon
         [[nodiscard]] Mesh& cubeMesh() { return *m_cubeMesh; }
 
     private:
-        void bindMaterial(const MaterialComponent& material, const glm::vec3& dynamicEmission, int ballVisualType);
+        void bindMaterial(const MaterialComponent& material, const glm::vec3& dynamicEmission, int ballVisualType, int ballNumber = 0);
+        void renderShadows(Registry& registry, float alpha);
+        void bindSceneShader();
 
         std::unique_ptr<Shader> m_shader;
+        std::unique_ptr<Shader> m_shadowShader;
+        std::unique_ptr<Shader> m_bloomDownShader;
+        std::unique_ptr<Shader> m_bloomUpShader;
+        std::unique_ptr<Shader> m_postShader;
+        unsigned int m_emptyVertexArray {0};
+
+        SceneTarget m_sceneTarget;
+        BloomChain m_bloom;
+        ShadowMaps m_shadows;
+        std::unique_ptr<NumberAtlas> m_numbers;
+
+        // Per-frame choices from the quality preset and the light rig.
+        bool m_bloomEnabled {true};
+        bool m_shadowsEnabled {true};
+        int m_shadowKernel {3};
+        std::vector<glm::mat4> m_lightMatrices;
         std::unique_ptr<Mesh> m_cubeMesh;
         std::unique_ptr<Mesh> m_planeMesh;
         std::unique_ptr<Mesh> m_sphereMesh;

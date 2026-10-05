@@ -20,10 +20,10 @@ tests link, and the `BilliardsSaloon` executable.
 | `src/gameplay/director.*` | bs_game | Broadcast director: plans camera cuts (pocket camera, wide) from a simulated trajectory. |
 | `src/gameplay/sim_bridge.h` | bs_game | Game ↔ simulator frame conversion. |
 | `src/platform/` | app | `Window` (GLFW, vsync on), `Input` (key edge detection), `Timer`. |
-| `src/render/` | app | `SceneRenderer` (frame setup, world, aim guide), `Shader`, `Mesh`, `Camera`, `camera_rig`, `ui_overlay` (voxel-font text). |
+| `src/render/` | app | `SceneRenderer` (shadow pass, HDR scene, cue, guides, post chain), `render_targets` (MSAA HDR buffer, bloom chain, shadow map array), `number_atlas` (ball numbers via FreeType), `Shader`, `Mesh`, `Camera`, `camera_rig`. |
 | `src/app/` | app | `Application` (loop, screens, camera rig), `saloon_scene` (room, lamps, ball materials), RmlUi screens: `shell_menus` (title, hub, pause, frame over, confirm, referee choice), `match_setup_screen`, `settings_screen`, `hud_screen`. |
 | `assets/data/` | — | Game data: `variants/*.json` (rules discipline, rack, balls) and `tables/*.json` (dimensions, pockets, physics coefficients). |
-| `assets/shaders/basic.*` | — | Single forward shader with procedural cloth/wood finishes and ball patterns. |
+| `assets/shaders/` | — | `basic.*`: physically based forward shading (GGX, ball resin, cloth sheen, PCF lamp shadows, ball numbers) into an HDR buffer; `shadow.*` depth pass; `bloom_*` and `post.frag`: bloom, ACES filmic tone curve, vignette, sRGB. |
 | `tests/` | bs_tests | doctest suite: ECS, simulator (closed-form, golden shots vs pooltool), rules per WPA clause, session, data loading. |
 
 Known limitations: no jump or massé shots yet (cue elevation); rails and

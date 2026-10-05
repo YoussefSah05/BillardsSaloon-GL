@@ -202,13 +202,15 @@ namespace BilliardsSaloon
                 const std::uint32_t c = b + 1U;
                 const std::uint32_t d = a + 1U;
 
+                // Counter-clockwise seen from outside, so back-face culling
+                // removes the far side, not the near one.
                 indices.push_back(a);
-                indices.push_back(b);
                 indices.push_back(d);
+                indices.push_back(b);
 
                 indices.push_back(d);
-                indices.push_back(b);
                 indices.push_back(c);
+                indices.push_back(b);
             }
         }
 

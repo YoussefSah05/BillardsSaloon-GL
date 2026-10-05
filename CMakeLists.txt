@@ -160,6 +160,8 @@ add_executable(BilliardsSaloon
     src/platform/window.cpp
     src/platform/timer.cpp
     src/render/scene_renderer.cpp
+    src/render/render_targets.cpp
+    src/render/number_atlas.cpp
     src/render/screenshot.cpp
     src/render/shader.cpp
     src/render/mesh.cpp
@@ -181,6 +183,8 @@ target_link_libraries(BilliardsSaloon PRIVATE
     glfw
     OpenGL::GL
 )
+# Ball numbers are rasterised with FreeType, which RmlUi already links.
+target_include_directories(BilliardsSaloon SYSTEM PRIVATE $<TARGET_PROPERTY:freetype,INTERFACE_INCLUDE_DIRECTORIES>)
 
 bs_set_warnings(BilliardsSaloon)
 

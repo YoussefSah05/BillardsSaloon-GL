@@ -133,6 +133,11 @@ namespace BilliardsSaloon
         return program;
     }
 
+    void Shader::setVec2(const std::string& name, const glm::vec2& value) const
+    {
+        glUniform2f(uniformLocation(name), value.x, value.y);
+    }
+
     int Shader::uniformLocation(const std::string& name) const
     {
         const auto cached = m_uniformLocations.find(name);
@@ -141,12 +146,9 @@ namespace BilliardsSaloon
             return cached->second;
         }
 
+        // A uniform the compiler optimised away has no location; setting it
+        // is then a no-op, as in OpenGL itself (location -1).
         const int location = glGetUniformLocation(m_program, name.c_str());
-        if (location < 0)
-        {
-            throw std::runtime_error("Uniform not found: " + name);
-        }
-
         m_uniformLocations.emplace(name, location);
         return location;
     }

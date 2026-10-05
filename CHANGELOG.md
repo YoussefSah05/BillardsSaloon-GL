@@ -6,6 +6,19 @@ All notable changes to Billiards Saloon. The format follows
 
 ## [Unreleased]
 
+### Added
+- New rendering pipeline (M6): the scene is lit physically (GGX specular,
+  polished resin balls, a velvet sheen on the cloth) into an HDR buffer with
+  multisampling, then bloom, an ACES filmic tone curve and a light vignette.
+- Lamp shadows: each of the three table lamps casts soft shadows (balls,
+  cue ball contact shadows, rails), with PCF filtering by quality.
+- Ball numbers printed in the white spot, from the game's own typeface.
+- Quality presets now choose MSAA (1/4/8), bloom and shadow detail.
+
+### Fixed
+- Spheres were wound clockwise, so culling showed the inside of the far
+  half of every ball and lamp; balls now light and shade correctly.
+
 ## [0.5.0] - 2026-10-06
 
 Shot input and broadcast presentation (M5).

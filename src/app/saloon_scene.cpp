@@ -105,9 +105,9 @@ namespace BilliardsSaloon
             .specularStrength = 0.62f,
             .shininess = 96.0f,
             .surfaceType = MaterialSurfaceType::Wood,
-            .roughness = 0.26f,
-            .reflectivity = 0.08f,
-            .clearcoatStrength = 0.45f,
+            .roughness = 0.34f,
+            .reflectivity = 0.04f,
+            .clearcoatStrength = 0.12f,
             .emissionColor = glm::vec3(0.0f),
             .emissionIntensity = 0.0f
         };
