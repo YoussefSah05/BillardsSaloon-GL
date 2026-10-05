@@ -27,7 +27,9 @@ materials are scheduled for the hall-visuals milestone.
   spotted balls, three-foul rule, and the referee's choices (re-rack, hand the
   shot back). Races to N frames from a match setup screen.
   See [`docs/design/RULES.md`](docs/design/RULES.md).
-- Cue strike with power and tip offset (english, follow, draw).
+- Cue strike with power and tip offset (english, follow, draw), with a
+  modelled cue and aim guides predicted by the simulator (ghost ball, object
+  and cue ball lines; full paths optional).
 - Event-based physics on a WPA 9 ft table: each shot is simulated exactly
   (sliding, rolling and spinning in closed form, ball-ball throw, Han 2005
   cushions, pocket jaws, squirt) and played back in real time.
@@ -61,7 +63,9 @@ ctest --test-dir build --output-on-failure   # unit tests
 | Called pocket / called ball | — | Q / E pocket, Z ball | D-pad left/right, D-pad up |
 | Push out (9- and 10-ball, after the break) | — | P | View |
 | Spin (cue tip offset) | Hold right button and move | Arrow keys, C to centre | Right stick, X to centre |
-| Camera views | — | Tab cycles; 1 aim, 2 overview, 3 follow, 4 free look | Y cycles |
+| Camera views | — | Tab cycles; 1 aim, 2 overview, 3 follow, 4 free look, 5 broadcast (default: director cuts during the shot) | Y cycles |
+| Replay the last shot / skip | — | R / Space | Left stick click / A |
+| Shot clock extension | — | T | Right stick click |
 | Free look | Right-drag to orbit, wheel to zoom | J/L orbit, I/K tilt, U/O zoom | Right stick orbit, triggers zoom |
 | Menus | Point and click | Up/Down, Enter, Esc | D-pad or left stick, A, B |
 | Pause | — | Esc | Start |
@@ -76,7 +80,8 @@ depending on the device used last.
 ```bash
 ./build/BilliardsSaloon --screen game                      # skip the main menu
 ./build/BilliardsSaloon --screen pause --capture pause.png # save a screenshot and quit
-./build/BilliardsSaloon --scenario foul|choice|call        # script a shot: ball in hand, a referee choice, a called shot
+./build/BilliardsSaloon --scenario foul|choice|call|replay # script a shot: ball in hand, a referee choice, a called shot, a winning replay
+./build/BilliardsSaloon --camera overview                  # start with a camera view (broadcast, aim, overview, follow, free)
 ```
 
 ## Project layout

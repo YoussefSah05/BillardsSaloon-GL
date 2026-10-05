@@ -21,6 +21,7 @@ namespace BilliardsSaloon
         GameDiscipline game {GameDiscipline::EightBall};
         int raceTo {3};
         Rules::BreakOrder breakOrder {Rules::BreakOrder::Alternate};
+        int shotClock {0};   // seconds; 0 = off
     };
 
     struct MatchSetupActions

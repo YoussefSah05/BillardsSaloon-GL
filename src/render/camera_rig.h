@@ -10,12 +10,13 @@ namespace BilliardsSaloon
         PlayerAim,
         TableOverview,
         ShotFollow,
-        FreeLook
+        FreeLook,
+        Broadcast     // the player's aim view, with director cuts while the balls roll
     };
 
     struct CameraRigState
     {
-        CameraViewMode mode {CameraViewMode::PlayerAim};
+        CameraViewMode mode {CameraViewMode::Broadcast};
         float freeLookYawRadians {0.0f};
         float freeLookPitchRadians {glm::radians(24.0f)};
         float freeLookDistance {2.35f};

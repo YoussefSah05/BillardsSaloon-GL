@@ -80,6 +80,9 @@ namespace BilliardsSaloon
 
             case CameraViewMode::FreeLook:
                 return "Free";
+
+            case CameraViewMode::Broadcast:
+                return "Broadcast";
         }
 
         return "Unknown";
@@ -131,6 +134,7 @@ namespace BilliardsSaloon
         switch (state.mode)
         {
             case CameraViewMode::PlayerAim:
+            case CameraViewMode::Broadcast:
             {
                 const glm::vec3 focus =
                     context.cueBallAvailable

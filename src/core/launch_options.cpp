@@ -65,8 +65,19 @@ namespace BilliardsSaloon
                 if (value == "foul") options.scenario = DevScenario::Foul;
                 else if (value == "choice") options.scenario = DevScenario::Choice;
                 else if (value == "call") options.scenario = DevScenario::Call;
-                else throw std::invalid_argument("--scenario needs 'foul', 'choice' or 'call'.");
+                else if (value == "replay") options.scenario = DevScenario::Replay;
+                else throw std::invalid_argument("--scenario needs 'foul', 'choice', 'call' or 'replay'.");
                 options.startScreen = StartScreen::Gameplay;
+            }
+            else if (argument == "--camera")
+            {
+                const std::string_view value = nextValue();
+                if (value == "aim") options.startCamera = 0;
+                else if (value == "overview") options.startCamera = 1;
+                else if (value == "follow") options.startCamera = 2;
+                else if (value == "free") options.startCamera = 3;
+                else if (value == "broadcast") options.startCamera = 4;
+                else throw std::invalid_argument("--camera needs broadcast, aim, overview, follow or free.");
             }
             else if (argument == "--capture-frames")
             {
@@ -87,7 +98,8 @@ namespace BilliardsSaloon
             "Usage: BilliardsSaloon [options]\n"
             "  --fullscreen            start in fullscreen\n"
             "  --screen title|main|setup|game|pause|settings  start on this screen\n"
-            "  --scenario foul|choice|call  (development) script a state: ball in hand, a referee choice, a called shot\n"
+            "  --scenario foul|choice|call|replay  (development) script a state: ball in hand, a referee choice, a called shot, a winning replay\n"
+            "  --camera broadcast|aim|overview|follow|free  start with this camera view\n"
             "  --capture FILE.png      save a screenshot after a few frames, then quit\n"
             "  --capture-frames N      frames to render before capturing (default 90)\n";
     }

@@ -13,7 +13,7 @@
             top: 50%;
             width: 600dp;
             margin-left: -300dp;
-            margin-top: -260dp;
+            margin-top: -290dp;
         }
         .panel h2 {
             margin-bottom: 6dp;
@@ -76,6 +76,7 @@
         <div class="eyebrow section">MATCH</div>
         <button class="menu-item setting" id="race" data-event-click="cycle(1, 1)" data-event-keydown="key(1, ev.key_identifier)"><span class="label">RACE TO<span class="value">{{ race }}</span></span></button>
         <button class="menu-item setting" id="breaks" data-event-click="cycle(2, 1)" data-event-keydown="key(2, ev.key_identifier)"><span class="label">BREAK<span class="value">{{ breaks }}</span></span></button>
+        <button class="menu-item setting" id="clock" data-event-click="cycle(3, 1)" data-event-keydown="key(3, ev.key_identifier)"><span class="label">SHOT CLOCK<span class="value">{{ clock }}</span></span></button>
 
         <div class="actions">
             <button class="menu-item" id="start" data-event-click="start"><span class="label">START MATCH</span></button><button class="menu-item" id="setupback" data-event-click="back"><span class="label">BACK</span></button>

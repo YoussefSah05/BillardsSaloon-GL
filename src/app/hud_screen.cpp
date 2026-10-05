@@ -77,6 +77,8 @@ namespace BilliardsSaloon
                     return "NO CUSHION AFTER CONTACT";
                 case Rules::Foul::IllegalBreak:
                     return "ILLEGAL BREAK";
+                case Rules::Foul::TimeOut:
+                    return "SHOT CLOCK EXPIRED";
                 case Rules::Foul::None:
                     return "";
             }
@@ -158,6 +160,15 @@ namespace BilliardsSaloon
         model.Bind("call_text", &m_callText);
         model.Bind("push_available", &m_pushAvailable);
         model.Bind("push_declared", &m_pushDeclared);
+        model.Bind("replaying", &m_replaying);
+        model.Bind("clock_visible", &m_clockVisible);
+        model.Bind("clock_low", &m_clockLow);
+        model.Bind("clock_extend", &m_clockExtend);
+        model.Bind("clock_text", &m_clockText);
+        model.Bind("ext1", &m_extension[0]);
+        model.Bind("ext2", &m_extension[1]);
+        model.Bind("replay_slow", &m_replaySlow);
+        model.Bind("can_replay", &m_canReplay);
         model.Bind("active", &m_active);
         model.Bind("discipline", &m_discipline);
         model.Bind("camera_label", &m_cameraLabel);
@@ -309,6 +320,19 @@ namespace BilliardsSaloon
         assign(m_model, m_callText, snapshot.callText, "call_text");
         assign(m_model, m_pushAvailable, snapshot.pushOutAvailable, "push_available");
         assign(m_model, m_pushDeclared, snapshot.pushOutDeclared, "push_declared");
+        assign(m_model, m_replaying, snapshot.replaying, "replaying");
+        {
+            const int seconds = static_cast<int>(std::ceil(std::max(snapshot.clockSeconds, 0.0f)));
+            assign(m_model, m_clockVisible, snapshot.clockEnabled, "clock_visible");
+            assign(m_model, m_clockText, std::to_string(seconds), "clock_text");
+            assign(m_model, m_clockLow, snapshot.clockRunning && (seconds <= 10), "clock_low");
+            const bool extend = snapshot.clockRunning && snapshot.extensions[static_cast<std::size_t>(snapshot.activePlayer)];
+            assign(m_model, m_clockExtend, extend, "clock_extend");
+            assign(m_model, m_extension[0], snapshot.extensions[0], "ext1");
+            assign(m_model, m_extension[1], snapshot.extensions[1], "ext2");
+        }
+        assign(m_model, m_replaySlow, snapshot.replaySlow, "replay_slow");
+        assign(m_model, m_canReplay, snapshot.canReplay && snapshot.aiming, "can_replay");
         assign(m_model, m_active, snapshot.activePlayer, "active");
         assign(m_model, m_discipline, snapshot.discipline, "discipline");
         assign(m_model, m_cameraLabel, snapshot.cameraLabel, "camera_label");

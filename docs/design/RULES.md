@@ -33,6 +33,9 @@ HUD announces it.
   long string as fits, else in front of it.
 - **Racking** is random apart from the WPA positions (see each game).
 - **Match:** race to N frames; alternate break (default) or winner breaks.
+- **Shot clock** (optional, as in professional events): 30, 45 or 60 s from
+  the shot after the break, one 30 s extension per player per frame. Running
+  out is a foul (`judgeTimeFoul`), with ball in hand for the other player.
 
 ## 8-ball
 
@@ -84,6 +87,6 @@ open table is a foul.
 ## Not yet covered
 
 Jump and massé shots (and their fouls), cue ball off the table, double hits,
-time limits and the shot clock, "object balls behind the head string" after a
+"object balls behind the head string" after a
 break scratch, and concessions. These come with cue elevation (shot input) and
 the shot clock (presentation).
