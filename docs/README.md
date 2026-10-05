@@ -66,7 +66,7 @@ mouse / keyboard ──► Input ──► ShotControls ──► MatchSession (
 
 ## Working on the code
 
-- Build, run, test and conventions: [../CLAUDE.md](../CLAUDE.md) and [../README.md](../README.md).
+- Build, run, test and conventions: [../CONTRIBUTING.md](../CONTRIBUTING.md) and [../README.md](../README.md).
 - Check visual changes: `./build/BilliardsSaloon --screen main|game|pause --capture shot.png`.
 - Explore relationships in the code: the Graphify knowledge graph in `graphify-out/`
   (`graphify query "…"`, `graphify explain "MatchSession"`).
