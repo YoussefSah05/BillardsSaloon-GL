@@ -1,9 +1,9 @@
 {
-  "discipline": "nine_ball",
-  "displayName": "9-Ball",
+  "discipline": "ten_ball",
+  "displayName": "10-Ball",
   "table": "table_9ft",
   "rack": {
-    "pattern": "diamond",
+    "pattern": "triangle",
     "apex": [
       0.635,
       0.0
@@ -64,13 +64,13 @@
       ]
     },
     {
-      "name": "9 Ball",
-      "number": 9,
+      "name": "10 Ball",
+      "number": 10,
       "rule": "stripe",
       "color": [
-        0.86,
-        0.72,
-        0.1
+        0.1,
+        0.28,
+        0.78
       ]
     },
     {
@@ -111,6 +111,16 @@
         0.05,
         0.05,
         0.06
+      ]
+    },
+    {
+      "name": "9 Ball",
+      "number": 9,
+      "rule": "numbered",
+      "color": [
+        0.86,
+        0.72,
+        0.1
       ]
     }
   ]

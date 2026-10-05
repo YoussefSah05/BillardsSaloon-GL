@@ -338,6 +338,27 @@ namespace BilliardsSaloon
         return variant;
     }
 
+    const GameVariantDefinition& tenBallVariant()
+    {
+        static const GameVariantDefinition variant =
+            loadGameVariant(resolveAssetPath("data/variants/ten_ball.json"));
+        return variant;
+    }
+
+    const GameVariantDefinition& variantFor(GameDiscipline discipline)
+    {
+        switch (discipline)
+        {
+            case GameDiscipline::EightBall:
+                return eightBallVariant();
+            case GameDiscipline::NineBall:
+                return nineBallVariant();
+            case GameDiscipline::TenBall:
+                return tenBallVariant();
+        }
+        return eightBallVariant();
+    }
+
     std::vector<glm::vec3> buildRackPositions(const GameVariantDefinition& variant)
     {
         switch (variant.rack.pattern)

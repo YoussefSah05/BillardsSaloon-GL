@@ -3,15 +3,18 @@
 #include "ecs/entity.h"
 #include "ecs/registry.h"
 #include "gameplay/game_variant.h"
-#include "gameplay/match_state.h"
 #include "gameplay/shot_result.h"
 #include "gameplay/shot_state.h"
+#include "rules/match_score.h"
+#include "rules/referee.h"
 #include "sim/simulate.h"
 
 #include <glm/glm.hpp>
 
+#include <array>
 #include <cstdint>
 #include <optional>
+#include <random>
 #include <vector>
 
 namespace BilliardsSaloon
@@ -65,22 +68,25 @@ namespace BilliardsSaloon
         EventBased    // exact event simulation of the whole shot (bs_sim)
     };
 
-    // What happened on the last resolved shot, for the referee and the HUD.
-    struct ShotOutcome
+    struct MatchSettings
     {
-        int shooter {0};
-        int nextPlayer {0};
-        FoulReason foul {FoulReason::None};
-        bool turnPassed {false};
-        bool groupsAssigned {false};
-        bool frameOver {false};
-        int winner {-1};
-        FrameEndReason frameEnd {FrameEndReason::None};
-        std::vector<int> pottedNumbers;   // object balls only
+        int raceTo {1};
+        Rules::BreakOrder breakOrder {Rules::BreakOrder::Alternate};
+        int firstBreaker {0};
+        bool shuffleRack {true};          // WPA racking; false keeps the variant's order
+        std::uint32_t seed {0x5EED};
     };
 
-    // Headless owner of one rack of play: the ECS world with table and balls,
-    // the shot state machine, physics stepping and rule resolution.
+    // What happened on the last resolved shot, for the HUD and stats.
+    struct ShotOutcome
+    {
+        Rules::Verdict verdict;
+        int nextPlayer {0};
+        bool matchOver {false};
+    };
+
+    // Headless owner of a match: the ECS world with table and balls, the shot
+    // state machine, physics playback, the referee and the match score.
     // Presentation layers attach meshes and materials to its entities.
     class MatchSession
     {
@@ -88,7 +94,8 @@ namespace BilliardsSaloon
         explicit MatchSession(
             const GameVariantDefinition& variant,
             ShotInputTuning tuning = {},
-            PhysicsBackend backend = PhysicsBackend::EventBased);
+            PhysicsBackend backend = PhysicsBackend::EventBased,
+            MatchSettings settings = {});
 
         [[nodiscard]] PhysicsBackend backend() const { return m_backend; }
 
@@ -102,21 +109,74 @@ namespace BilliardsSaloon
         [[nodiscard]] const Registry& registry() const { return m_registry; }
 
         [[nodiscard]] const GameVariantDefinition& variant() const { return *m_variant; }
-        [[nodiscard]] const MatchState& matchState() const { return m_matchState; }
+        [[nodiscard]] const MatchSettings& settings() const { return m_settings; }
+        [[nodiscard]] const Rules::FrameState& frame() const { return m_frame; }
+        [[nodiscard]] const Rules::MatchScore& score() const { return m_score; }
         [[nodiscard]] const ShotState& shotState() const { return m_shotState; }
 
         [[nodiscard]] Entity tableEntity() const { return m_tableEntity; }
         [[nodiscard]] Entity cueBallEntity() const { return m_cueBallEntity; }
         [[nodiscard]] const std::vector<Entity>& objectBallEntities() const { return m_objectBallEntities; }
+        [[nodiscard]] std::optional<Entity> ballEntity(int number) const;
+
+        // Object balls still on the table, by number, ascending.
+        [[nodiscard]] std::vector<int> objectBallsOnTable() const;
+
+        // Pocket centres in game coordinates, indexed like the simulator's pockets.
+        [[nodiscard]] const std::vector<glm::vec3>& pocketPositions() const { return m_pocketPositions; }
 
         [[nodiscard]] glm::vec3 aimDirection() const;
-        [[nodiscard]] glm::vec3 cueBallStartPosition() const;
+        [[nodiscard]] glm::vec3 cueBallStartPosition() const;   // the head spot
+        [[nodiscard]] glm::vec3 footSpot() const;
+        [[nodiscard]] float headStringX() const;
 
         // True while the player may aim and shoot.
         [[nodiscard]] bool acceptsShotInput() const;
         [[nodiscard]] bool ballsInMotion() const;
+        [[nodiscard]] bool frameOver() const { return m_frame.phase == Rules::Phase::FrameOver; }
+        [[nodiscard]] bool matchOver() const { return m_score.over(); }
 
-        void resetRack();
+        // A new match: score reset, first frame racked.
+        void startMatch();
+        // Re-rack the current frame with the same breaker.
+        void restartFrame();
+        // After a frame is over: rack the next one (no-op once the match is over).
+        void startNextFrame();
+        [[nodiscard]] int frameNumber() const { return m_frameNumber; }
+
+        // Puts the cue ball and the listed object balls at rest at the given
+        // table positions (x, z); unlisted object balls leave the table.
+        // For practice layouts, drills and tests; the frame state is unchanged.
+        void setLayout(const glm::vec2& cueBall, const std::vector<std::pair<int, glm::vec2>>& objectBalls);
+
+        // ---- Ball in hand -------------------------------------------------
+        [[nodiscard]] bool placingCueBall() const { return m_shotState.phase == ShotPhase::PlacingCueBall; }
+        // True when the shooter has ball in hand and has not shot yet.
+        [[nodiscard]] bool canPlaceCueBall() const;
+        void beginCueBallPlacement();
+        // Moves the cue ball on the table plane (x, z), kept inside the allowed area.
+        void moveCueBall(const glm::vec2& deltaXZ);
+        [[nodiscard]] bool cueBallPlacementValid() const { return m_placementValid; }
+        // Ends placement if the spot is legal; returns false otherwise.
+        bool confirmCueBallPlacement();
+
+        // ---- Referee choices ---------------------------------------------
+        [[nodiscard]] Rules::Choice pendingChoice() const { return m_frame.choice; }
+        [[nodiscard]] int chooser() const { return m_frame.chooser; }
+        bool choose(Rules::Option option);
+
+        // ---- Called shots ----------------------------------------------------
+        // A called ball and pocket follow the aim automatically until the player
+        // picks one by hand.
+        [[nodiscard]] bool callRequired() const;
+        [[nodiscard]] const std::optional<Rules::Call>& calledShot() const { return m_call; }
+        void cycleCalledPocket(int direction);
+        void cycleCalledBall(int direction);
+
+        // ---- Push-out (9-ball, 10-ball) ------------------------------------------
+        [[nodiscard]] bool pushOutAvailable() const;
+        [[nodiscard]] bool pushOutDeclared() const { return m_pushOut; }
+        void setPushOut(bool declared);
 
         // Applies aiming, tip offset and the hold-to-charge / release-to-shoot
         // gesture for one frame of length deltaTimeSeconds.
@@ -139,7 +199,21 @@ namespace BilliardsSaloon
     private:
         void spawnTable();
         void spawnBalls();
+        void startFrame(int breaker);
+        void rackBalls();
+        void placeBall(Entity entity, const glm::vec3& position);
         void resetCueBall();
+        void enterTurn();
+        void resolveShot();
+
+        [[nodiscard]] bool positionFree(const glm::vec3& position, Entity ignore) const;
+        [[nodiscard]] glm::vec3 clampToPlacementArea(const glm::vec3& position) const;
+        [[nodiscard]] bool placementLegal(const glm::vec3& position) const;
+        [[nodiscard]] glm::vec3 nearestFreePlacement(const glm::vec3& preferred) const;
+        void spotBall(int number);
+
+        void updateAutoCall();
+
         bool fireShot();
         bool fireSimulatedShot();
         void playBack(double deltaTimeSeconds);
@@ -147,18 +221,38 @@ namespace BilliardsSaloon
 
         const GameVariantDefinition* m_variant {nullptr};
         ShotInputTuning m_tuning;
+        MatchSettings m_settings;
+        std::mt19937 m_random;
 
         Registry m_registry;
         Entity m_tableEntity;
         Entity m_cueBallEntity;
         std::vector<Entity> m_objectBallEntities;
 
-        MatchState m_matchState {};
+        Rules::FrameState m_frame {};
+        Rules::MatchScore m_score {};
+        int m_nextBreaker {0};
+        int m_frameNumber {0};
+
         ShotState m_shotState {};
-        ShotResult m_currentShotResult {};
+        bool m_placementValid {true};
+        std::optional<Rules::Call> m_call;
+        bool m_callBallByHand {false};
+        bool m_callPocketByHand {false};
+        bool m_pushOut {false};
+
+        // What the referee needs about the shot in flight.
+        std::vector<int> m_onTableAtStrike;
+        std::optional<Rules::Call> m_callAtStrike;
+        bool m_pushOutAtStrike {false};
+        Rules::ShotRecord m_record {};
+        ShotResult m_legacyResult {};
+
         PhysicsBackend m_backend {PhysicsBackend::EventBased};
         Sim::Table m_simTable;
         std::vector<Entity> m_simBalls;   // simulator ball index -> entity (cue first)
+        std::vector<int> m_simNumbers;    // simulator ball index -> ball number
+        std::vector<glm::vec3> m_pocketPositions;
         std::optional<Sim::ShotTrajectory> m_trajectory;
         double m_playbackSeconds {0.0};
 
