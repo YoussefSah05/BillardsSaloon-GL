@@ -145,6 +145,8 @@ add_library(bs_game STATIC
     src/gameplay/equipment.cpp
     src/gameplay/game_variant.cpp
     src/gameplay/match_session.cpp
+    src/ai/ai_profile.cpp
+    src/ai/planner.cpp
     src/audio/shot_sounds.cpp
     src/audio/sound_synth.cpp
     src/rules/racking.cpp
@@ -262,6 +264,7 @@ if(BS_BUILD_TESTS)
         tests/test_table_geometry.cpp
         tests/test_equipment.cpp
         tests/test_audio.cpp
+        tests/test_ai.cpp
         tests/test_game_variant.cpp
         tests/test_game_data.cpp
         tests/test_launch_options.cpp

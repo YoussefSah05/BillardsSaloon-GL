@@ -36,6 +36,7 @@ TEST_CASE("settings survive a save and load")
     settings.raceTo = 7;
     settings.winnerBreaks = true;
     settings.shotClock = 45;
+    settings.opponent = "viktor_hale";
     settings.masterVolume = 0.5f;
     settings.crowdVolume = 0.2f;
     settings.equipment.cloth = "tournament_blue";

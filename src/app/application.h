@@ -10,6 +10,7 @@
 #include "app/shell_menus.h"
 #include "core/launch_options.h"
 #include "ecs/entity.h"
+#include "ai/planner.h"
 #include "gameplay/director.h"
 #include "gameplay/match_session.h"
 #include "platform/input.h"
@@ -20,6 +21,7 @@
 #include "ui/ui_system.h"
 
 #include <cstdint>
+#include <future>
 #include <memory>
 #include <optional>
 
@@ -81,6 +83,11 @@ namespace BilliardsSaloon
         void updateHud(float frameTimeSeconds);
         // Plays the sounds of the shot (or replay) on screen as playback passes them.
         void updateAudio();
+
+        // The computer player: thinks on a worker thread, lines up, strikes.
+        void updateAi(float frameTimeSeconds);
+        void resetAi();
+        [[nodiscard]] bool aiToAct() const;
         [[nodiscard]] HudSnapshot buildHudSnapshot() const;
 
         void render(double alpha);
@@ -164,6 +171,25 @@ namespace BilliardsSaloon
         // A frame-winning pot is replayed in slow motion before the result card.
         bool m_replayBeforeCard {false};
         bool m_cardAfterReplay {false};
+
+        // The computer opponent (seat 1), if any.
+        struct AiPlan
+        {
+            bool choice {false};
+            Rules::Option option {Rules::Option::Play};
+            bool place {false};
+            glm::vec2 spot {0.0f};
+            Ai::AiShot shot;
+        };
+        enum class AiStage { Idle, Thinking, Aiming };
+        int m_aiSeat {-1};
+        Ai::AiProfile m_aiProfile;
+        AiStage m_aiStage {AiStage::Idle};
+        std::future<AiPlan> m_aiFuture;
+        float m_aiElapsed {0.0f};
+        AiPlan m_aiPlan;
+        ShotInput m_aiFrom;
+        std::mt19937 m_aiRandom {2026};
 
         // Shot sounds for the playback on screen.
         std::vector<Audio::SoundCue> m_soundCues;

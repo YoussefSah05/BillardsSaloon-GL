@@ -1,5 +1,6 @@
 #include "app/match_setup_screen.h"
 
+#include "ai/ai_profile.h"
 #include "ui/ui_system.h"
 
 #include <RmlUi/Core/Context.h>
@@ -7,6 +8,8 @@
 #include <RmlUi/Core/Input.h>
 
 #include <algorithm>
+#include <cctype>
+#include <vector>
 #include <array>
 #include <stdexcept>
 #include <string>
@@ -21,7 +24,8 @@ namespace BilliardsSaloon
             ROW_GAME = 0,
             ROW_RACE,
             ROW_BREAK,
-            ROW_CLOCK
+            ROW_CLOCK,
+            ROW_OPPONENT
         };
 
         constexpr std::array<int, 4> CLOCK_STEPS {0, 30, 45, 60};
@@ -94,6 +98,22 @@ namespace BilliardsSaloon
         model.BindFunc("clock", [this](Rml::Variant& v)
         {
             v = (m_setup.shotClock == 0) ? Rml::String("OFF") : std::to_string(m_setup.shotClock) + " SECONDS";
+        });
+        model.BindFunc("opponent", [this](Rml::Variant& v)
+        {
+            if (m_setup.opponent.empty())
+            {
+                v = Rml::String("HUMAN · SAME SCREEN");
+                return;
+            }
+            const Ai::AiProfile& p = Ai::findAiProfile(m_setup.opponent);
+            std::string tier = p.tier;
+            std::transform(tier.begin(), tier.end(), tier.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+            v = p.name + " · " + tier;
+        });
+        model.BindFunc("opponent_about", [this](Rml::Variant& v)
+        {
+            v = m_setup.opponent.empty() ? Rml::String("Pass the controls between shots.") : Rml::String(Ai::findAiProfile(m_setup.opponent).style);
         });
         model.Bind("gamepad", &m_gamepad);
 
@@ -178,6 +198,20 @@ namespace BilliardsSaloon
                     ? Rules::BreakOrder::WinnerBreaks
                     : Rules::BreakOrder::Alternate;
                 break;
+            case ROW_OPPONENT:
+            {
+                // "" (human), then each AI player, wrapping around.
+                std::vector<std::string> ids {""};
+                for (const Ai::AiProfile& p : Ai::aiProfiles())
+                {
+                    ids.push_back(p.id);
+                }
+                const auto it = std::find(ids.begin(), ids.end(), m_setup.opponent);
+                const int count = static_cast<int>(ids.size());
+                const int index = (it == ids.end()) ? 0 : static_cast<int>(it - ids.begin());
+                m_setup.opponent = ids[static_cast<std::size_t>(((index + direction) % count + count) % count)];
+                break;
+            }
             case ROW_CLOCK:
                 m_setup.shotClock = CLOCK_STEPS[stepIndex<CLOCK_STEPS.size()>(indexOf(CLOCK_STEPS, m_setup.shotClock), direction)];
                 break;
@@ -185,7 +219,7 @@ namespace BilliardsSaloon
                 return;
         }
 
-        for (const char* name : {"game", "about", "race", "breaks", "clock"})
+        for (const char* name : {"game", "about", "race", "breaks", "clock", "opponent", "opponent_about"})
         {
             m_model.DirtyVariable(name);
         }

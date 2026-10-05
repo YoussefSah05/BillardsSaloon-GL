@@ -59,6 +59,7 @@ namespace BilliardsSaloon
         float clockSeconds {0.0f};
         std::array<bool, 2> extensions {true, true};
         bool canReplay {false};
+        std::string aiThinking;                           // the computer player's name while it decides
 
         float power01 {0.0f};
         float strikeRight01 {0.0f};
@@ -132,6 +133,7 @@ namespace BilliardsSaloon
         bool m_extension[2] {true, true};
         bool m_replaySlow {false};
         bool m_canReplay {false};
+        std::string m_aiThinking;
         bool m_gamepad {false};
         bool m_showPrompts {true};
         float m_power {0.0f};

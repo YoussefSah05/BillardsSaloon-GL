@@ -56,11 +56,6 @@ namespace BilliardsSaloon
         }
     }
 
-    glm::vec3 aimDirectionFromAngle(float angleRadians)
-    {
-        return glm::normalize(glm::vec3(std::sin(angleRadians), 0.0f, -std::cos(angleRadians)));
-    }
-
     MatchSession::MatchSession(const GameVariantDefinition& variant, ShotInputTuning tuning, MatchSettings settings)
         : m_variant(&variant)
         , m_tuning(tuning)
@@ -617,6 +612,98 @@ namespace BilliardsSaloon
 
     // ---- Shooting --------------------------------------------------------------
 
+    Ai::AiTable MatchSession::aiView() const
+    {
+        Ai::AiTable view;
+        view.discipline = m_variant->discipline;
+        view.frame = m_frame;
+        view.table = m_simTable;
+        view.ball = m_variant->table.simBall;
+        view.tuning = m_tuning;
+        view.length = m_variant->table.clothWidth;
+        view.width = m_variant->table.clothDepth;
+        view.radius = m_variant->table.ballRadius;
+        view.headStringX = headStringX();
+        for (const glm::vec3& pocket : m_pocketPositions)
+        {
+            view.pockets.emplace_back(pocket.x, pocket.z);
+        }
+        for (std::size_t i = 0; i < m_simBalls.size(); ++i)
+        {
+            const glm::vec3 p = m_registry.get<TransformComponent>(m_simBalls[i]).position;
+            view.numbers.push_back(m_simNumbers[i]);
+            view.positions.emplace_back(p.x, p.z);
+            view.pocketed.push_back(m_registry.get<BallComponent>(m_simBalls[i]).pocketed);
+        }
+        return view;
+    }
+
+    bool MatchSession::playShot(const ShotInput& input)
+    {
+        if (placingCueBall() && m_placementValid)
+        {
+            m_shotState.phase = ShotPhase::Aiming;
+        }
+        if (!acceptsShotInput())
+        {
+            return false;
+        }
+        m_shotState.aimAngleRadians = input.aimRadians;
+        m_shotState.strikeRight01 = input.strikeRight01;
+        m_shotState.strikeForward01 = input.strikeForward01;
+        m_shotState.elevationDegrees = input.elevationDegrees;
+        m_shotState.charge01 = std::clamp(input.power01, 0.0f, 1.0f);
+        m_pushOut = input.pushOut && m_frame.pushOutAvailable;
+        if (input.call)
+        {
+            m_call = input.call;
+            m_callBallByHand = true;
+            m_callPocketByHand = true;
+        }
+        const bool fired = fireShot();
+        m_shotState.phase = fired ? ShotPhase::BallsInMotion : ShotPhase::Aiming;
+        m_shotState.charge01 = 0.0f;
+        return fired;
+    }
+
+    void MatchSession::previewInput(const ShotInput& input)
+    {
+        if (!acceptsShotInput())
+        {
+            return;
+        }
+        m_shotState.aimAngleRadians = input.aimRadians;
+        m_shotState.strikeRight01 = input.strikeRight01;
+        m_shotState.strikeForward01 = input.strikeForward01;
+        m_shotState.elevationDegrees = input.elevationDegrees;
+        m_shotState.charge01 = std::clamp(input.power01, 0.0f, 1.0f);
+        if (input.call)
+        {
+            m_call = input.call;
+        }
+    }
+
+    bool MatchSession::placeCueBallAt(const glm::vec2& position)
+    {
+        if (!canPlaceCueBall())
+        {
+            return false;
+        }
+        m_shotState.phase = ShotPhase::PlacingCueBall;
+        const glm::vec3 target = clampToPlacementArea(glm::vec3(position.x, m_variant->table.ballRadius, position.y));
+        if (!placementLegal(target))
+        {
+            return false;
+        }
+        TransformComponent& transform = m_registry.get<TransformComponent>(m_cueBallEntity);
+        transform.position = target;
+        transform.syncPrevious();
+        m_placementValid = true;
+        m_shotState.phase = ShotPhase::Aiming;
+        updateAutoCall();
+        return true;
+    }
+
     void MatchSession::applyShotControls(const ShotControls& controls, float deltaTimeSeconds)
     {
         const bool holding = controls.shootHeld || controls.strokeHeld;
@@ -769,14 +856,13 @@ namespace BilliardsSaloon
 
     Sim::CueStrike MatchSession::currentStrike(float power01) const
     {
-        return Sim::CueStrike {
-            .speed = m_tuning.minCueSpeed + (m_tuning.maxCueSpeed - m_tuning.minCueSpeed) * power01,
-            .phiDegrees = SimBridge::aimToPhiDegrees(aimDirection()),
-            .thetaDegrees = m_shotState.elevationDegrees,
-            // The simulator's a > 0 is left english; the game's strikeRight01 > 0 is right.
-            .a = -m_shotState.strikeRight01 * m_tuning.tipOffsetPerStrikeUnit,
-            .b = m_shotState.strikeForward01 * m_tuning.tipOffsetPerStrikeUnit
-        };
+        ShotInput input;
+        input.aimRadians = m_shotState.aimAngleRadians;
+        input.power01 = power01;
+        input.strikeRight01 = m_shotState.strikeRight01;
+        input.strikeForward01 = m_shotState.strikeForward01;
+        input.elevationDegrees = m_shotState.elevationDegrees;
+        return toCueStrike(m_tuning, input);
     }
 
     const ShotPreview& MatchSession::shotPreview()

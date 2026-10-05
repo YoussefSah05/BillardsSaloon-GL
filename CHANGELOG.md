@@ -6,6 +6,27 @@ All notable changes to Billiards Saloon. The format follows
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-06
+
+Computer opponents (M8).
+
+### Added
+- AI opponents that play on the same simulator and referee as you. For each
+  shot they consider pots (every legal ball into every pocket, at several
+  powers and spins), safeties and, when snookered, kicks; try each on the
+  simulator; re-run the best with their own execution error; and pick the
+  best average, valuing the position left for the next shot. They break,
+  place the cue ball with ball in hand, call shots and answer the referee's
+  choices.
+- Five fictional players from club to champion (`assets/data/ai/players.json`),
+  each with an aim, power and spin error, a safety bias, a style and a
+  thinking time: Sam Whitlock, Dani Reyes, Iris Lindqvist, Marta Okafor,
+  Viktor Hale.
+- Match setup: Player 2 is a second human or one of them. The AI thinks on a
+  worker thread (a THINKING callout shows), swings its cue onto the line,
+  draws back and strikes; its aim guides are never shown.
+- `--opponent ID` for captures.
+
 ## [0.7.0] - 2026-10-06
 
 Audio (M7).
