@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.28)
 
 project(BilliardsSaloon
-    VERSION 0.6.0
+    VERSION 0.7.0
     DESCRIPTION "A 3D billiards game built from scratch in C++ and OpenGL"
     LANGUAGES C CXX
 )
@@ -36,6 +36,17 @@ FetchContent_Declare(
     GIT_TAG 1.0.1
 )
 FetchContent_MakeAvailable(glm)
+
+# Audio: miniaudio (public domain / MIT-0), header only. SOURCE_SUBDIR points
+# at a folder without a CMakeLists so only the sources are fetched.
+FetchContent_Declare(
+    miniaudio
+    GIT_REPOSITORY https://github.com/mackron/miniaudio.git
+    GIT_TAG 0.11.22
+    GIT_SHALLOW TRUE
+    SOURCE_SUBDIR header-only
+)
+FetchContent_MakeAvailable(miniaudio)
 
 FetchContent_Declare(
     nlohmann_json
@@ -134,6 +145,8 @@ add_library(bs_game STATIC
     src/gameplay/equipment.cpp
     src/gameplay/game_variant.cpp
     src/gameplay/match_session.cpp
+    src/audio/shot_sounds.cpp
+    src/audio/sound_synth.cpp
     src/rules/racking.cpp
     src/scene/hall_geometry.cpp
     src/scene/table_geometry.cpp
@@ -154,6 +167,8 @@ bs_set_warnings(bs_game)
 add_executable(BilliardsSaloon
     src/app/main.cpp
     src/app/application.cpp
+    src/app/audio_engine.cpp
+    src/app/miniaudio_impl.cpp
     src/app/hud_screen.cpp
     src/app/locker_screen.cpp
     src/app/match_setup_screen.cpp
@@ -187,6 +202,16 @@ target_link_libraries(BilliardsSaloon PRIVATE
     glfw
     OpenGL::GL
 )
+# Audio: miniaudio's headers, its implementation in one file without our
+# warnings, and the system audio frameworks it talks to.
+target_include_directories(BilliardsSaloon SYSTEM PRIVATE ${miniaudio_SOURCE_DIR})
+set_source_files_properties(src/app/miniaudio_impl.cpp PROPERTIES COMPILE_OPTIONS "$<IF:$<CXX_COMPILER_ID:MSVC>,/w,-w>")
+if(APPLE)
+    target_link_libraries(BilliardsSaloon PRIVATE "-framework CoreFoundation" "-framework CoreAudio" "-framework AudioToolbox")
+elseif(UNIX)
+    target_link_libraries(BilliardsSaloon PRIVATE pthread m dl)
+endif()
+
 # Ball numbers are rasterised with FreeType, which RmlUi already links.
 target_include_directories(BilliardsSaloon SYSTEM PRIVATE $<TARGET_PROPERTY:freetype,INTERFACE_INCLUDE_DIRECTORIES>)
 
@@ -208,6 +233,11 @@ add_custom_target(bs_assets ALL
     COMMENT "Copying assets next to BilliardsSaloon"
 )
 add_dependencies(BilliardsSaloon bs_assets)
+
+# Development tool: writes the synthesised sounds to WAV files.
+add_executable(bs_sound_preview tools/sound_preview/main.cpp)
+target_link_libraries(bs_sound_preview PRIVATE bs_game)
+bs_set_warnings(bs_sound_preview)
 
 if(BS_BUILD_TESTS)
     FetchContent_Declare(
@@ -231,6 +261,7 @@ if(BS_BUILD_TESTS)
         tests/test_director.cpp
         tests/test_table_geometry.cpp
         tests/test_equipment.cpp
+        tests/test_audio.cpp
         tests/test_game_variant.cpp
         tests/test_game_data.cpp
         tests/test_launch_options.cpp

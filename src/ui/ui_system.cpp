@@ -3,6 +3,7 @@
 #include "core/asset_paths.h"
 
 #include <RmlUi/Core.h>
+#include <RmlUi/Core/EventListener.h>
 #include <RmlUi_Platform_GLFW.h>
 #include <RmlUi_Renderer_GL3.h>
 
@@ -13,6 +14,37 @@
 
 namespace BilliardsSaloon
 {
+    // Interface sounds: menu items tick on focus and confirm on click.
+    class MenuSoundListener final : public Rml::EventListener
+    {
+    public:
+        explicit MenuSoundListener(const std::function<void(bool)>& hook)
+            : m_hook(hook)
+        {
+        }
+
+        void ProcessEvent(Rml::Event& event) override
+        {
+            Rml::Element* target = event.GetTargetElement();
+            if ((target == nullptr) || !m_hook)
+            {
+                return;
+            }
+            // Clicks land on inner spans; walk up to the menu item.
+            for (Rml::Element* e = target; e != nullptr; e = e->GetParentNode())
+            {
+                if (e->IsClassSet("menu-item"))
+                {
+                    m_hook(event.GetId() == Rml::EventId::Click);
+                    return;
+                }
+            }
+        }
+
+    private:
+        const std::function<void(bool)>& m_hook;
+    };
+
     namespace
     {
         // Every face the stylesheets refer to. RmlUi reads family, weight and
@@ -119,6 +151,12 @@ namespace BilliardsSaloon
             throw std::runtime_error("Could not load UI document: " + path);
         }
         document->SetClass("reduced-motion", m_reducedMotion);
+        if (!m_soundListener)
+        {
+            m_soundListener = std::make_unique<MenuSoundListener>(m_soundHook);
+        }
+        document->AddEventListener(Rml::EventId::Focus, m_soundListener.get(), true);
+        document->AddEventListener(Rml::EventId::Click, m_soundListener.get(), true);
         return *document;
     }
 

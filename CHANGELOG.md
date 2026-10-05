@@ -6,6 +6,26 @@ All notable changes to Billiards Saloon. The format follows
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-06
+
+Audio (M7).
+
+### Added
+- Sound, synthesised in code (no recorded files): ball-ball clicks, cushion
+  thumps, pocket drops with a rattle, the cue tip's strike, a hall's
+  murmuring crowd, applause and interface ticks.
+- Shot sounds come from the simulator: each collision, cushion and pocket
+  plays at its moment, as loud as the impact was hard, panned by where it
+  happened relative to the camera. Replays sound too.
+- Applause when a frame or match is won; the crowd's murmur depends on the
+  hall (full in the arena, a quiet room in the saloon).
+- Settings: master, table sounds and crowd volumes. `--mute` (captures are
+  always silent).
+- `bs_sound_preview`: writes every sound and a mixed break to WAV files.
+
+### Not yet
+- Spoken referee calls; the referee's banners carry the calls for now.
+
 ## [0.6.0] - 2026-10-06
 
 Hall visuals, realism and equipment customisation (M6).
@@ -216,7 +236,8 @@ Playable 8-ball prototype: local two-player 8-ball with fouls and turn
 resolution, a fixed-step physics model with sliding and rolling, camera modes,
 and main and pause menus.
 
-[Unreleased]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/YoussefSah05/BillardsSaloon-GL/compare/v0.3.0...v0.4.0

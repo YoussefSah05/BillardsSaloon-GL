@@ -27,8 +27,17 @@ namespace BilliardsSaloon
             ROW_SENSITIVITY,
             ROW_UI_SCALE,
             ROW_REDUCED_MOTION,
-            ROW_AIM_GUIDE
+            ROW_AIM_GUIDE,
+            ROW_MASTER,
+            ROW_EFFECTS,
+            ROW_CROWD
         };
+
+        float stepVolume(float volume, int direction)
+        {
+            const float stepped = std::round(volume * 10.0f + static_cast<float>(direction)) / 10.0f;
+            return (stepped > 1.001f) ? 0.0f : (stepped < -0.001f) ? 1.0f : stepped;
+        }
 
         const char* aimGuideName(int guide)
         {
@@ -108,6 +117,9 @@ namespace BilliardsSaloon
         model.BindFunc("ui_scale", [this](Rml::Variant& v) { v = formatted("%.0f%%", static_cast<double>(m_settings.uiScale * 100.0f)); });
         model.BindFunc("reduced_motion", [this](Rml::Variant& v) { v = Rml::String(onOff(m_settings.reducedMotion)); });
         model.BindFunc("aim_guide", [this](Rml::Variant& v) { v = Rml::String(aimGuideName(m_settings.aimGuide)); });
+        model.BindFunc("master_volume", [this](Rml::Variant& v) { v = formatted("%.0f%%", static_cast<double>(m_settings.masterVolume * 100.0f)); });
+        model.BindFunc("effects_volume", [this](Rml::Variant& v) { v = formatted("%.0f%%", static_cast<double>(m_settings.effectsVolume * 100.0f)); });
+        model.BindFunc("crowd_volume", [this](Rml::Variant& v) { v = formatted("%.0f%%", static_cast<double>(m_settings.crowdVolume * 100.0f)); });
 
         model.Bind("gamepad", &m_gamepad);
 
@@ -187,7 +199,8 @@ namespace BilliardsSaloon
 
     void SettingsScreen::refreshAll()
     {
-        for (const char* name : {"fullscreen", "vsync", "quality", "sensitivity", "ui_scale", "reduced_motion", "aim_guide"})
+        for (const char* name : {"fullscreen", "vsync", "quality", "sensitivity", "ui_scale", "reduced_motion", "aim_guide",
+                                 "master_volume", "effects_volume", "crowd_volume"})
         {
             m_model.DirtyVariable(name);
         }
@@ -214,6 +227,15 @@ namespace BilliardsSaloon
                 break;
             case ROW_REDUCED_MOTION:
                 m_settings.reducedMotion = !m_settings.reducedMotion;
+                break;
+            case ROW_MASTER:
+                m_settings.masterVolume = stepVolume(m_settings.masterVolume, direction);
+                break;
+            case ROW_EFFECTS:
+                m_settings.effectsVolume = stepVolume(m_settings.effectsVolume, direction);
+                break;
+            case ROW_CROWD:
+                m_settings.crowdVolume = stepVolume(m_settings.crowdVolume, direction);
                 break;
             case ROW_AIM_GUIDE:
                 m_settings.aimGuide = (m_settings.aimGuide + direction + AIM_GUIDE_COUNT) % AIM_GUIDE_COUNT;

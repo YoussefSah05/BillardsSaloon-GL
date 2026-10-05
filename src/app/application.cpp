@@ -178,7 +178,10 @@ namespace BilliardsSaloon
             variant.table.ballRadius
         );
 
+        m_audio = std::make_unique<AudioEngine>(!options.mute && options.capturePath.empty());
+        m_audio->setVolumes(m_settings.masterVolume, m_settings.effectsVolume, m_settings.crowdVolume);
         m_ui = std::make_unique<UiSystem>(m_window);
+        m_ui->setSoundHook([this](bool confirm) { m_audio->playUi(confirm ? UiSound::Confirm : UiSound::Move); });
         m_hud = std::make_unique<HudScreen>(*m_ui, variant);
         m_menus = std::make_unique<ShellMenus>(*m_ui, ShellMenuActions{
             .startMatch = [this]() { setShellState(ApplicationShellState::MatchSetup); },
@@ -1069,6 +1072,10 @@ namespace BilliardsSaloon
         {
             m_ui->setReducedMotion(m_settings.reducedMotion);
         }
+        if (m_audio)
+        {
+            m_audio->setVolumes(m_settings.masterVolume, m_settings.effectsVolume, m_settings.crowdVolume);
+        }
         if (!(m_settings.equipment == previous.equipment))
         {
             applyEquipment();
@@ -1393,6 +1400,7 @@ namespace BilliardsSaloon
 
             if (outcome.verdict.frameOver && (outcome.verdict.winner >= 0))
             {
+                m_audio->playApplause(outcome.matchOver);
                 setFrameResultText(outcome, snapshot);
                 m_replayBeforeCard = outcome.verdict.end == Rules::FrameEnd::GameBallPotted;
                 m_frameOverDelay = m_replayBeforeCard ? 1.3f : 1.8f;   // let the referee banner play first
@@ -1404,6 +1412,7 @@ namespace BilliardsSaloon
         }
 
         m_hud->update(snapshot, frameTimeSeconds);
+        updateAudio();
 
         // The referee's question: after the banner, or straight away when the
         // game comes back from pause with a question still open.
@@ -1440,6 +1449,59 @@ namespace BilliardsSaloon
             m_cardAfterReplay = false;
             setShellState(ApplicationShellState::FrameOver);
         }
+    }
+
+    void Application::updateAudio()
+    {
+        // The listener rides with the camera.
+        if (const TransformComponent* camera = m_session->registry().tryGet<TransformComponent>(m_cameraEntity))
+        {
+            m_audio->setListener(camera->position, camera->rotation * glm::vec3(1.0f, 0.0f, 0.0f));
+        }
+
+        // A murmuring crowd in the arena, a quiet room in the saloon; silent while paused in menus.
+        const HallOption& hall = findOption(equipmentCatalog().halls, m_settings.equipment.hall);
+        const float crowd = (hall.layout == "arena") ? ((hall.id == "night_final") ? 0.7f : 1.0f) : 0.25f;
+        m_audio->setCrowdLevel(isInMatch() ? crowd : 0.4f * crowd);
+
+        // New playback (a shot or a replay): plan its sounds.
+        if (m_session->playbackId() != m_soundPlayback)
+        {
+            m_soundPlayback = m_session->playbackId();
+            m_soundCues.clear();
+            m_nextSoundCue = 0;
+            if (const Sim::ShotTrajectory* trajectory = m_session->playbackTrajectory())
+            {
+                m_soundCues = Audio::planShotSounds(*trajectory, m_session->variant().table.clothWidth,
+                                                    m_session->variant().table.clothDepth);
+            }
+        }
+
+        if (m_session->playbackTrajectory() != nullptr)
+        {
+            const double now = m_session->playbackSeconds();
+            m_lastPlaybackSeconds = now;
+            const float replayScale = m_session->replaying() ? 0.8f : 1.0f;
+            while ((m_nextSoundCue < m_soundCues.size()) && (m_soundCues[m_nextSoundCue].time <= now))
+            {
+                Audio::SoundCue cue = m_soundCues[m_nextSoundCue++];
+                cue.intensity *= replayScale;
+                m_audio->playShotCue(cue);
+            }
+        }
+        else
+        {
+            // Playback ended between frames: play what fell due in its last
+            // moment (a ball dropping as the shot ends); after a skipped
+            // replay, everything else is dropped.
+            while ((m_nextSoundCue < m_soundCues.size()) && (m_soundCues[m_nextSoundCue].time <= m_lastPlaybackSeconds + 0.1))
+            {
+                m_audio->playShotCue(m_soundCues[m_nextSoundCue++]);
+            }
+            m_nextSoundCue = m_soundCues.size();
+        }
+
+        m_audio->update();
     }
 
     void Application::render(double alpha)

@@ -2,6 +2,7 @@
 
 #include "platform/window.h"
 
+#include <functional>
 #include <memory>
 #include <string_view>
 
@@ -44,6 +45,10 @@ namespace BilliardsSaloon
         // Adds the reduced-motion class to every document, which turns off transitions.
         void setReducedMotion(bool enabled);
 
+        // Called when a menu item takes focus (confirm = false) or is clicked
+        // (confirm = true), for interface sounds.
+        void setSoundHook(std::function<void(bool confirm)> hook) { m_soundHook = std::move(hook); }
+
         // Sends a key press to the UI as if typed (gamepad menu navigation).
         // key is an Rml::Input::KeyIdentifier.
         void injectKey(int key);
@@ -75,5 +80,7 @@ namespace BilliardsSaloon
         float m_contentScale {1.0f};
         bool m_reducedMotion {false};
         bool m_consumedLastKey {false};
+        std::function<void(bool)> m_soundHook;
+        std::unique_ptr<class MenuSoundListener> m_soundListener;
     };
 }

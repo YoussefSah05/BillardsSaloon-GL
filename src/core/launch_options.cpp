@@ -70,6 +70,10 @@ namespace BilliardsSaloon
                 else throw std::invalid_argument("--scenario needs 'foul', 'choice', 'call' or 'replay'.");
                 options.startScreen = StartScreen::Gameplay;
             }
+            else if (argument == "--mute")
+            {
+                options.mute = true;
+            }
             else if (argument == "--camera")
             {
                 const std::string_view value = nextValue();
@@ -98,6 +102,7 @@ namespace BilliardsSaloon
         return
             "Usage: BilliardsSaloon [options]\n"
             "  --fullscreen            start in fullscreen\n"
+            "  --mute                  no sound\n"
             "  --screen title|main|setup|locker|game|pause|settings  start on this screen\n"
             "  --scenario foul|choice|call|replay  (development) script a state: ball in hand, a referee choice, a called shot, a winning replay\n"
             "  --camera broadcast|aim|overview|follow|free  start with this camera view\n"
