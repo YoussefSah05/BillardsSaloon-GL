@@ -18,6 +18,7 @@ tests link, and the `BilliardsSaloon` executable.
 | `src/gameplay/match_session.*` | bs_game | A match: ECS world, shot state machine (place, aim, tip offset, elevation, charge, fire), playback, shot preview, replays, shot clock, referee, ball in hand, spotting, calls, push-outs, race to N. |
 | `src/rules/` | bs_game | WPA referee for 8-, 9- and 10-ball as pure functions (`judgeShot`, `applyChoice`), shot records from simulator events, racking, match score. See design/RULES.md. |
 | `src/sim/` | bs_sim | Event-based simulator: roots, motion, table geometry, event detection, collision models, `simulateShot` → `ShotTrajectory`. The game's physics. See design/PHYSICS.md. |
+| `src/gameplay/equipment.*` | bs_game | Equipment catalogue (cloth, rails, trim, pockets, ball sets, cues, halls) loaded from `assets/data/equipment/catalog.json`. |
 | `src/gameplay/director.*` | bs_game | Broadcast director: plans camera cuts (pocket camera, wide) from a simulated trajectory. |
 | `src/gameplay/sim_bridge.h` | bs_game | Game ↔ simulator frame conversion. |
 | `src/platform/` | app | `Window` (GLFW, vsync on), `Input` (key edge detection), `Timer`. |

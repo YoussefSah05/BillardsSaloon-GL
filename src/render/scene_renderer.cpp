@@ -228,7 +228,9 @@ namespace BilliardsSaloon
         m_shader->setInt("uActivePointLightCount", static_cast<int>(std::min<std::size_t>(settings.lights.positions.size(), 3)));
         m_shader->setFloat("uReflectionScale", 0.45f);   // a dark hall: the lamps light the scene
         m_shader->setFloat("uEmissionScale", 1.0f);
-        m_shader->setFloat("uLightIntensity", 2.6f);
+        m_shader->setFloat("uLightIntensity", settings.lightIntensity);
+        m_shader->setInt("uMeasleCueBall", m_measleCueBall ? 1 : 0);
+        m_exposure = settings.exposure;
         m_shader->setFloat("uLightRadius", 0.05f);
         m_shader->setInt("uShadowsEnabled", m_shadowsEnabled ? 1 : 0);
         m_shader->setInt("uShadowKernel", m_shadowKernel);
@@ -400,7 +402,7 @@ namespace BilliardsSaloon
         m_postShader->setInt("uBloom", 1);
         m_postShader->setInt("uBloomEnabled", (m_bloomEnabled && !levels.empty()) ? 1 : 0);
         m_postShader->setFloat("uBloomStrength", 0.045f);
-        m_postShader->setFloat("uExposure", 1.0f);
+        m_postShader->setFloat("uExposure", m_exposure);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, m_sceneTarget.colorTexture());
         glActiveTexture(GL_TEXTURE1);
@@ -456,6 +458,19 @@ namespace BilliardsSaloon
                 mesh->draw();
             }
         );
+    }
+
+    void SceneRenderer::setCueStyle(const glm::vec3& shaft, const glm::vec3& forearm, const glm::vec3& wrap, const glm::vec3& joint)
+    {
+        // Segments from the tip: tip, ferrule, shaft, joint, forearm, wrap, sleeve, bumper.
+        if (m_cue.size() >= 7)
+        {
+            m_cue[2].color = shaft;
+            m_cue[3].color = joint;
+            m_cue[4].color = forearm;
+            m_cue[5].color = wrap;
+            m_cue[6].color = forearm;
+        }
     }
 
     void SceneRenderer::beginTranslucent()

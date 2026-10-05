@@ -87,6 +87,7 @@ namespace BilliardsSaloon
 
         model.BindEventCallback("start_match", callback(m_actions.startMatch));
         model.BindEventCallback("open_settings", callback(m_actions.openSettings));
+        model.BindEventCallback("open_locker", callback(m_actions.openLocker));
         model.BindEventCallback("quit", callback(m_actions.quit));
         model.BindEventCallback("resume", callback(m_actions.resume));
         model.BindEventCallback("restart_rack", callback(m_actions.restartRack));

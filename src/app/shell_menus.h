@@ -31,6 +31,7 @@ namespace BilliardsSaloon
     {
         std::function<void()> startMatch;
         std::function<void()> openSettings;
+        std::function<void()> openLocker;
         std::function<void()> quit;
         std::function<void()> resume;
         std::function<void()> restartRack;

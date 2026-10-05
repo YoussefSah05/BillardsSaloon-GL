@@ -43,6 +43,7 @@ uniform float uShadowTexel;
 // Ball numbers: a 4 x 4 atlas, cell n holds number n.
 uniform sampler2D uNumberAtlas;
 uniform int uBallNumber;
+uniform int uMeasleCueBall;   // red spots on the cue ball, as on broadcast tables
 
 out vec4 FragColor;
 
@@ -106,7 +107,24 @@ vec3 applyBallFinish(vec3 baseColor)
     if (uBallVisualType == BALL_VISUAL_CUE)
     {
         float chalkBloom = 0.5 + 0.5 * sin(localDirection.x * 22.0) * sin(localDirection.z * 19.0);
-        return mix(ivory * 0.97, ivory * 1.03, 0.30 * chalkBloom);
+        vec3 cue = mix(ivory * 0.97, ivory * 1.03, 0.30 * chalkBloom);
+        if (uMeasleCueBall == 1)
+        {
+            // Spots at the twelve corners of an icosahedron: spin shows at any angle.
+            const float g = 0.5257311;
+            const float h = 0.8506508;
+            vec3 spots[12] = vec3[12](
+                vec3(-g, h, 0.0), vec3(g, h, 0.0), vec3(-g, -h, 0.0), vec3(g, -h, 0.0),
+                vec3(0.0, -g, h), vec3(0.0, g, h), vec3(0.0, -g, -h), vec3(0.0, g, -h),
+                vec3(h, 0.0, -g), vec3(h, 0.0, g), vec3(-h, 0.0, -g), vec3(-h, 0.0, g));
+            float spot = 0.0;
+            for (int i = 0; i < 12; ++i)
+            {
+                spot = max(spot, spotMask(localDirection, spots[i], cos(radians(6.5)), cos(radians(7.5))));
+            }
+            cue = mix(cue, vec3(0.80, 0.06, 0.05), spot);
+        }
+        return cue;
     }
 
     vec3 color = baseColor;

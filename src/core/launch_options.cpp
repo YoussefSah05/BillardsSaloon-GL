@@ -15,7 +15,8 @@ namespace BilliardsSaloon
             if (value == "pause") return StartScreen::Pause;
             if (value == "settings") return StartScreen::Settings;
             if (value == "setup") return StartScreen::MatchSetup;
-            throw std::invalid_argument("Unknown screen '" + std::string(value) + "' (use title, main, setup, game, pause or settings).");
+            if (value == "locker") return StartScreen::Locker;
+            throw std::invalid_argument("Unknown screen '" + std::string(value) + "' (use title, main, setup, locker, game, pause or settings).");
         }
 
         int parsePositiveInt(std::string_view option, std::string_view value)
@@ -97,7 +98,7 @@ namespace BilliardsSaloon
         return
             "Usage: BilliardsSaloon [options]\n"
             "  --fullscreen            start in fullscreen\n"
-            "  --screen title|main|setup|game|pause|settings  start on this screen\n"
+            "  --screen title|main|setup|locker|game|pause|settings  start on this screen\n"
             "  --scenario foul|choice|call|replay  (development) script a state: ball in hand, a referee choice, a called shot, a winning replay\n"
             "  --camera broadcast|aim|overview|follow|free  start with this camera view\n"
             "  --capture FILE.png      save a screenshot after a few frames, then quit\n"
