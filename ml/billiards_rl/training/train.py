@@ -126,7 +126,7 @@ def train(config: dict, seed: int, runs_root: Path = Path("runs"), name: str | N
             final[f"{suite}@{sigma:g}"] = metrics.success_rate
     run.finish(training_seconds=round(seconds, 1), steps_per_second=round(training["total_timesteps"] / seconds, 1),
                best_during_training=callback.best, final_success=final)
-    print(f"{run.dir}: {seconds:.0f}s, best medium(limit) {callback.best:.3f}, final {final}", flush=True)
+    print(f"{run.dir}: {seconds:.0f}s, best on {evaluation['during_training_suite']} {callback.best:.3f}, final {final}", flush=True)
     return run.dir
 
 

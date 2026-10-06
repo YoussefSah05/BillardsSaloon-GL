@@ -25,11 +25,11 @@ sac:
 
 training:
   total_timesteps: 100000
-  eval_every: 10000         # evaluate on the medium suite (eval.limit layouts)
+  eval_every: 10000         # evaluate on the validation suite for checkpoint selection
   device: cpu               # small MLPs: the CPU beats MPS here
 
 eval:
-  during_training_suite: medium
-  during_training_limit: 300
+  during_training_suite: validation   # checkpoint selection; never a test suite
+  during_training_limit: 600
   final_suites: [easy, medium, hard]
   final_noise: [0.0, 0.25]

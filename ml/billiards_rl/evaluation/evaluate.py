@@ -116,7 +116,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--policy", choices=["random", "geometry", "sim_search"])
     parser.add_argument("--checkpoint")
-    parser.add_argument("--suite", required=True, choices=["easy", "medium", "hard"])
+    parser.add_argument("--suite", required=True, choices=["easy", "medium", "hard", "validation"])
     parser.add_argument("--noise", type=float, default=0.0, help="aim error sd, degrees")
     parser.add_argument("--speed-noise", type=float, default=0.0, help="relative speed error sd")
     parser.add_argument("--action-frame", default="absolute", choices=["absolute", "ghost_relative"])

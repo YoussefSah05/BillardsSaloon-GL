@@ -16,6 +16,7 @@ from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
+import yaml
 
 
 def main() -> None:
@@ -23,6 +24,7 @@ def main() -> None:
     groups: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
     curves: dict[str, list[list[tuple[int, float]]]] = defaultdict(list)
     times: dict[str, list[float]] = defaultdict(list)
+    curve_suite: dict[str, str] = {}
     for run in sorted(p for p in root.iterdir() if (p / "meta.json").exists()):
         group = re.sub(r"-s\d+$", "", run.name)
         meta = json.loads((run / "meta.json").read_text())
@@ -31,6 +33,8 @@ def main() -> None:
         for key, value in meta["final_success"].items():
             groups[group][key].append(value)
         times[group].append(meta.get("training_seconds", float("nan")))
+        config = yaml.safe_load((run / "config.yaml").read_text())
+        curve_suite[group] = config["eval"]["during_training_suite"]
         curve = []
         for f in sorted((run / "eval").glob("step*.json")):
             m = json.loads(f.read_text())
@@ -48,7 +52,7 @@ def main() -> None:
     for group, runs in curves.items():
         steps = [s for s, _ in runs[0]]
         means = [np.mean([r[i][1] for r in runs if len(r) > i]) for i in range(len(steps))]
-        print(f"{group} learning curve (medium, during-training subset): " +
+        print(f"{group} learning curve ({curve_suite[group]}, during training): " +
               ", ".join(f"{s // 1000}k {100 * m:.0f}%" for s, m in zip(steps, means)))
         print(f"  training time per run: {np.mean(times[group]):.0f} s")
 
