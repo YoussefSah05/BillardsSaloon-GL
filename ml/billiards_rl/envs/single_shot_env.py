@@ -20,6 +20,10 @@ from billiards_rl.rewards.single_shot import ShotResult, reward_function
 
 rl = bs.rl
 
+# Bumped whenever the environment's dynamics, observation or action mapping
+# change, so results and evaluation suites record what they were made with.
+ENV_VERSION = "single_shot-v1"
+
 OBS_MODES = ("positions", "positions+geometry")
 ACTION_FRAMES = ("absolute", "ghost_relative")
 
