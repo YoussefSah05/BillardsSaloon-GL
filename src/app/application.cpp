@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <iomanip>
 #include <iostream>
 #include <optional>
 #include <chrono>
@@ -130,6 +131,10 @@ namespace BilliardsSaloon
             if (options.fullscreen)
             {
                 settings.fullscreen = true;
+            }
+            if (!options.hall.empty())
+            {
+                settings.equipment.hall = options.hall;
             }
             return settings;
         }
@@ -543,6 +548,31 @@ namespace BilliardsSaloon
         m_window.requestClose();
     }
 
+    void Application::reportProfile(double frameTime)
+    {
+        // Averages over about a second: CPU frame time, GPU time and the
+        // renderer's counts for the latest frame.
+        m_profileSeconds += frameTime;
+        m_profileGpuMilliseconds += static_cast<double>(m_renderer->stats().gpuMilliseconds);
+        ++m_profileFrames;
+        if (m_profileSeconds < 1.0)
+        {
+            return;
+        }
+        const RenderStats& stats = m_renderer->stats();
+        const double frames = static_cast<double>(m_profileFrames);
+        std::cout << std::fixed << std::setprecision(2)
+                  << "frame " << 1000.0 * m_profileSeconds / frames << " ms"
+                  << "  gpu " << m_profileGpuMilliseconds / frames << " ms"
+                  << "  draws " << stats.drawCalls
+                  << "  triangles " << stats.triangles
+                  << "  objects " << stats.objectsDrawn << " drawn / " << stats.objectsCulled << " culled"
+                  << "  shadow casters " << stats.shadowCasters << " / " << stats.shadowCulled << " culled\n";
+        m_profileSeconds = 0.0;
+        m_profileGpuMilliseconds = 0.0;
+        m_profileFrames = 0;
+    }
+
     int Application::run()
     {
         m_timer.reset();
@@ -567,6 +597,10 @@ namespace BilliardsSaloon
 
             render(m_accumulator / FIXED_TIME_STEP);
             updateWindowTitle(frameTime, fixedStepsThisFrame);
+            if (m_options.profile)
+            {
+                reportProfile(frameTime);
+            }
 
             ++m_frameCount;
             captureIfDue();

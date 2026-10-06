@@ -8,10 +8,12 @@
 #include "render/render_targets.h"
 #include "render/shader.h"
 #include "scene/components.h"
+#include "scene/visibility.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+#include <array>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -70,6 +72,18 @@ namespace BilliardsSaloon
         float ambient {1.0f};
     };
 
+    // What the last frame cost: for profiling and the --profile report.
+    struct RenderStats
+    {
+        int drawCalls {0};            // all passes
+        int triangles {0};
+        int objectsDrawn {0};         // scene pass
+        int objectsCulled {0};        // scene pass, outside the view
+        int shadowCasters {0};        // summed over the lamps
+        int shadowCulled {0};
+        float gpuMilliseconds {0.0f}; // the frame before last (queries are read without waiting)
+    };
+
     // Optional emphasis on one ball (the cue ball while aiming).
     struct BallHighlight
     {
@@ -119,6 +133,8 @@ namespace BilliardsSaloon
         // `size` (for lines such as the head string).
         void drawMarker(const glm::vec3& position, const glm::vec3& size, const glm::vec3& color, bool box = false);
 
+        [[nodiscard]] const RenderStats& stats() const { return m_stats; }
+
         [[nodiscard]] Shader& shader() { return *m_shader; }
         [[nodiscard]] Mesh& cubeMesh() { return *m_cubeMesh; }
 
@@ -127,6 +143,7 @@ namespace BilliardsSaloon
         void renderShadows(Registry& registry, float alpha);
         void bindSceneShader();
         [[nodiscard]] Mesh* meshFor(const StaticMeshComponent& component);
+        void countDraw(const Mesh& mesh);
 
         std::unique_ptr<Shader> m_shader;
         std::unique_ptr<Shader> m_shadowShader;
@@ -147,6 +164,15 @@ namespace BilliardsSaloon
         bool m_shadowsEnabled {true};
         int m_shadowKernel {3};
         std::vector<glm::mat4> m_lightMatrices;
+        Frustum m_viewFrustum;
+        RenderStats m_stats;
+
+        // GPU time per frame: a ring of timer queries, read a few frames late
+        // so the CPU never waits for the GPU.
+        static constexpr int TIMER_QUERIES = 4;
+        std::array<unsigned int, TIMER_QUERIES> m_timerQueries {};
+        std::array<bool, TIMER_QUERIES> m_timerPending {};
+        int m_timerIndex {0};
         std::unique_ptr<Mesh> m_cubeMesh;
         std::unique_ptr<Mesh> m_planeMesh;
         std::unique_ptr<Mesh> m_sphereMesh;

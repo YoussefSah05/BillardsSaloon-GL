@@ -153,6 +153,7 @@ add_library(bs_game STATIC
     src/rules/racking.cpp
     src/scene/hall_geometry.cpp
     src/scene/table_geometry.cpp
+    src/scene/visibility.cpp
     src/rules/referee.cpp
     src/rules/shot_record.cpp
 )
@@ -263,6 +264,7 @@ if(BS_BUILD_TESTS)
         tests/test_match_rules.cpp
         tests/test_director.cpp
         tests/test_table_geometry.cpp
+        tests/test_visibility.cpp
         tests/test_equipment.cpp
         tests/test_audio.cpp
         tests/test_ai.cpp

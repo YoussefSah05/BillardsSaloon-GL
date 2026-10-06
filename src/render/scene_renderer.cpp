@@ -111,6 +111,7 @@ namespace BilliardsSaloon
         m_postShader = shader("shaders/fullscreen.vert", "shaders/post.frag");
         m_numbers = std::make_unique<NumberAtlas>(resolveAssetPath("fonts/BarlowCondensed-Bold.ttf"));
         glGenVertexArrays(1, &m_emptyVertexArray);   // core profile: draws need a bound VAO
+        glGenQueries(TIMER_QUERIES, m_timerQueries.data());
 
         // A two-piece playing cue, from the tip back: leather tip, ferrule,
         // tapered maple shaft, joint collar, forearm, wrap, butt sleeve, bumper.
@@ -137,6 +138,7 @@ namespace BilliardsSaloon
 
     SceneRenderer::~SceneRenderer()
     {
+        glDeleteQueries(TIMER_QUERIES, m_timerQueries.data());
         glDeleteVertexArrays(1, &m_emptyVertexArray);
     }
 
@@ -219,6 +221,7 @@ namespace BilliardsSaloon
         // Off-axis projection: clip.x gains -shift * z_view, i.e. +shift in NDC.
         projectionMatrix[2][0] -= settings.lensShiftX;
         outView.viewProjection = projectionMatrix * viewMatrix;
+        m_viewFrustum = Frustum::fromViewProjection(outView.viewProjection);
 
         m_shader->bind();
         m_shader->setMat4("uView", viewMatrix);
@@ -253,7 +256,26 @@ namespace BilliardsSaloon
             m_shader->setVec3("uPointLightColors[" + index + "]", settings.lights.colors[lightIndex]);
         }
 
+        // Statistics for this frame; GPU time from the oldest query in the ring.
+        const float lastGpu = m_stats.gpuMilliseconds;
+        m_stats = RenderStats{};
+        m_stats.gpuMilliseconds = lastGpu;
+        const unsigned int query = m_timerQueries[static_cast<std::size_t>(m_timerIndex)];
+        if (m_timerPending[static_cast<std::size_t>(m_timerIndex)])
+        {
+            GLuint64 nanoseconds = 0;
+            glGetQueryObjectui64v(query, GL_QUERY_RESULT, &nanoseconds);
+            m_stats.gpuMilliseconds = static_cast<float>(static_cast<double>(nanoseconds) * 1.0e-6);
+        }
+        glBeginQuery(GL_TIME_ELAPSED, query);
+
         return true;
+    }
+
+    void SceneRenderer::countDraw(const Mesh& mesh)
+    {
+        ++m_stats.drawCalls;
+        m_stats.triangles += mesh.indexCount() / 3;
     }
 
     Mesh* SceneRenderer::meshFor(const StaticMeshComponent& component)
@@ -320,6 +342,7 @@ namespace BilliardsSaloon
             m_shadows.bindLayerForDrawing(static_cast<int>(layer));
             glClear(GL_DEPTH_BUFFER_BIT);
             m_shadowShader->setMat4("uLightMatrix", m_lightMatrices[layer]);
+            const Frustum lampView = Frustum::fromViewProjection(m_lightMatrices[layer]);
 
             registry.view<TransformComponent, StaticMeshComponent, MaterialComponent>().each(
                 [&](Entity entity, TransformComponent& transform, StaticMeshComponent& meshComponent, MaterialComponent& material)
@@ -340,8 +363,16 @@ namespace BilliardsSaloon
                     {
                         return;
                     }
-                    m_shadowShader->setMat4("uModel", composeInterpolatedMatrix(transform, alpha));
+                    const glm::mat4 model = composeInterpolatedMatrix(transform, alpha);
+                    if (!lampView.intersects(transformBounds(mesh->bounds(), model)))
+                    {
+                        ++m_stats.shadowCulled;
+                        return;
+                    }
+                    ++m_stats.shadowCasters;
+                    m_shadowShader->setMat4("uModel", model);
                     mesh->draw();
+                    countDraw(*mesh);
                 });
         }
 
@@ -414,6 +445,10 @@ namespace BilliardsSaloon
         glBindVertexArray(0);
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_CULL_FACE);
+
+        glEndQuery(GL_TIME_ELAPSED);
+        m_timerPending[static_cast<std::size_t>(m_timerIndex)] = true;
+        m_timerIndex = (m_timerIndex + 1) % TIMER_QUERIES;
     }
 
     void SceneRenderer::bindMaterial(const MaterialComponent& material, const glm::vec3& dynamicEmission, int visualType, int ballNumber)
@@ -450,13 +485,22 @@ namespace BilliardsSaloon
                     return;
                 }
 
+                const glm::mat4 model = composeInterpolatedMatrix(transform, alpha);
+                if (!m_viewFrustum.intersects(transformBounds(mesh->bounds(), model)))
+                {
+                    ++m_stats.objectsCulled;
+                    return;
+                }
+                ++m_stats.objectsDrawn;
+
                 const glm::vec3 dynamicEmission =
                     (entity == highlight.ball) ? highlight.emission : glm::vec3(0.0f);
 
-                m_shader->setMat4("uModel", composeInterpolatedMatrix(transform, alpha));
+                m_shader->setMat4("uModel", model);
                 const int number = ((ball != nullptr) && !ball->isCueBall) ? ball->number : 0;
                 bindMaterial(material, dynamicEmission, (ball != nullptr) ? ballVisualType(*ball) : 0, number);
                 mesh->draw();
+                countDraw(*mesh);
             }
         );
     }
