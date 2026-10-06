@@ -36,6 +36,14 @@ All notable changes to Billiards Saloon. The format follows
   give the same layouts on every platform; a geometry baseline that aims at
   pocket mouths with a friction-based speed model.
 - Python tests for the shot API (`uv run pytest` in `ml/`).
+- `SingleShotEnv`, a Gymnasium environment for one shot (absolute or
+  ghost-relative aim, positions or positions-plus-geometry observations,
+  optional execution noise); rewards in their own module.
+- Baselines (random, geometry, simulator search), three hashed evaluation
+  suites of 1000 layouts, and an evaluation module with confidence intervals.
+- Config-driven training with Stable-Baselines3 and reproducible run folders.
+- Experiments 0 (baselines) and 1 (SAC, absolute vs ghost-relative aim)
+  written up in `docs/rl/experiments.md`.
 
 ### Documentation
 - Theory documents with equations in LaTeX: the physics (motion on cloth,
