@@ -68,16 +68,18 @@ class TrainedPolicy:
 class EvaluationCallback(BaseCallback):
     """Evaluates on part of a fixed suite every `every` steps; keeps the best."""
 
-    def __init__(self, run: RunLogger, env_config: dict, suite: str, limit: int, every: int, name: str):
+    def __init__(self, run: RunLogger, env_config: dict, suite: str, limit: int, every: int, name: str,
+                 noise: tuple[float, float] = (0.0, 0.0)):
         super().__init__()
         self.run, self.env_config, self.suite, self.limit, self.every, self.name = run, env_config, suite, limit, every, name
+        self.noise = noise
         self.best = -1.0
         self.history: list[tuple[int, float]] = []
 
     def _on_step(self) -> bool:
         if self.num_timesteps % self.every != 0:
             return True
-        metrics, _ = evaluate(TrainedPolicy(self.model, self.name), self.suite, action_frame=self.env_config["action_frame"],
+        metrics, _ = evaluate(TrainedPolicy(self.model, self.name), self.suite, self.noise, action_frame=self.env_config["action_frame"],
                               obs_mode=self.env_config["obs_mode"], limit=self.limit)
         self.history.append((self.num_timesteps, metrics.success_rate))
         self.logger.record("eval/success_rate", metrics.success_rate)
@@ -106,8 +108,12 @@ def train(config: dict, seed: int, runs_root: Path = Path("runs"), name: str | N
     model.set_logger(configure(str(run.dir), ["csv", "tensorboard"]))
 
     evaluation = config["eval"]
+    # Checkpoints are selected under the noise the policy trains with: a
+    # robust policy is chosen for robustness, a precise one for precision.
+    selection_noise = tuple(evaluation.get("during_training_noise", env_config.get("noise", (0.0, 0.0))))
     callback = EvaluationCallback(run, env_config, evaluation["during_training_suite"],
-                                  evaluation["during_training_limit"], training["eval_every"], f"{algorithm}:{run.dir.name}")
+                                  evaluation["during_training_limit"], training["eval_every"], f"{algorithm}:{run.dir.name}",
+                                  selection_noise)
     start = time.perf_counter()
     # One episode is one step: log every 1,000 episodes, not SB3's default 4.
     model.learn(total_timesteps=training["total_timesteps"], callback=callback, log_interval=1000, progress_bar=False)
