@@ -1,5 +1,6 @@
 #include "rl/layouts.h"
 
+#include <cmath>
 #include <stdexcept>
 #include <string>
 
@@ -121,6 +122,47 @@ namespace BilliardsSaloon::Rl
             }
         }
         return layout;
+    }
+
+    SingleBallLayout LayoutGenerator::singleBallWithin(const ShotLimits& limits)
+    {
+        constexpr double PI = 3.14159265358979323846;
+        const double R = m_params.R;
+        for (int attempt = 0; attempt < MAX_TRIES; ++attempt)
+        {
+            const PocketMouth& mouth = m_mouths[static_cast<std::size_t>(m_random() % m_mouths.size())];
+
+            // The object ball somewhere in front of the mouth (within 75
+            // degrees of straight out), at a distance within the limits.
+            const double outward = std::atan2(-mouth.inward.y, -mouth.inward.x) + uniform(-75.0, 75.0) * PI / 180.0;
+            const double objectDistance = uniform(limits.minObjectDistance, std::max(limits.minObjectDistance, limits.maxObjectDistance));
+            const glm::dvec2 object = mouth.centre + objectDistance * glm::dvec2(std::cos(outward), std::sin(outward));
+            if (!legalSpot(object, {}))
+            {
+                continue;
+            }
+
+            // The cue ball behind the ghost ball, turned by the cut angle.
+            const glm::dvec2 travel = glm::normalize(mouth.centre - object);
+            const glm::dvec2 ghost = object - travel * (2.0 * R);
+            const double cut = uniform(-limits.maxCutDegrees, limits.maxCutDegrees) * PI / 180.0;
+            const glm::dvec2 approach(travel.x * std::cos(cut) - travel.y * std::sin(cut),
+                                      travel.x * std::sin(cut) + travel.y * std::cos(cut));
+            const double minCue = 2.0 * R + 0.02;
+            const double cueDistance = uniform(minCue, std::max(minCue, limits.maxCueDistance));
+            const glm::dvec2 cue = ghost - approach * cueDistance;
+            if (!legalSpot(cue, {object}))
+            {
+                continue;
+            }
+            const std::vector<glm::dvec2> positions {cue, object};
+            if (pathBlocked(positions, cue, ghost, R, 0, 1))
+            {
+                continue;
+            }
+            return analyse(positions);
+        }
+        throw std::runtime_error("No layout found within the curriculum limits.");
     }
 
     SingleBallLayout LayoutGenerator::singleBall(Difficulty band)

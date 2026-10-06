@@ -23,6 +23,7 @@ from stable_baselines3.common.logger import configure
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.noise import NormalActionNoise
 
+from billiards_rl.curriculum import Curriculum
 from billiards_rl.envs.single_shot_env import SingleShotEnv
 from billiards_rl.evaluation.evaluate import evaluate
 from billiards_rl.training.run_logger import RunLogger
@@ -69,8 +70,9 @@ class EvaluationCallback(BaseCallback):
     """Evaluates on part of a fixed suite every `every` steps; keeps the best."""
 
     def __init__(self, run: RunLogger, env_config: dict, suite: str, limit: int, every: int, name: str,
-                 noise: tuple[float, float] = (0.0, 0.0)):
+                 noise: tuple[float, float] = (0.0, 0.0), curriculum: Curriculum | None = None):
         super().__init__()
+        self.curriculum = curriculum
         self.run, self.env_config, self.suite, self.limit, self.every, self.name = run, env_config, suite, limit, every, name
         self.noise = noise
         self.best = -1.0
@@ -82,6 +84,9 @@ class EvaluationCallback(BaseCallback):
         metrics, _ = evaluate(TrainedPolicy(self.model, self.name), self.suite, self.noise, action_frame=self.env_config["action_frame"],
                               obs_mode=self.env_config["obs_mode"], limit=self.limit)
         self.history.append((self.num_timesteps, metrics.success_rate))
+        if self.curriculum is not None:
+            self.logger.record("curriculum/stage", self.curriculum.stage)
+            self.logger.record("curriculum/success_rate", self.curriculum.success_rate)
         self.logger.record("eval/success_rate", metrics.success_rate)
         self.logger.record("eval/scratch_rate", metrics.scratch_rate)
         self.run.log_eval(f"step{self.num_timesteps:08d}-{self.suite}", metrics)
@@ -98,7 +103,14 @@ def train(config: dict, seed: int, runs_root: Path = Path("runs"), name: str | N
     run = RunLogger(runs_root, config, seed, name)
     torch.set_num_threads(1)   # one core per run: several seeds run side by side
 
-    env = Monitor(make_env(env_config))
+    curriculum = None
+    base_env = make_env(env_config)
+    curriculum_config = config.get("curriculum") or {}
+    if curriculum_config.get("enabled", False):
+        curriculum = Curriculum(base_env, curriculum_config["stages"], curriculum_config.get("threshold", 0.8),
+                                curriculum_config.get("window", 2000))
+        base_env = curriculum
+    env = Monitor(base_env)
     env.reset(seed=seed)
     kwargs = dict(config.get(algorithm, {}))
     if algorithm == "td3" and "action_noise_sigma" in kwargs:
@@ -113,7 +125,7 @@ def train(config: dict, seed: int, runs_root: Path = Path("runs"), name: str | N
     selection_noise = tuple(evaluation.get("during_training_noise", env_config.get("noise", (0.0, 0.0))))
     callback = EvaluationCallback(run, env_config, evaluation["during_training_suite"],
                                   evaluation["during_training_limit"], training["eval_every"], f"{algorithm}:{run.dir.name}",
-                                  selection_noise)
+                                  selection_noise, curriculum)
     start = time.perf_counter()
     # One episode is one step: log every 1,000 episodes, not SB3's default 4.
     model.learn(total_timesteps=training["total_timesteps"], callback=callback, log_interval=1000, progress_bar=False)
@@ -130,6 +142,9 @@ def train(config: dict, seed: int, runs_root: Path = Path("runs"), name: str | N
                                   obs_mode=env_config["obs_mode"])
             run.log_eval(f"final-{suite}-noise{sigma:g}", metrics)
             final[f"{suite}@{sigma:g}"] = metrics.success_rate
+    if curriculum is not None:
+        run.meta["curriculum_history"] = curriculum.history   # (episode, stage) at each advance
+        run.meta["curriculum_final_stage"] = curriculum.stage
     run.finish(training_seconds=round(seconds, 1), steps_per_second=round(training["total_timesteps"] / seconds, 1),
                best_during_training=callback.best, final_success=final)
     print(f"{run.dir}: {seconds:.0f}s, best on {evaluation['during_training_suite']} {callback.best:.3f}, final {final}", flush=True)

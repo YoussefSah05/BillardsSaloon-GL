@@ -35,6 +35,17 @@ namespace BilliardsSaloon::Rl
         GhostShot ghost;                     // its ghost-ball line
     };
 
+    // Limits for curriculum layouts: a shot to some pocket with at most this
+    // cut, and the cue and object ball within these distances of the ghost
+    // ball and the pocket mouth.
+    struct ShotLimits
+    {
+        double maxCutDegrees {90.0};
+        double maxCueDistance {3.0};
+        double maxObjectDistance {3.0};
+        double minObjectDistance {0.08};
+    };
+
     // Seeded random layouts. The same seed gives the same layouts on every
     // platform: uniform numbers come straight from the 64-bit generator's bits
     // (std::uniform_real_distribution differs between standard libraries).
@@ -46,6 +57,13 @@ namespace BilliardsSaloon::Rl
         // A cue ball and an object ball, both resting legally on the table
         // (inside the cushions, apart, clear of the pockets), in `band`.
         [[nodiscard]] SingleBallLayout singleBall(Difficulty band);
+
+        // A layout built around a shot within `limits`: a random pocket, the
+        // object ball in front of its mouth, the cue ball behind the ghost
+        // ball at a random cut. Built directly rather than by rejection, so
+        // even very easy shots are cheap. The returned difficulty and pocket
+        // are those of analyse() (the easiest line may be another pocket's).
+        [[nodiscard]] SingleBallLayout singleBallWithin(const ShotLimits& limits);
 
         // Analyses a given layout (for fixed evaluation states).
         [[nodiscard]] SingleBallLayout analyse(const std::vector<glm::dvec2>& positions) const;

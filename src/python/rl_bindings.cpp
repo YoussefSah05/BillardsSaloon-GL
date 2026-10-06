@@ -306,6 +306,12 @@ void bindShotLab(py::module_& parent)
         .def(py::init([](std::uint64_t seed) { return Rl::LayoutGenerator(standardTable(), seed, PARAMS); }), py::arg("seed"))
         .def("single_ball", [](Rl::LayoutGenerator& g, const std::string& band) { return layoutDict(g.singleBall(Rl::difficultyFromName(band))); },
              py::arg("band") = "any", "A legal cue + object ball layout in a difficulty band (easy, medium, hard, none, any).")
+        .def("single_ball_within", [](Rl::LayoutGenerator& g, double maxCut, double maxCue, double maxObject, double minObject)
+             {
+                 return layoutDict(g.singleBallWithin(Rl::ShotLimits{maxCut, maxCue, maxObject, minObject}));
+             },
+             py::arg("max_cut"), py::arg("max_cue_distance"), py::arg("max_object_distance"), py::arg("min_object_distance") = 0.08,
+             "A layout built around a shot within these limits (degrees, metres), for curricula.")
         .def("analyse", [](const Rl::LayoutGenerator& g, const py::array_t<double, py::array::c_style | py::array::forcecast>& positions)
              { return layoutDict(g.analyse(toPositions(positions))); },
              py::arg("positions"), "The difficulty band and easiest pocket of a given two-ball layout.")

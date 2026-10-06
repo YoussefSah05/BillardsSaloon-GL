@@ -33,3 +33,44 @@ def test_a_short_sac_run_writes_a_complete_run_folder(tmp_path):
     final = json.loads((run / "eval" / "final-easy-noise0.json").read_text())
     assert final["episodes"] == 1000
     assert 0.0 <= final["success_rate"] <= 1.0
+
+
+def test_curriculum_advances_on_success_and_records_it():
+    import numpy as np
+    import billiards_sim as bs
+    from billiards_rl.curriculum import Curriculum
+    from billiards_rl.envs import SingleShotEnv
+
+    stages = [{"max_cut": 5, "max_cue_distance": 0.4, "max_object_distance": 0.4}, None]
+    env = Curriculum(SingleShotEnv(), stages, threshold=0.5, window=20)
+    env.reset(seed=0)
+    assert env.unwrapped.limits == stages[0]
+    # The geometry shot succeeds on these easy layouts, so the stage advances.
+    for _ in range(60):
+        shot = bs.rl.geometry_shot(env.unwrapped.positions)
+        _, _, _, _, info = env.step(env.unwrapped.action_for(shot["strike"][1], shot["strike"][0]))
+        env.reset()
+        if env.stage == 1:
+            break
+    assert env.stage == 1
+    assert env.unwrapped.limits is None
+    assert env.history[-1][1] == 1
+    assert info["curriculum_stage"] in (0, 1)
+    # Stage-1 layouts respect the limits.
+    env2 = SingleShotEnv(limits=stages[0])
+    env2.reset(seed=1)
+    for _ in range(50):
+        aims = bs.rl.ghost_aims(env2.positions)
+        assert np.any((aims["cut"] <= 5.0 + 1e-6) & (aims["cue_distance"] <= 0.4 + 1e-6))
+        env2.reset()
+
+
+def test_a_short_curriculum_run_records_its_history(tmp_path):
+    config = apply_overrides(yaml.safe_load((CONFIG.parent / "sac_curriculum.yaml").read_text()), [
+        "training.total_timesteps=400", "training.eval_every=200", "sac.learning_starts=100",
+        "eval.during_training_limit=20", "eval.final_suites=[easy]", "eval.final_noise=[0.0]",
+    ])
+    run = train(config, seed=4, runs_root=tmp_path, name="curriculum-run")
+    meta = json.loads((run / "meta.json").read_text())
+    assert meta["curriculum_history"][0] == [0, 0]
+    assert "curriculum_final_stage" in meta
