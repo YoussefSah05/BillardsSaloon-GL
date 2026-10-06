@@ -35,7 +35,8 @@ rl = bs.rl
 
 class ExpectimaxPlayer:
     def __init__(self, executor, depth: int = 2, samples: int = 16, leaf_samples: int = 4, sigma: float = 0.25,
-                 speed_factors=(0.8, 1.0, 1.25), verticals=(-0.3, 0.0, 0.3), seed: int = 0, threads: int = 0):
+                 speed_factors=(0.8, 1.0, 1.25), verticals=(-0.3, 0.0, 0.3), seed: int = 0, threads: int = 0,
+                 value_fn=None):
         self.executor = executor
         self.depth = depth
         self.samples = samples
@@ -45,6 +46,9 @@ class ExpectimaxPlayer:
         self.verticals = verticals
         self.rng = np.random.default_rng(seed)
         self.threads = threads
+        # Leaf value of a state after a kept turn: by default the simulated
+        # next-shot pot rate; a learned value of the rest of the rack (Milestone 13).
+        self.value_fn = value_fn if value_fn is not None else self._leaf_values
         self.name = f"expectimax-d{depth}"
 
     # ---- Candidates ------------------------------------------------------------
@@ -120,7 +124,7 @@ class ExpectimaxPlayer:
                 remaining = [0] + [i for i in range(1, len(env.positions)) if not pocketed[row, i]]
                 states.append(np.asarray(out["final_positions"][row])[remaining])
             if states:
-                values[continuing] += self._leaf_values(states)
+                values[continuing] += self.value_fn(states)
         q = values.reshape(len(strikes), k).mean(1)
         return strikes[int(np.argmax(q))]
 

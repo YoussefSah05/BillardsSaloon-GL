@@ -1340,3 +1340,95 @@ reaches 1.22 balls with the SAC executor at 0.25°.
 
   Replacing $\hat p$ with a value network trained on the search's own games
   (self-play / expert iteration) is the next milestone.
+
+### Experiment 12 — Expert iteration of a learned rack value (Milestone 13)
+
+**Hypothesis.** Experiment 11's leaf is hand-made: the pot rate of the best
+next shot. A value network trained on the search's own racks estimates the
+value of the *whole rest of the rack*, so it should rank the positions a shot
+leaves better. Iterating this (search ⇒ data ⇒ value ⇒ better search) should
+keep improving the player.
+
+**Method.**
+- **Value network.** $V_\theta(s) \approx \mathbb E[G_t \mid s_t = s]$, with
+  $G_t$ the balls still to be potted minus scratches, under the search player
+  and its noise. It's a DeepSets encoder over object balls (mean- and
+  max-pooled $\phi$). Per-ball features: position, offset and distance to the
+  cue ball, the best ghost-ball ease over its open pockets, and the share of
+  pockets open to it.
+- **Expert iteration.** Generation 0 is Experiment 11's depth-2 search with
+  the geometry proposer. For $k = 1..4$:
+  1. fit $V_k$ by MSE on the Monte Carlo returns of the 8,000 racks that
+     generation $k-1$ played (about 19k states);
+  2. let the search with leaf $V_k$ play 8,000 new racks.
+
+  The value is
+
+$$
+Q_k(s, a) = \frac1K \sum_{k'} \Big[ r(s, a + \varepsilon_{k'}) + \mathbb 1[\text{turn kept}]\, V_{k-1}(s'_{k'}) \Big].
+$$
+
+  Search is the improvement step and regression is the evaluation step, i.e.
+  approximate policy iteration. This is the single-agent form of AlphaZero's
+  loop: RunEnv has no opponent, so there is no adversarial self-play yet.
+- **Settings.** 0.25° aim noise everywhere; 3 seeds.
+
+**Setup.**
+- `uv run python -m scripts.experiment12_selfplay` (about 40 min on 10 cores).
+- Every $V_k$ player is evaluated on `run3` with Experiment 11's noise draws,
+  paired per rack with generation 0.
+- The headline is generation 4, fixed in advance.
+- `results.json` caveat: in this run, `train_states` holds the number of
+  states that generation *played*. A late label fix now stores the fitted
+  count, and the two differ by under 2%.
+
+**Results** (balls per rack; generation 0 scores **1.780**, 41.4% cleared):
+
+| Generation | Seed 1 | Seed 2 | Seed 3 | Mean difference vs gen 0 | Value $R^2$ (held out) |
+|---|---|---|---|---|---|
+| 1 | +0.014 | +0.008 | −0.005 | +0.006 | 0.26–0.31 |
+| 2 | +0.005 | −0.005 | +0.006 | +0.002 | 0.27–0.31 |
+| 3 | −0.007 | +0.011 | −0.012 | −0.003 | 0.26–0.27 |
+| **4** | −0.019 | −0.001 | −0.025 | **−0.015** | 0.25–0.30 |
+
+- Every 95% interval contains 0; the widest is about ±0.05.
+- Generation 4 scores 1.765 balls per rack, against 1.780 for generation 0.
+- The self-play rack means stay between 1.78 and 1.85 across all generations.
+
+**Diagnostic.** I took 821 states reached after a kept turn (where the leaf
+is used), from 600 fresh racks played by generation 0, and measured how much
+of the remaining return each leaf explains.
+
+| Leaf | $R^2$ on $G_t$ |
+|---|---|
+| hand-made $\hat p$ (best next-shot pot rate), linear | 0.22 |
+| $\hat p \times$ balls left, linear | 0.34 |
+| learned $V$, seed 1, gen 1 / gen 4 | 0.33 / 0.32 |
+
+44% of these states have a single ball left, where the rest of the rack *is*
+the next shot.
+
+**Interpretation.**
+- **A null result.** The learned value matches the hand-made leaf and does not
+  beat it, and iterating does not compound. Generations 1–4 are flat within
+  ±0.025 balls per rack.
+- **Why: the hand-made leaf is already as informative.**
+  - On three-ball racks a kept turn leaves one or two balls, so "how makeable
+    is the next shot" is nearly the whole future.
+  - The learned value explains no more of the return than $\hat p$ scaled by
+    the balls left (0.32 vs 0.34), and the two are correlated (0.66–0.70).
+  - The return is mostly execution luck: about 70% of its variance is not
+    predictable from the state by either leaf. More data or generations then
+    refines the estimate of a quantity that's already known.
+- **What it did buy is speed.** The learned leaf replaces the leaf
+  simulations with one batched forward pass. On one thread a rack takes about
+  0.1 s instead of 0.5 s. That was measured on 50–100 racks, so it is
+  indicative only.
+- **Where a learned value should matter:**
+  - longer horizons: more balls, so the leave determines several future shots;
+  - rules with an opponent: safeties and the value of handing over the table;
+  - large branching factors, where per-leaf simulation is too costly.
+
+  These are 8-ball/9-ball positions with rules, which need the rules engine in
+  the Python bindings. That is the remaining step of the brief's final
+  milestone (adversarial self-play).

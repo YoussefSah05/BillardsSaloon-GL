@@ -65,6 +65,9 @@ All notable changes to Billiards Saloon. The format follows
 - Search: `ExpectimaxPlayer`, candidate shots from a shot policy with speed and
   spin variations, valued by sampled expectimax over execution noise
   (experiment 11: +0.65 balls per rack over easiest-first under noise).
+- Expert iteration: a DeepSets rack-value network trained on the search's own
+  racks as its leaf; it matches the hand-made leaf at 5x the speed but does
+  not improve on it over 4 generations (experiment 12, a documented null result).
 
 ### Documentation
 - Theory documents with equations in LaTeX: the physics (motion on cloth,
