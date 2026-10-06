@@ -1,0 +1,35 @@
+# PPO on SingleShotEnv: Stable-Baselines3's PPO defaults (an on-policy
+# baseline). Episodes are one step long, so GAE reduces to r - V(s).
+algorithm: ppo
+
+env:
+  band: any                 # train on all legal layouts; evaluate on the fixed suites
+  obs_mode: positions
+  action_frame: absolute    # experiment 1 compares with ghost_relative
+  reward: sparse
+  noise: [0.0, 0.0]         # (aim sd in degrees, relative speed sd)
+
+ppo:
+  learning_rate: 0.0003
+  n_steps: 2048
+  batch_size: 64
+  n_epochs: 10
+  gamma: 0.99
+  gae_lambda: 0.95
+  clip_range: 0.2
+  ent_coef: 0.0
+  vf_coef: 0.5
+  max_grad_norm: 0.5
+  policy_kwargs:
+    net_arch: [64, 64]
+
+training:
+  total_timesteps: 100000
+  eval_every: 10000         # evaluate on the validation suite for checkpoint selection
+  device: cpu               # small MLPs: the CPU beats MPS here
+
+eval:
+  during_training_suite: validation   # checkpoint selection; never a test suite
+  during_training_limit: 600
+  final_suites: [easy, medium, hard]
+  final_noise: [0.0, 0.25]

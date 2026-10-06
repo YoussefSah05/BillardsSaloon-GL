@@ -194,3 +194,104 @@ policy on the same layouts, both in the ghost-relative frame):
     distances that throw corrections depend on;
   - training under execution noise, to learn robust shots;
   - a separate validation suite for checkpoint selection.
+
+---
+
+## Experiment 2 — SAC, TD3 and PPO
+
+**Hypothesis.** The failure of the absolute frame in Experiment 1 is a
+property of the task (a needle-shaped reward), not of SAC: TD3 and PPO will
+fail there too. In the ghost-relative frame, the off-policy methods (SAC,
+TD3) will be more sample-efficient than on-policy PPO at an equal number of
+environment steps.
+
+**Setup.** As in Experiment 1, with one protocol change. Checkpoints are
+selected on a separate **validation suite** (600 layouts: 200 per band, seed
+1004), never on a test suite; this fixes the selection caveat of Experiment 1.
+Each algorithm uses Stable-Baselines3's defaults: the same budget and no
+tuning for any of them.
+
+- **SAC:** as in Experiment 1.
+- **TD3:** learning rate $10^{-3}$, MLP [400, 300], policy delay 2, target
+  smoothing 0.2. Gaussian exploration noise $\sigma = 0.1$ (SB3 documents
+  this choice but sets no default).
+- **PPO:** learning rate $3\cdot10^{-4}$, 2,048 steps per update, batch 64,
+  10 epochs, clip 0.2, MLP [64, 64].
+
+Both frames, seeds 1–5, 100k environment steps per run: 30 runs.
+
+**Command.** `bash scripts/experiment2_algorithms.sh`, then
+`uv run python -m scripts.summarise_runs runs/experiment2` and
+`uv run python -m scripts.compare_to_baseline runs/experiment2`.
+
+**Results** (mean ± sd over 5 seeds):
+
+| Policy | easy | medium | hard | easy, σ=0.25° | medium, σ=0.25° | hard, σ=0.25° | Time per run |
+|---|---|---|---|---|---|---|---|
+| SAC, absolute | 1.9% ± 0.7 | 1.4% ± 0.5 | 1.0% ± 0.6 | 1.9% | 1.3% | 1.0% | 428 s |
+| TD3, absolute | 1.1% ± 0.8 | 0.7% ± 0.7 | 0.2% ± 0.2 | 0.9% | 0.6% | 0.4% | 439 s |
+| PPO, absolute | 1.5% ± 0.5 | 1.1% ± 0.5 | 0.9% ± 0.2 | 1.6% | 1.0% | 0.8% | 27 s |
+| SAC, ghost-relative | 86.9% ± 0.7 | 83.3% ± 0.8 | 82.2% ± 0.9 | 82.5% ± 0.9 | 58.6% ± 0.9 | 41.5% ± 0.5 | 438 s |
+| TD3, ghost-relative | 86.0% ± 1.1 | 81.2% ± 2.3 | 79.3% ± 2.0 | 81.2% ± 0.8 | 58.3% ± 1.8 | 43.2% ± 1.0 | 394 s |
+| PPO, ghost-relative | 86.5% ± 0.5 | 78.6% ± 0.6 | 73.5% ± 1.7 | 82.7% ± 0.6 | 55.8% ± 1.5 | 41.5% ± 0.5 | 37 s |
+| geometry (Exp. 0) | 82.6% | 86.1% | 85.4% | 80.9% | 65.1% | 47.3% | — |
+
+**Paired with the geometry baseline** (no noise; exact McNemar test per seed,
+$p < 0.05$):
+
+| Policy | easy | medium | hard |
+|---|---|---|---|
+| SAC, ghost-relative | +4.3, better in 5/5 seeds | −2.8, worse in 4/5 | −3.2, worse in 4/5 |
+| TD3, ghost-relative | +3.4, better in 5/5 | −4.9, worse in 4/5 | −6.1, worse in 5/5 |
+| PPO, ghost-relative | +3.9, better in 5/5 | −7.5, worse in 5/5 | −11.9, worse in 5/5 |
+| any algorithm, absolute | worse in 5/5 | worse in 5/5 | worse in 5/5 |
+
+Learning curves on the validation suite (mean of 5 seeds), ghost-relative:
+
+- **SAC:** 62% at 10k steps, 80% at 20k, 85% at 100k.
+- **TD3:** 71% at 10k, 79% at 20k, 84% at 100k.
+- **PPO:** 59% at 10k, 72% at 40k, 81% at 100k, still rising.
+
+**Interpretation.**
+
+1. **The absolute frame fails for every algorithm.** Off-policy or
+   on-policy, stochastic or deterministic, all end below a random policy. The
+   needle defeats undirected exploration regardless of the update rule. It is
+   a property of the problem's parameterisation, which is the case for the
+   brief's later milestones: goal-conditioning, HER, curricula and
+   elite-sample methods.
+2. **In the ghost-relative frame, all three learn the same thing.** On short
+   straight shots (*easy*), each beats geometry in every seed, by firmer
+   speed (Experiment 1). On *medium* and *hard*, none reaches geometry. The
+   ranking SAC ≥ TD3 > PPO follows sample efficiency at equal steps.
+3. **SAC is the most consistent** (seed sd 0.7–0.9 points, against 1.1–2.3
+   for TD3).
+4. **Equal steps is not equal compute.** PPO took 37 s per run against
+   400–440 s for the off-policy methods (one gradient step per environment
+   step on the CPU). Its curve is still rising at 100k steps. With equal
+   wall-clock time it would see about 10 times more data, which is a fair
+   comparison to run before ranking it last.
+5. **Selecting on a separate validation suite changed SAC's numbers by under
+   half a point** compared with Experiment 1. The earlier selection on
+   *medium* layouts did not inflate the results.
+6. **Under aiming noise, no learned policy matches geometry on medium or
+   hard** (σ = 0.25°: 56–59% against 65%, 42–43% against 47%). No policy was
+   trained with noise.
+
+**Failure modes.**
+
+- The geometry baseline in the paired test plays in the absolute frame, as in
+  Experiment 0. The learned policies cannot correct more than ±4° from their
+  reference pocket. That never limits a pot in practice, since search found
+  wide windows within ±2°.
+- All conclusions are for 100k steps and SB3 defaults.
+
+**Next experiments.**
+
+- **Observation:** `positions+geometry`, the cut angle and distances that
+  throw and speed depend on, instead of inferring them from four coordinates.
+- **Training under execution noise** ($\sigma_\varphi = 0.25°$), to see
+  whether policies learn to prefer wide windows, as search does.
+- **PPO at equal wall-clock time** (about 1M steps).
+- **Then the brief's Milestone 7:** a curriculum, and ultimately the
+  goal-conditioned environment with HER.

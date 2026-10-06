@@ -54,3 +54,11 @@ def test_baselines_are_ordered_on_a_small_sample():
     assert geometry_metrics.success_rate > 0.7
     assert search_metrics.success_rate >= geometry_metrics.success_rate - 0.05
     assert np.isfinite(geometry_metrics.mean_distance_after_miss)
+
+
+def test_exact_mcnemar_matches_known_values():
+    from scripts.compare_to_baseline import mcnemar_exact
+    assert mcnemar_exact(0, 0) == 1.0
+    assert mcnemar_exact(5, 5) == 1.0
+    assert mcnemar_exact(10, 0) == pytest.approx(2 / 2**10)     # all discordant one way
+    assert mcnemar_exact(54, 90) < 0.01 < mcnemar_exact(65, 76)

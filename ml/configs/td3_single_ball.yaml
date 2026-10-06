@@ -1,0 +1,38 @@
+# TD3 on SingleShotEnv: Stable-Baselines3's TD3 defaults, plus Gaussian
+# exploration noise (sd 0.1 on the normalised action), which SB3 documents as
+# the usual choice but does not set by default.
+algorithm: td3
+
+env:
+  band: any                 # train on all legal layouts; evaluate on the fixed suites
+  obs_mode: positions
+  action_frame: absolute    # experiment 1 compares with ghost_relative
+  reward: sparse
+  noise: [0.0, 0.0]         # (aim sd in degrees, relative speed sd)
+
+td3:
+  learning_rate: 0.001
+  buffer_size: 1000000
+  learning_starts: 100
+  batch_size: 256
+  tau: 0.005
+  gamma: 0.99
+  train_freq: 1
+  gradient_steps: 1
+  policy_delay: 2
+  target_policy_noise: 0.2
+  target_noise_clip: 0.5
+  action_noise_sigma: 0.1
+  policy_kwargs:
+    net_arch: [400, 300]
+
+training:
+  total_timesteps: 100000
+  eval_every: 10000         # evaluate on the validation suite for checkpoint selection
+  device: cpu               # small MLPs: the CPU beats MPS here
+
+eval:
+  during_training_suite: validation   # checkpoint selection; never a test suite
+  during_training_limit: 600
+  final_suites: [easy, medium, hard]
+  final_noise: [0.0, 0.25]
