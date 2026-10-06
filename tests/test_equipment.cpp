@@ -18,7 +18,7 @@ TEST_CASE("the shipped equipment catalogue loads with every category filled")
     CHECK(catalog.cues.size() >= 2);
     CHECK(catalog.halls.size() >= 2);
 
-    const BallSetOption& broadcast = findOption(catalog.balls, "broadcast");
+    const BallSetOption broadcast = findOption(catalog.balls, "broadcast");   // a copy: GCC flags the reference
     CHECK(broadcast.measleCueBall);
     CHECK(broadcast.colors.size() == 15);
 }

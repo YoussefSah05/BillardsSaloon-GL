@@ -1556,7 +1556,7 @@ namespace BilliardsSaloon
                 // Plan on a worker thread, from a copy of the table.
                 const Ai::AiTable table = m_session->aiView();
                 const Ai::AiProfile profile = m_aiProfile;
-                const std::uint32_t seed = m_aiRandom();
+                const auto seed = static_cast<std::uint32_t>(m_aiRandom());
                 const bool choosing = m_session->pendingChoice() != Rules::Choice::None;
                 const bool placing = m_session->placingCueBall() ||
                     (m_session->canPlaceCueBall() && (table.frame.phase != Rules::Phase::Break));
