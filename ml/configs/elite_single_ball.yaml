@@ -1,0 +1,36 @@
+# Elite regression / AWR on SingleShotEnv (Milestone 9; agents/elite.py).
+# The policy sees the target pocket's mouth and only that pocket counts, so
+# the successful shots for a state are unimodal (regression would otherwise
+# average aims at different pockets). Set algorithm: awr for AWR.
+algorithm: elite
+
+env:
+  band: any
+  obs_mode: positions+target
+  action_frame: ghost_relative
+  reward: sparse_target
+  noise: [0.0, 0.0]
+
+elite:
+  batch_episodes: 1000
+  updates_per_round: 200
+  minibatch: 256
+  learning_rate: 0.001
+  hidden: [256, 256]
+  explore_uniform: 0.1
+  log_std_min: -6.0
+  log_std_max: 0.0
+  buffer_size: 500000
+  awr_beta: 0.2
+  awr_max_weight: 20.0
+  value_updates_per_round: 200
+
+training:
+  total_timesteps: 100000
+  eval_every: 10000
+
+eval:
+  during_training_suite: validation
+  during_training_limit: 600
+  final_suites: [easy, medium, hard]
+  final_noise: [0.0, 0.25]
