@@ -78,6 +78,9 @@ namespace BilliardsSaloon
         glm::ivec3 counts {1};
         int revision {0};
         std::string lighting;   // the hall option whose lights were captured
+        glm::vec3 roomMin {0.0f};          // reflections: the room's box...
+        glm::vec3 roomMax {0.0f};
+        glm::vec3 reflectionCentre {0.0f}; // ...and the capture point
     };
 
     struct StaticMeshComponent

@@ -239,7 +239,7 @@ namespace BilliardsSaloon
         {
             static int revision = 0;
             const Entity volume = registry.createEntity();
-            registry.emplace<ProbeVolumeComponent>(volume, ProbeVolumeComponent{hall.probeMin, hall.probeMax, hall.probeCounts, ++revision, {}});
+            registry.emplace<ProbeVolumeComponent>(volume, ProbeVolumeComponent{hall.probeMin, hall.probeMax, hall.probeCounts, ++revision, {}, hall.roomMin, hall.roomMax, hall.reflectionCentre});
             registry.emplace<HallTagComponent>(volume, HallTagComponent{static_cast<int>(layout)});
         }
 

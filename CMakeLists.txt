@@ -186,6 +186,7 @@ add_executable(BilliardsSaloon
     src/render/scene_renderer.cpp
     src/render/render_targets.cpp
     src/render/light_probes.cpp
+    src/render/reflection_probe.cpp
     src/render/number_atlas.cpp
     src/render/screenshot.cpp
     src/render/shader.cpp

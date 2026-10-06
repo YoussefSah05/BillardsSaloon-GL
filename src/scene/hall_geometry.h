@@ -82,6 +82,11 @@ namespace BilliardsSaloon
         glm::vec3 probeMin {-2.0f, -0.7f, -1.5f};
         glm::vec3 probeMax {2.0f, 1.5f, 1.5f};
         glm::ivec3 probeCounts {4, 3, 3};
+        // The room's box for parallax-corrected reflections, and where the
+        // reflection cube map is captured from.
+        glm::vec3 roomMin {-5.0f, -0.8f, -5.0f};
+        glm::vec3 roomMax {5.0f, 3.0f, 5.0f};
+        glm::vec3 reflectionCentre {0.0f, 0.9f, 0.0f};
         // The three lamps over the table (game coordinates).
         std::array<glm::vec3, 3> lamps {};
     };

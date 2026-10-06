@@ -66,6 +66,15 @@ uniform vec3 uProbeCounts;
 uniform int uProbesEnabled;
 uniform int uCapture;   // 1 while rendering probes: diffuse light and emission only
 
+// Reflections: the room as a prefiltered cube map (mip = roughness), its
+// parallax corrected against the room's box.
+uniform samplerCube uReflection;
+uniform int uReflectionEnabled;
+uniform vec3 uRoomMin;
+uniform vec3 uRoomMax;
+uniform vec3 uReflectionCentre;
+uniform float uReflectionMaxLod;
+
 // Ball numbers: a 4 x 4 atlas, cell n holds number n.
 uniform sampler2D uNumberAtlas;
 uniform int uBallNumber;
@@ -329,6 +338,25 @@ vec3 evaluateSh(vec3 c[9], vec3 n, vec3 band)
     return max(result, vec3(0.0));
 }
 
+// Where the reflected ray from this point leaves the room's box, as seen
+// from the capture point (Lagarde & Zanuttini 2012, "local cube maps").
+vec3 boxProjected(vec3 position, vec3 direction)
+{
+    vec3 safe = direction + vec3(equal(direction, vec3(0.0))) * 1.0e-5;
+    vec3 far = max((uRoomMax - position) / safe, (uRoomMin - position) / safe);
+    float t = min(min(far.x, far.y), far.z);
+    return position + direction * t - uReflectionCentre;
+}
+
+vec3 roomReflection(vec3 direction, float roughness)
+{
+    vec3 position = clamp(vWorldPosition, uRoomMin + 0.01, uRoomMax - 0.01);
+    // Rough lobes are wide: blend back towards the plain direction, which
+    // hides the box's corners in blurry reflections.
+    vec3 lookup = mix(boxProjected(position, direction), direction, roughness * roughness);
+    return textureLod(uReflection, lookup, roughness * uReflectionMaxLod).rgb;
+}
+
 struct Surface
 {
     vec3 baseColor;
@@ -481,7 +509,9 @@ void main()
         probeCoefficients(vWorldPosition + normal * 0.08, c);
         vec3 irradiance = evaluateSh(c, normal, vec3(PI, 2.0 * PI / 3.0, PI / 4.0));
         ambient = baseColor / PI * irradiance * uAmbientScale;
-        environment = evaluateSh(c, reflectionDirection, vec3(1.0)) * uAmbientScale;
+        environment = (uReflectionEnabled == 1)
+            ? roomReflection(reflectionDirection, surface.roughness)
+            : evaluateSh(c, reflectionDirection, vec3(1.0)) * uAmbientScale;
     }
     else
     {
@@ -494,7 +524,8 @@ void main()
     vec3 reflections = environment * environmentBrdf(surface.f0, surface.roughness, nDotV);
     if (surface.clearcoat > 0.0)
     {
-        reflections += 0.5 * environment * fresnelSchlick(nDotV, vec3(0.04)) * surface.clearcoat;
+        vec3 coatEnvironment = (uReflectionEnabled == 1) ? roomReflection(reflectionDirection, 0.05) : environment;
+        reflections += 0.5 * coatEnvironment * fresnelSchlick(nDotV, vec3(0.04)) * surface.clearcoat;
     }
     if (surface.cloth)
     {

@@ -4,6 +4,7 @@
 #include "ecs/registry.h"
 #include "render/light_probes.h"
 #include "render/light_rig.h"
+#include "render/reflection_probe.h"
 #include "render/mesh.h"
 #include "render/number_atlas.h"
 #include "render/render_targets.h"
@@ -183,6 +184,8 @@ namespace BilliardsSaloon
         glm::vec3 m_cameraPosition {0.0f};
 
         LightProbes m_probes;
+        ReflectionProbe m_reflection;
+        std::unique_ptr<Shader> m_prefilterShader;
         int m_probeRevision {-1};
         glm::vec3 m_probeMin {0.0f};
         glm::vec3 m_probeMax {1.0f};

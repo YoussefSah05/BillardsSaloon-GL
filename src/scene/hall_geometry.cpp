@@ -188,6 +188,9 @@ namespace BilliardsSaloon
             hall.probeMin = glm::vec3(-arena.x - 2.5f, floorY + 0.25f, -arena.y - 2.5f);
             hall.probeMax = glm::vec3(arena.x + 2.5f, floorY + 3.2f, arena.y + 2.5f);
             hall.probeCounts = glm::ivec3(9, 3, 7);
+            hall.roomMin = glm::vec3(-wallX, floorY, -wallZ);
+            hall.roomMax = glm::vec3(wallX, wallTop, wallZ);
+            hall.reflectionCentre = glm::vec3(0.0f, 0.7f, 0.0f);
 
             for (HallPart* part : {&carpet, &playing, &barriers, &trim, &stands, &seats, &walls, &furniture, &canopy, &panels, &cables})
             {
@@ -723,6 +726,9 @@ namespace BilliardsSaloon
             hall.probeMin = glm::vec3(-RX + 0.25f, floorY + 0.25f, -RZ + 0.25f);
             hall.probeMax = glm::vec3(RX - 0.25f, ceiling - 0.3f, RZ - 0.25f);
             hall.probeCounts = glm::ivec3(9, 3, 7);
+            hall.roomMin = glm::vec3(-RX, floorY, -RZ);
+            hall.roomMax = glm::vec3(RX, ceiling, RZ);
+            hall.reflectionCentre = glm::vec3(0.0f, 0.9f, 0.0f);
 
             hall.parts = std::move(parts);
             return hall;

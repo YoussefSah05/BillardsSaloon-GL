@@ -16,8 +16,10 @@ namespace BilliardsSaloon
 {
     namespace
     {
-        // Shadow maps on unit 0, ball numbers on 1, probe SH on 2..8.
+        // Shadow maps on unit 0, ball numbers on 1, probe SH on 2..8, the
+        // room's reflection cube map on 9.
         constexpr int PROBE_TEXTURE_UNIT = 2;
+        constexpr int REFLECTION_TEXTURE_UNIT = 9;
 
         // Must match BALL_VISUAL_* in basic.frag.
         int ballVisualType(const BallComponent& ball)
@@ -113,6 +115,7 @@ namespace BilliardsSaloon
         m_bloomDownShader = shader("shaders/fullscreen.vert", "shaders/bloom_down.frag");
         m_bloomUpShader = shader("shaders/fullscreen.vert", "shaders/bloom_up.frag");
         m_postShader = shader("shaders/fullscreen.vert", "shaders/post.frag");
+        m_prefilterShader = shader("shaders/fullscreen.vert", "shaders/prefilter.frag");
         m_numbers = std::make_unique<NumberAtlas>(resolveAssetPath("fonts/BarlowCondensed-Bold.ttf"));
         glGenVertexArrays(1, &m_emptyVertexArray);   // core profile: draws need a bound VAO
         glGenQueries(TIMER_QUERIES, m_timerQueries.data());
@@ -234,7 +237,6 @@ namespace BilliardsSaloon
         setCamera(viewMatrix, projectionMatrix, outView.position);
 
         m_shader->setInt("uActivePointLightCount", static_cast<int>(std::min<std::size_t>(settings.lights.positions.size(), 3)));
-        m_shader->setFloat("uReflectionScale", 0.45f);   // a dark hall: the lamps light the scene
         m_shader->setFloat("uEmissionScale", 1.0f);
         m_shader->setFloat("uLightIntensity", settings.lightIntensity);
         m_ambientScale = settings.ambient;
@@ -244,6 +246,11 @@ namespace BilliardsSaloon
         {
             m_shader->setInt("uProbeSH" + std::to_string(t), PROBE_TEXTURE_UNIT + t);
         }
+        m_shader->setInt("uReflection", REFLECTION_TEXTURE_UNIT);
+        m_shader->setFloat("uReflectionMaxLod", static_cast<float>(ReflectionProbe::LEVELS - 1));
+        // Real reflections of the room carry their own brightness; the old
+        // analytic environment was dimmed for a dark hall.
+        m_shader->setFloat("uReflectionScale", m_reflection.ready() ? 1.0f : 0.45f);
         m_shader->setInt("uMeasleCueBall", m_measleCueBall ? 1 : 0);
         m_exposure = settings.exposure;
         m_shader->setFloat("uLightRadius", 0.05f);
@@ -389,6 +396,10 @@ namespace BilliardsSaloon
         if (m_probes.ready())
         {
             m_probes.bindTextures(PROBE_TEXTURE_UNIT);
+        }
+        if (m_reflection.ready())
+        {
+            m_reflection.bind(REFLECTION_TEXTURE_UNIT);
         }
     }
 
@@ -597,6 +608,7 @@ namespace BilliardsSaloon
         if (volume == nullptr)
         {
             m_shader->setInt("uProbesEnabled", 0);
+            m_shader->setInt("uReflectionEnabled", 0);
             return;
         }
         if (volume->revision == m_probeRevision)
@@ -645,6 +657,28 @@ namespace BilliardsSaloon
             const std::vector<ShRgb9> captured = m_probes.finishCapture(probeCount);
             m_probes.upload(captured, m_probeCounts);
             bindSceneShader();
+        }
+
+        // The reflection cube map, seen from above the table with the probes'
+        // indirect light, then prefiltered by roughness.
+        {
+            const glm::mat4 faceProjection60 = glm::perspective(glm::radians(90.0f), 1.0f, 0.03f, 60.0f);
+            for (int face = 0; face < 6; ++face)
+            {
+                m_reflection.bindCaptureFace(face);
+                const glm::mat4 view = LightProbes::faceView(volume->reflectionCentre, face);
+                setCamera(view, faceProjection60, volume->reflectionCentre);
+                drawObjects(registry, alpha, Frustum::fromViewProjection(faceProjection60 * view), nullptr, false);
+            }
+            glBindVertexArray(m_emptyVertexArray);
+            m_reflection.prefilter(*m_prefilterShader);
+            glBindVertexArray(0);
+            bindSceneShader();
+            m_shader->setVec3("uRoomMin", volume->roomMin);
+            m_shader->setVec3("uRoomMax", volume->roomMax);
+            m_shader->setVec3("uReflectionCentre", volume->reflectionCentre);
+            m_shader->setInt("uReflectionEnabled", 1);
+            m_shader->setFloat("uReflectionScale", 1.0f);
         }
 
         m_shader->setInt("uCapture", 0);
