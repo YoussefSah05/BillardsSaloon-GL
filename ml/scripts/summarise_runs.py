@@ -25,6 +25,7 @@ def main() -> None:
     curves: dict[str, list[list[tuple[int, float]]]] = defaultdict(list)
     times: dict[str, list[float]] = defaultdict(list)
     curve_suite: dict[str, str] = {}
+    stages: dict[str, list] = defaultdict(list)
     for run in sorted(p for p in root.iterdir() if (p / "meta.json").exists()):
         group = re.sub(r"-s\d+$", "", run.name)
         meta = json.loads((run / "meta.json").read_text())
@@ -33,6 +34,8 @@ def main() -> None:
         for key, value in meta["final_success"].items():
             groups[group][key].append(value)
         times[group].append(meta.get("training_seconds", float("nan")))
+        if "curriculum_history" in meta:
+            stages[group].append((meta["curriculum_final_stage"], meta["curriculum_history"]))
         config = yaml.safe_load((run / "config.yaml").read_text())
         curve_suite[group] = config["eval"]["during_training_suite"]
         curve = []
@@ -55,6 +58,10 @@ def main() -> None:
         print(f"{group} learning curve ({curve_suite[group]}, during training): " +
               ", ".join(f"{s // 1000}k {100 * m:.0f}%" for s, m in zip(steps, means)))
         print(f"  training time per run: {np.mean(times[group]):.0f} s")
+        for final, history in stages.get(group, []):
+            print(f"  curriculum: final stage {final}; advances at episodes " +
+                  ", ".join(f"{episode} -> stage {stage}" for episode, stage in history[1:]) if len(history) > 1
+                  else f"  curriculum: stayed at stage {final}")
 
 
 if __name__ == "__main__":

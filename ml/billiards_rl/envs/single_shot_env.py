@@ -46,6 +46,9 @@ class SingleShotEnv(gym.Env):
     cycle of states, for evaluation. ``reset(options={"positions": ...})``
     plays one given layout.
 
+    ``limits`` (max_cut, max_cue_distance, max_object_distance) generates
+    shots within those limits instead of a band; a curriculum changes it.
+
     ``noise`` = (sigma_phi_deg, sigma_speed_relative) perturbs every executed
     shot (design, Section 10); the action and observation are unaffected.
     """
@@ -63,6 +66,7 @@ class SingleShotEnv(gym.Env):
         v_max: float = 7.0,
         noise: tuple[float, float] = (0.0, 0.0),
         layouts: list[np.ndarray] | None = None,
+        limits: dict | None = None,
     ):
         super().__init__()
         if obs_mode not in OBS_MODES:
@@ -80,6 +84,9 @@ class SingleShotEnv(gym.Env):
         self.noise = (float(noise[0]), float(noise[1]))
         self._fixed = [np.asarray(p, dtype=np.float64) for p in layouts] if layouts is not None else None
         self._fixed_index = 0
+        # Curriculum: generate shots within these limits instead of a band
+        # (keys max_cut, max_cue_distance, max_object_distance); None = band.
+        self.limits = dict(limits) if limits else None
 
         table = rl.table_info()
         self.width = float(table["width"])
@@ -112,6 +119,8 @@ class SingleShotEnv(gym.Env):
             positions = self._fixed[self._fixed_index % len(self._fixed)]
             self._fixed_index += 1
             self._layout = self._analyser.analyse(positions)
+        elif self.limits is not None:
+            self._layout = self._generator.single_ball_within(**self.limits)
         else:
             self._layout = self._generator.single_ball(self.band)
         self._positions = np.asarray(self._layout["positions"], dtype=np.float64)

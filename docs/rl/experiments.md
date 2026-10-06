@@ -421,3 +421,106 @@ target, rather than a scalar reward the critic must interpolate:
 - **The brief's curriculum (Milestone 7) and HER (Milestone 8),** which
   address the absolute frame's exploration failure more than this precision
   gap.
+
+---
+
+## Experiment 4 — Curriculum (Milestone 7)
+
+**Hypothesis.** In the absolute frame, every algorithm failed because
+successes are too rare for the critic to form a gradient (Experiments 1–2).
+Starting from shots where success is common (aligned, close) lets the policy
+learn the smooth part of the mapping, roughly "aim from the cue ball through
+the object ball towards a pocket", then sharpen it as shots get harder. In
+the ghost-relative frame, which already learns, a curriculum should mainly
+speed learning.
+
+**Setup.** The curriculum wrapper (`billiards_rl/curriculum/`) generates
+layouts within shot limits, built constructively: a random pocket, the
+object ball in front of its mouth, the cue ball behind the ghost ball at a
+random cut. It advances when success over the last 2,000 episodes of the
+stage exceeds 0.8, and never moves back. Stages, following the brief:
+
+| Stage | Max cut | Max cue distance | Max object distance |
+|---|---|---|---|
+| 0: aligned and close | 5° | 0.4 m | 0.4 m |
+| 1: wider angles | 25° | 0.5 m | 0.5 m |
+| 2: cue ball anywhere | 45° | 1.5 m | 0.6 m |
+| 3: object ball anywhere | 60° | 2.0 m | 1.5 m |
+| 4: long shots | 70° | 3.0 m | 3.0 m |
+| 5: full training distribution | — | — | — |
+
+The brief's last stage (banks, obstacles) has no counterpart yet: one object
+ball, and no bank-shot goals.
+
+**Runs** (SAC, SB3 defaults, positions, 5 seeds each, validation-suite
+selection):
+
+- absolute frame, 300k steps, with and without the curriculum (equal
+  budget);
+- ghost-relative frame, 100k steps, with the curriculum, compared with
+  Experiment 2's `sac-ghost_relative`.
+
+**Command.** `bash scripts/experiment4_curriculum.sh`, then `summarise_runs`
+and `compare_to_baseline` on `runs/experiment4`.
+
+**Results:**
+
+| Policy | easy | medium | hard | easy, σ=0.25° | medium, σ=0.25° | hard, σ=0.25° |
+|---|---|---|---|---|---|---|
+| SAC absolute, 300k, no curriculum | 1.9% ± 0.7 | 1.4% ± 0.5 | 1.0% ± 0.5 | 1.9% | 1.3% | 0.9% |
+| SAC absolute, 300k, curriculum | **19.6% ± 2.1** | 4.2% ± 0.7 | 1.8% ± 0.8 | 19.1% | 4.0% | 2.1% |
+| SAC ghost-relative, 100k (Exp. 2) | 86.9% ± 0.7 | 83.3% ± 0.8 | 82.2% ± 0.9 | 82.5% | 58.6% | 41.5% |
+| SAC ghost-relative, 100k, curriculum | **88.7% ± 0.3** | 84.3% ± 1.1 | 81.1% ± 1.5 | 84.0% | 61.6% | 42.6% |
+| geometry (Exp. 0) | 82.6% | 86.1% | 85.4% | 80.9% | 65.1% | 47.3% |
+
+**Curriculum progress.**
+
+- **Absolute frame:** all 5 seeds stayed at stage 0 for all 300k episodes.
+  Their rolling stage-0 success rose from 6–9% to 62–68% and was still rising
+  slowly; it never crossed the 0.8 gate.
+- **Ghost-relative frame:** every seed reached stage 4. Advances came at
+  about 5.5k, 8.5k and 14k episodes, then 61–85k for stage 4. No seed reached
+  stage 5 within 100k.
+
+**Paired with geometry** (exact McNemar per seed, $p < 0.05$),
+ghost-relative with curriculum:
+
+- *easy:* +6.1, better in 5/5 seeds;
+- *medium:* −1.8, worse in 2/5;
+- *hard:* −4.3, worse in 4/5.
+
+**Interpretation.**
+
+1. **The curriculum is the first intervention that makes the absolute frame
+   learn.** Easy-suite success goes from 1.9% to 19.6%. Learning curves on
+   the validation suite rise from 3% to 11%, where every earlier
+   absolute-frame run stayed at 0–2%. On stage-0 shots the policy learned to
+   pot two times in three: it learned the coarse "aim through the object ball
+   towards a pocket" mapping that undirected exploration never found.
+2. **The 0.8 gate was too strict for the absolute frame.** Success on the
+   easiest stage plateaued below the threshold, so the policy never saw
+   harder shots. That explains why the gains shrink from easy (19.6%) to
+   medium (4.2%) and hard (1.8%). The gate, not the idea, limited this run.
+3. **In the ghost-relative frame, the curriculum gives a small, consistent
+   gain on easier layouts** (easy +1.8, medium +1.0 over no curriculum),
+   with the lowest seed variance of any group (sd 0.3 on easy). It slightly
+   hurts *hard* (−1.1), since the policy spent its steps on easier shots and
+   never reached the full distribution. It does not close the precision gap
+   diagnosed in Experiment 3.
+
+**Failure modes.**
+
+- Stage limits are measured to the constructed pocket. The easiest line of a
+  constructed layout can be to another pocket, so stages are not perfectly
+  pure (by design: the policy may choose either).
+- Advancement compares a 2,000-episode rolling window with a fixed
+  threshold. A plateau below the threshold freezes the curriculum: there is
+  no time-based fallback and no mixing of earlier stages.
+
+**Next.**
+
+- The absolute frame with a lower gate (0.5–0.6), or one that advances on a
+  plateau, plus a share of earlier-stage layouts to avoid forgetting.
+  Expected to carry the coarse skill to harder shots.
+- Milestone 8: the goal-conditioned environment and HER, the brief's other
+  answer to sparse rewards.

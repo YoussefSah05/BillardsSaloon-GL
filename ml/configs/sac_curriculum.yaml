@@ -1,0 +1,49 @@
+# SAC with the success-gated curriculum (rl-system-design.md, Section 6).
+# Everything else as configs/sac_single_ball.yaml. Stages follow the brief:
+# aligned and close, wider angles, cue ball anywhere, object ball anywhere,
+# long shots, then the full training distribution (null). The brief's last
+# stage (banks, obstacles) has no counterpart yet: one object ball, no banks.
+algorithm: sac
+
+env:
+  band: any
+  obs_mode: positions
+  action_frame: absolute
+  reward: sparse
+  noise: [0.0, 0.0]
+
+curriculum:
+  enabled: true
+  threshold: 0.8          # success over the last `window` episodes of a stage
+  window: 2000
+  stages:
+    - {max_cut: 5,  max_cue_distance: 0.4, max_object_distance: 0.4}
+    - {max_cut: 25, max_cue_distance: 0.5, max_object_distance: 0.5}
+    - {max_cut: 45, max_cue_distance: 1.5, max_object_distance: 0.6}
+    - {max_cut: 60, max_cue_distance: 2.0, max_object_distance: 1.5}
+    - {max_cut: 70, max_cue_distance: 3.0, max_object_distance: 3.0}
+    - null
+
+sac:
+  learning_rate: 0.0003
+  buffer_size: 1000000
+  learning_starts: 1000
+  batch_size: 256
+  tau: 0.005
+  gamma: 0.99
+  train_freq: 1
+  gradient_steps: 1
+  ent_coef: auto
+  policy_kwargs:
+    net_arch: [256, 256]
+
+training:
+  total_timesteps: 300000
+  eval_every: 10000
+  device: cpu
+
+eval:
+  during_training_suite: validation
+  during_training_limit: 600
+  final_suites: [easy, medium, hard]
+  final_noise: [0.0, 0.25]
