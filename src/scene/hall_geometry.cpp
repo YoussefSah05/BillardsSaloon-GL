@@ -1,6 +1,7 @@
 #include "scene/hall_geometry.h"
 
 #include <cmath>
+#include <initializer_list>
 
 namespace BilliardsSaloon
 {

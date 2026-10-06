@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <initializer_list>
 #include <limits>
 
 namespace BilliardsSaloon::Ai

@@ -83,6 +83,7 @@ TEST_CASE("a ball click is brighter than a cushion thud")
 #include "gameplay/sim_bridge.h"
 
 #include <algorithm>
+#include <initializer_list>
 
 TEST_CASE("a break sounds like a break: a hard strike, a loud first contact, then softer clicks and cushions")
 {
