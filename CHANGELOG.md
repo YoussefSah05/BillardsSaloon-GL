@@ -62,6 +62,9 @@ All notable changes to Billiards Saloon. The format follows
   trained shot policy) and a strategic policy trained by policy gradient
   (experiment 10); trained under aiming noise it matches easiest-first
   (experiment 10b).
+- Search: `ExpectimaxPlayer`, candidate shots from a shot policy with speed and
+  spin variations, valued by sampled expectimax over execution noise
+  (experiment 11: +0.65 balls per rack over easiest-first under noise).
 
 ### Documentation
 - Theory documents with equations in LaTeX: the physics (motion on cloth,

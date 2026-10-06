@@ -121,6 +121,11 @@ class RunEnv:
     def play(self, candidate: Candidate, executor) -> tuple[float, bool, dict]:
         """Executes a goal; returns (reward, episode over, info)."""
         strike = np.asarray(executor.strike(self.positions, candidate.ball, candidate.pocket), dtype=np.float64)
+        return self.play_strike(strike, candidate.ball, candidate.pocket)
+
+    def play_strike(self, strike: np.ndarray, ball: int = -1, pocket: int = -1) -> tuple[float, bool, dict]:
+        """Plays a physical strike (with this env's execution noise)."""
+        strike = np.asarray(strike, dtype=np.float64).copy()
         if self.noise[0] > 0.0:
             strike[1] += self.rng.normal(0.0, self.noise[0])
         if self.noise[1] > 0.0:
@@ -130,7 +135,8 @@ class RunEnv:
         scratch = bool(out["scratch"])
         potted = int(pocketed[1:].sum())
         reward = float(potted) - (1.0 if scratch else 0.0)
-        info = {"potted": potted, "scratch": scratch, "intended": bool(pocketed[candidate.ball] and out["pocket_of"][candidate.ball] == candidate.pocket)}
+        info = {"potted": potted, "scratch": scratch,
+                "intended": bool(ball > 0 and pocketed[ball] and out["pocket_of"][ball] == pocket)}
         if scratch:
             return reward, True, info
         remaining = [0] + [i for i in range(1, len(self.positions)) if not pocketed[i]]
