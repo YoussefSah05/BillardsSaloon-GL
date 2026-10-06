@@ -44,6 +44,12 @@ All notable changes to Billiards Saloon. The format follows
 - Config-driven training with Stable-Baselines3 and reproducible run folders.
 - Experiments 0 (baselines) and 1 (SAC, absolute vs ghost-relative aim)
   written up in `docs/rl/experiments.md`.
+- TD3 and PPO, a validation suite for checkpoint selection, and exact
+  McNemar paired comparisons (experiments 2-3).
+- A success-gated curriculum with plateau advance and review of earlier
+  stages (experiments 4-5).
+- `GoalShotEnv`, a goal-conditioned environment compatible with HER
+  (experiments 6 and 6b).
 
 ### Documentation
 - Theory documents with equations in LaTeX: the physics (motion on cloth,
