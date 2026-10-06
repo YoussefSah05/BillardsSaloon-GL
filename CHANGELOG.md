@@ -52,6 +52,9 @@ All notable changes to Billiards Saloon. The format follows
   (experiments 6 and 6b), and `DirectionGoalEnv` with departure-direction
   goals (experiment 6c); the simulator reports the contacted ball's velocity.
 - Elite-regression and AWR agents for one-shot episodes (experiments 7 and 7b).
+- A robustness reward (mean outcome of noisy replays of the intended shot):
+  the first learned policy to match the geometry baseline under aiming noise
+  (experiment 8).
 
 ### Documentation
 - Theory documents with equations in LaTeX: the physics (motion on cloth,
