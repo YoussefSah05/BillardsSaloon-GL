@@ -6,6 +6,12 @@ All notable changes to Billiards Saloon. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- Linux and Windows builds: a test variable named `raise` clashed with the C
+  library function used inside doctest's macros on Linux; files that loop over
+  braced lists now include `<initializer_list>` instead of relying on other
+  headers to pull it in; MSVC reads sources as UTF-8.
+
 ## [0.8.0] - 2026-10-06
 
 Computer opponents (M8).

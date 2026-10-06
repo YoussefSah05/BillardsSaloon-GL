@@ -107,7 +107,8 @@ find_package(OpenGL REQUIRED)
 
 function(bs_set_warnings target)
     if(MSVC)
-        target_compile_options(${target} PRIVATE /W4 /permissive- /EHsc)
+        # /utf-8: sources and UI strings are UTF-8 ("·", "°", "É").
+        target_compile_options(${target} PRIVATE /W4 /permissive- /EHsc /utf-8)
         if(BS_WARNINGS_AS_ERRORS)
             target_compile_options(${target} PRIVATE /WX)
         endif()

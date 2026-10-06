@@ -9,6 +9,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <initializer_list>
 #include <vector>
 #include <array>
 #include <stdexcept>
