@@ -13,6 +13,8 @@
 namespace py = pybind11;
 using namespace BilliardsSaloon;
 
+void bindShotLab(py::module_& parent);   // rl_bindings.cpp
+
 namespace
 {
     py::dict resultDict(const Ai::StepResult& result)
@@ -39,6 +41,7 @@ namespace
 PYBIND11_MODULE(billiards_sim, m)
 {
     m.doc() = "Billiards Saloon simulator, WPA referee and classical AI";
+    bindShotLab(m);
 
     py::enum_<GameDiscipline>(m, "Discipline")
         .value("EIGHT_BALL", GameDiscipline::EightBall)

@@ -181,6 +181,9 @@ add_library(bs_game STATIC
     src/scene/model_loader.cpp
     src/scene/model_codecs.cpp
     src/scene/prop_layout.cpp
+    src/rl/geometry.cpp
+    src/rl/layouts.cpp
+    src/rl/shot_lab.cpp
     src/rules/referee.cpp
     src/rules/shot_record.cpp
 )
@@ -281,7 +284,7 @@ if(BS_BUILD_PYTHON)
         GIT_SHALLOW TRUE
     )
     FetchContent_MakeAvailable(pybind11)
-    pybind11_add_module(billiards_sim src/python/billiards_sim_module.cpp)
+    pybind11_add_module(billiards_sim src/python/billiards_sim_module.cpp src/python/rl_bindings.cpp)
     target_link_libraries(billiards_sim PRIVATE bs_game)
     set_target_properties(billiards_sim PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/ml)
 endif()
@@ -367,6 +370,7 @@ if(BS_BUILD_TESTS)
         tests/test_visibility.cpp
         tests/test_spherical_harmonics.cpp
         tests/test_model_loader.cpp
+        tests/test_shot_lab.cpp
         tests/test_equipment.cpp
         tests/test_audio.cpp
         tests/test_ai.cpp

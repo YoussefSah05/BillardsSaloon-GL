@@ -25,6 +25,18 @@ All notable changes to Billiards Saloon. The format follows
   time, draw calls, triangles and culling once a second; `--hall ID` starts
   in a given hall.
 
+### Reinforcement learning
+- `docs/rl/`: an audit of the simulator for reinforcement learning, measured
+  (about 17k single-ball shots/s per core, bitwise determinism, potting
+  windows of 0.2-0.6 degrees), and the RL system design.
+- Shot-level simulation API in C++ (`src/rl/`) and Python
+  (`billiards_sim.rl`): any layout in, pots, scratch, first contact and the
+  table at rest out; batches across cores (113k shots/s); pocket mouths and
+  ghost-ball geometry; a seeded layout generator with difficulty bands that
+  give the same layouts on every platform; a geometry baseline that aims at
+  pocket mouths with a friction-based speed model.
+- Python tests for the shot API (`uv run pytest` in `ml/`).
+
 ### Documentation
 - Theory documents with equations in LaTeX: the physics (motion on cloth,
   event detection, ball, cushion and cue models, validation), rendering
