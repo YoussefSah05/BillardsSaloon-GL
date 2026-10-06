@@ -1432,3 +1432,111 @@ the next shot.
   These are 8-ball/9-ball positions with rules, which need the rules engine in
   the Python bindings. That is the remaining step of the brief's final
   milestone (adversarial self-play).
+
+### Experiment 13 — Self-play of a learned frame value under WPA rules (Milestone 13)
+
+**Hypothesis.** Experiment 12's value had little to add on three-ball
+racks. Under full 9-ball rules, with an opponent, safeties, fouls and ball in
+hand, the hand-made scoring of the classical planner is a much rougher guess.
+A frame-win value learned by self-play should beat it, and should improve as
+it trains on its own games.
+
+**Method.**
+- **The opponent.** The game's classical planner (M8): candidate pots,
+  safeties and kicks, simulated, judged by the referee, with finalists
+  replayed under the player's execution error.
+- **The value hook.** `play_classical(..., value=f)` (new in the bindings)
+  replaces its hand-made score of each simulated outcome with
+  $100\,(2V - 1)$, where $V = f(x)$ is the probability that the player wins
+  the frame. $x$ is the game's shared 144-float feature vector, the same one
+  the shipped ONNX path uses.
+- **The network.** A 2×256 MLP, run in NumPy.
+- **Training.** Binary cross-entropy on frame outcomes:
+
+$$
+\mathcal L(\theta) = -\frac1N \sum_i \big[ z_i \log V_\theta(x_i) + (1 - z_i) \log(1 - V_\theta(x_i)) \big].
+$$
+
+  Every position before a shot or cue-ball placement is recorded from *both*
+  players' points of view, because the planner evaluates outcomes where
+  either player is to move.
+- **Expert iteration with adversarial self-play.**
+  - Generation 0: the hand-made planner plays itself, 20,000 frames.
+  - For $k = 1..3$: fit $V_k$ on all self-play positions so far, evaluate
+    it, then let the planner with $V_k$ play itself for the next 20,000
+    frames.
+- **Settings.** 9-ball; the Pro profile (`iris_lindqvist`, 0.32° aim error)
+  in both seats.
+
+**Setup.**
+- `uv run python -m scripts.experiment13_frame_value` (about 2.5 h on 11
+  cores).
+- Head-to-head on 2,000 evaluation racks, never used in training. Each rack is
+  played twice with seats and break swapped, using the same seeds, so luck and
+  the break cancel within a pair.
+- Wilson 95% intervals over the 4,000 frames, plus a bootstrap over racks.
+- Seat swapping makes a hand-made vs hand-made match exactly 50% by
+  construction, so the protocol is checked with a **negative control**: a
+  constant value of 0.5, under which every outcome scores the same.
+
+**Results.**
+
+| Player vs the hand-made planner | Train positions | Value log loss (base rate 0.693; logistic) | Win rate [Wilson 95%] |
+|---|---|---|---|
+| Negative control: constant value | — | — | 40.5% [37.5, 43.6] (1,000 frames) |
+| $V_1$ (hand-made self-play) | 0.59M | 0.686 (0.692) | **47.8%** [46.3, 49.4] |
+| $V_2$ (+ $V_1$ self-play) | 1.56M | 0.687 (0.692) | **48.5%** [47.0, 50.1] |
+| $V_3$ (+ $V_2$ self-play) | 2.51M | 0.688 (0.693) | **49.2%** [47.6, 50.7] |
+
+The bootstrap intervals over racks agree with the Wilson intervals to within
+0.001.
+
+Self-play frames get longer once a learned value plays. Generation 0 averages
+32.7 recorded positions per frame; generations 1 and 2 average 53.8 and 52.7.
+
+**Interpretation.**
+- **The protocol works.** It detects a bad evaluation: the constant value
+  loses at 40.5%.
+- **The learned value never beats the hand-made scoring.**
+  - $V_1$ is significantly worse.
+  - Each self-play generation closes some of the gap: 47.8% → 48.5% → 49.2%.
+  - From $V_2$ on, the interval contains 50%. Generation 3 reaches parity at
+    best, not a gain.
+- **The bottleneck is the target, not the data or the network.**
+  - Frame outcomes between equal players barely depend on the current table:
+    log loss 0.686–0.688 against 0.693 for a coin flip.
+  - Four times the data does not lower the loss.
+  - A logistic regression finds almost nothing (0.692), so what the MLP
+    learns is weak non-linear structure.
+  - The planner turns tiny differences in $V$ into decisions, so it optimises
+    noise. The longer frames suggest, without proof, that the learned value prefers
+    positions that defer the outcome (safeties, ball-in-hand exchanges) over
+    the hand-made bias towards keeping the table.
+- **This repeats the audit's finding on a larger scale.** The M9-era value
+  network had a log loss of 0.682 on 130k positions. Now it is tested in play,
+  over three generations of self-play.
+
+**What would change the outcome** (not tried here):
+- **Lower-variance targets.**
+  - TD(λ) or bootstrapped values instead of whole-frame Monte Carlo outcomes.
+  - Shorter horizons: "the shooter keeps the table" or balls run, as in
+    Experiment 12, where values were learnable.
+  - Outcomes from mismatched players, where the table matters more than luck.
+- **A residual value.** Learn a correction to the hand-made score instead of
+  replacing it, so the planner keeps what geometry already knows (fouls, keeping
+  the table).
+- **Search over the opponent's reply** (true two-player expectimax). That is
+  much more expensive per shot.
+
+**Conclusion of the research track (Milestones 1–13).** Precision is where
+learning paid off:
+- the ghost-relative frame;
+- the robustness reward;
+- position play through speed.
+
+Search under execution noise gave the largest single gain (Experiment 11).
+Learned evaluations, of goals, racks or frames, matched hand-made heuristics
+but never beat them. That held at every horizon tried: one goal choice
+(Experiment 10b), a three-ball rack (Experiment 12) and a full 9-ball frame
+against an opponent (Experiment 13). Each null result is paired here with a
+diagnostic that says why.
