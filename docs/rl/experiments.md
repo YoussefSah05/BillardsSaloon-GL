@@ -827,3 +827,144 @@ infer that from the coordinates. The target-only reward adds a little on top,
 roughly additively. The effects are small (1–3 points) next to the 14–17
 point gap to search. The last row also differs in network input format
 (SB3's `MultiInputPolicy` over a Dict); that is a minor confound.
+
+---
+
+## Experiment 7 — Elite regression and AWR (Milestone 9)
+
+**Hypothesis.** Experiments 1–6c pointed to precise aim as the bottleneck:
+policies seemed unable to centre their aim in the potting window, as search
+does. Learning from the successful shots themselves, by regression rather
+than through a critic, should put the policy's mean at the centre of the
+successes. That would close the gap to geometry on *medium* and *hard* and
+improve robustness. It might also make the absolute frame learnable, since
+every rare success directly moves the mean.
+
+**Method** (`billiards_rl/agents/elite.py`). A Gaussian policy
+$\pi_\theta(a \mid s) = \mathcal N(\mu_\theta(s), \sigma_\theta(s)^2)$
+collects 1,000 shots per round, 10% of them uniform for exploration. It is
+then fitted by weighted maximum likelihood,
+$\max_\theta \sum_i w_i \log \pi_\theta(a_i \mid s_i)$, over all past shots
+(200 gradient steps per round):
+
+- **elite** (filtered imitation): $w_i = 1$ for a success, else 0;
+- **AWR** (Peng et al. 2019): $w_i = \min(\exp((r_i - V_\phi(s_i))/\beta), 20)$,
+  with $\beta = 0.2$ and $V_\phi$ regressed on rewards.
+
+To keep successes unimodal (regression would average aims at different
+pockets), the policy sees the target mouth (`positions+target`) and only the
+target pocket counts (`sparse_target`). Experiment 6d showed this is also the
+best SAC setting, so SAC is rerun in exactly this environment as the control.
+
+**Runs** (5 seeds each): elite and AWR in the ghost-relative frame at 100k
+steps; elite in the ghost-relative frame at 1M steps (elite runs are about
+15× cheaper per step, so 1M steps take SAC's 100k-step wall-clock time);
+elite and AWR in the absolute frame at 1M steps; SAC control at 100k.
+
+**Command.** `bash scripts/experiment7_elite.sh`.
+
+**Results** (mean ± sd over 5 seeds):
+
+| Policy | easy | medium | hard | easy, σ=0.25° | medium, σ=0.25° | hard, σ=0.25° | Time per run |
+|---|---|---|---|---|---|---|---|
+| SAC, ghost, 100k (control) | 86.9% ± 1.3 | **84.1% ± 0.6** | **84.0% ± 0.5** | 83.2% | 60.4% | 42.4% | 342 s |
+| elite, ghost, 100k | 87.3% ± 0.8 | 79.4% ± 1.0 | 75.8% ± 2.7 | 82.4% | 55.8% | 42.2% | 31 s |
+| AWR, ghost, 100k | 87.8% ± 0.4 | 79.7% ± 1.9 | 71.0% ± 3.1 | 82.9% | 57.2% | 40.6% | 46 s |
+| elite, ghost, 1M | **88.3% ± 0.3** | 81.8% ± 0.8 | 79.1% ± 0.8 | 83.6% | 57.1% | 41.9% | 292 s |
+| elite, absolute, 1M | 11.9% ± 3.0 | 7.4% ± 1.8 | 6.0% ± 1.9 | 11.5% | 7.6% | 5.9% | 274 s |
+| AWR, absolute, 1M | 4.5% ± 0.4 | 2.4% ± 0.5 | 1.1% ± 0.5 | 4.4% | 2.6% | 0.9% | 375 s |
+| geometry (Exp. 0) | 82.6% | 86.1% | 85.4% | 80.9% | 65.1% | 47.3% | — |
+
+**Paired with geometry** (no noise; seeds significantly better / worse):
+
+| Policy | easy | medium | hard |
+|---|---|---|---|
+| SAC control | better 5/5 | worse 2/5 | 0/5 either way |
+| elite, ghost, 1M | better 5/5 | worse 5/5 (−4.3) | worse 5/5 (−6.3) |
+| AWR, ghost, 100k | better 5/5 | worse 5/5 (−6.4) | worse 5/5 (−14.4) |
+
+**Diagnostic: where do the policies aim, and how hard?** On 200 *medium*
+layouts, each policy's potting window for the target pocket was scanned in
+0.02° steps, at the policy's own speed:
+
+| Policy | Aim inside its window | Distance from window centre, when inside (median) | Window width (median) | Speed (median) |
+|---|---|---|---|---|
+| geometry | 84% | 0.08° | 0.62° | 1.05 m/s |
+| SAC (seed 1) | 82% | 0.05° | 0.49° | 2.01 m/s |
+| elite, 1M (seed 1) | 84% | 0.04° | 0.38° | 3.38 m/s |
+| elite, 1M (seed 2) | 81% | 0.05° | 0.36° | 4.22 m/s |
+
+**Interpretation.**
+
+1. **The main hypothesis is rejected: aim centring was not the problem.**
+   - Every policy that lands in its window is within 0.04–0.08° of the
+     window's centre. Elite regression centres best, as designed, but
+     centring was not what separated the policies.
+   - Experiment 3's ablation attributed search's robustness to "aim centring
+     only", but that search kept the geometry *speed*. Its window centre was
+     found at a gentle speed, with a wide window.
+2. **Speed decides window width, and the learned policies hit too hard.**
+   - Geometry plays about 1 m/s, with 0.62° windows. SAC plays 2 m/s
+     (0.49°); elite regression plays 3.4–4.2 m/s (0.36–0.38°).
+   - Hard shots reduce throw and pot easy layouts reliably, so they dominate
+     the successful samples. The policy carries "hit hard" over to long cuts,
+     where it narrows the target. That is why elite and AWR lose most on
+     *hard*.
+3. **Elite regression is the best absolute-frame learner so far** on medium
+   (7.4%) and hard (6.0%), with no curriculum, against at most 6.5% and 2.6%
+   for SAC with curricula (Experiment 5). Caveat: it sees the target mouth
+   and only target pots count, which no absolute-frame SAC run had. AWR
+   fails in the absolute frame: with a success rate near 1%, its value
+   baseline absorbs almost all of the signal.
+4. **Elite methods are about 10× cheaper per step than SAC** (31 s against
+   342 s per 100k steps), with less hyperparameter sensitivity, but they
+   plateau lower in the ghost-relative frame.
+
+### Experiment 7b — Elite regression under execution noise
+
+**Prediction.** Under aiming noise, only shots with wide windows keep
+succeeding, so the successes, and hence the regression, should move to
+robust (slower) shots.
+
+**Setup.** Elite, ghost-relative frame, 1M steps, $\sigma_\varphi = 0.25°$
+during training (checkpoints selected under the same noise), 5 seeds.
+
+**Results:**
+
+| Policy | easy | medium | hard | easy, σ=0.25° | medium, σ=0.25° | hard, σ=0.25° |
+|---|---|---|---|---|---|---|
+| elite, 1M, clean | 88.3% | 81.8% | 79.1% | 83.6% | 57.1% | 41.9% |
+| elite, 1M, noisy | 87.7% ± 0.8 | 76.7% ± 2.5 | 64.2% ± 5.4 | 82.7% ± 0.9 | 56.2% ± 1.2 | 39.4% ± 1.1 |
+
+Under noise, the noisy-trained policy is worse than geometry on *medium* and
+*hard* in 5/5 seeds. Diagnostic on the same 200 layouts: speed 3.35 and 4.23
+m/s for seeds 1 and 2, window widths 0.40° and 0.38°. That is the *same*
+speed, per seed, as the clean-trained runs (3.38 and 4.22 m/s).
+
+**Interpretation.** **The prediction is rejected, and the identical speeds
+explain why.**
+
+- Each seed's preferred speed is fixed by its first successes and then
+  self-reinforces: regressing on one's own successes keeps the policy where
+  it already succeeds. This is self-imitation's familiar mode lock-in.
+- Under noise, the rarer successes on hard layouts weigh even less against
+  the easy ones, which succeed at any speed. So noise sharpened the
+  imbalance instead of selecting robust shots.
+
+**What Milestone 9 established.**
+
+- The precision story of Experiments 3–6 needs revising: learned policies
+  centre their aim well. They lose to geometry by choosing **speeds** that
+  narrow the window, and the training signal comes mostly from easy states.
+- Promising directions:
+  - **choose speed explicitly for robustness:** make window width (expected
+    success under noise) the objective, which the simulator can estimate per
+    candidate;
+  - **reweight states:** normalise successes by each state's difficulty, so
+    hard layouts are not drowned out;
+  - **keep speed exploration alive:** separate exploration noise for speed,
+    or a minimum spread.
+
+These lead naturally to the brief's next milestones. Cue-ball position play
+needs speed control anyway. Candidate generation plus search can score
+candidates by simulated robustness.
