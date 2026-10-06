@@ -1152,3 +1152,85 @@ follow to go forward, draw to come back.
 search). Experiment 9 suggests the search can do what the single network
 could not: use spin and pace to place the cue ball, with the robustness
 estimate of Experiment 8 to stay reliable under noise.
+
+---
+
+## Experiment 10 — A learned strategic layer (Milestone 11)
+
+**Hypothesis.** On a table with several balls, *which* shot to play matters:
+order, and the position each shot leaves. A strategic policy $\pi_H$ that
+chooses the goal (ball, pocket), executed by a fixed shot policy $\pi_L$,
+learns choices that clear more balls than the classical easiest-first rule.
+
+**Setup.** `RunEnv` (`billiards_rl/hierarchy/`):
+
+- **Rack:** a cue ball and 3 object balls; the player keeps shooting while
+  potting, in any order, with no game rules. +1 per ball, −1 for a scratch.
+- **Goals:** the (ball, pocket) pairs with a clear ghost-ball line and a cut
+  under 75°, the 8 easiest.
+- **Executors** ($\pi_L$), fixed:
+  - geometry;
+  - Experiment 8's robust SAC shot policy, which sees only the cue ball, the
+    chosen ball and the target mouth (the interface built in Milestones
+    6d–8).
+- **$\pi_H$:** a candidate scorer $\ell_j = f_\theta([x_j, g])$ applied to
+  each goal's features (cut, distances, ease, positions) plus global
+  features, with a masked softmax over valid goals.
+  - Permutation-equivariant: it scores goals, not slots.
+  - Trained with REINFORCE and a mean baseline: 300 iterations × 64 racks,
+    entropy 0.01. The best of 12 checkpoints on `run3_validation` is kept.
+  - 5 seeds per executor; trained with exact execution.
+- **Baselines:** random goal; easiest-first (the classical heuristic).
+- **Suites:** `run3` (1,000 racks) and `run3_validation` (600), hashed.
+  Evaluation uses identical noise draws per rack for every strategy, and
+  paired per-rack differences with 95% bootstrap intervals.
+
+**Command.** `uv run python -m scripts.experiment10_hierarchy` (about 15
+minutes).
+
+**Results** (mean balls potted per rack, out of 3, scratches counted −1; and
+racks cleared):
+
+| Executor | Aim noise | Random | Easiest-first | Learned $\pi_H$ (5 seeds) | Learned − easiest |
+|---|---|---|---|---|---|
+| geometry | 0° | 1.96 | 2.14 (58% cleared) | **2.43** ± 0.07 (69% cleared) | +0.29, better in 5/5 seeds |
+| SAC $\pi_L$ | 0° | 1.47 | 2.08 (55% cleared) | **2.26** ± 0.03 (62% cleared) | +0.18, better in 5/5 seeds |
+| geometry | 0.25° | 0.72 | **1.16** (17%) | 0.98 ± 0.03 (14%) | −0.19, worse in 5/5 seeds |
+| SAC $\pi_L$ | 0.25° | 0.70 | **1.19** (20%) | 1.14 ± 0.02 (19%) | −0.05, worse in 1/5 seeds |
+
+Validation curves rise over training, for example geometry seed 3:
+2.07 → 2.55 balls.
+
+**Diagnostic** (geometry executor, seeds 1 and 3; first shot of 500 racks):
+
+- the learned strategy chooses the easiest goal only 45% of the time
+  (mean ease rank 0.85–0.90);
+- its cuts are similar (median 18–19° against 16°);
+- its shots are much **longer**: cue and object ball travel 1.89 m against
+  1.32 m (median).
+
+**Interpretation.**
+
+1. **The hierarchy works, and the strategic layer learns real strategy.**
+   With exact execution, a policy trained only on balls potted beats
+   easiest-first in every seed, for both executors. It clears 69% of racks
+   against 58% (geometry) and 62% against 55% (SAC).
+   - This is the brief's decomposition: $\pi_L$ unchanged from the
+     single-shot milestones, $\pi_H$ trained on top.
+   - It needed no change to $\pi_L$: Milestone 6d's target-pocket input was
+     the right interface.
+2. **The strategy is tuned to the execution it trained with.** It prefers
+   longer shots that leave the next shot easier, which pays with exact
+   execution. Under 0.25° of aim noise, error grows with distance
+   ($\delta\psi \propto 1 + d_c/(2R\cos\theta)$), and the same choices clear
+   fewer balls than easiest-first.
+   - The SAC executor softens the loss (−0.05): it was trained to be robust,
+     and its own shot choices already avoid the narrowest windows.
+3. **Execution, not strategy, still dominates the numbers.** Noise of 0.25°
+   halves the balls cleared (about 2.1 to 1.2) for every strategy. A strategy
+   is only as good as the reliability it assumes.
+
+**Next.** Train $\pi_H$ with the executor's noise, so it learns which goals
+are reliable as well as useful. Then Milestone 12: candidate shots plus
+search, evaluating the next state explicitly instead of learning it, with
+Experiment 8's robustness estimate.

@@ -58,6 +58,9 @@ All notable changes to Billiards Saloon. The format follows
 - Position play: `PositionShotEnv` (pot and leave the cue ball near a target,
   with speed and spin), hashed position suites and a position-search
   baseline (experiment 9).
+- Hierarchical play: `RunEnv` (clear a small table), executors (geometry or a
+  trained shot policy) and a strategic policy trained by policy gradient
+  (experiment 10).
 
 ### Documentation
 - Theory documents with equations in LaTeX: the physics (motion on cloth,
