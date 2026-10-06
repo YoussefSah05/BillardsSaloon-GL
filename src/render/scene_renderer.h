@@ -2,6 +2,7 @@
 
 #include "ecs/entity.h"
 #include "ecs/registry.h"
+#include "render/light_probes.h"
 #include "render/light_rig.h"
 #include "render/mesh.h"
 #include "render/number_atlas.h"
@@ -84,6 +85,8 @@ namespace BilliardsSaloon
         int localLights {0};          // practical lights in the hall
         int lightsPerDrawMax {0};     // the most any one draw shaded
         float gpuMilliseconds {0.0f}; // the frame before last (queries are read without waiting)
+        float probeCaptureMilliseconds {0.0f};   // the last light probe capture (CPU, both bounces)
+        int probes {0};
     };
 
     // Optional emphasis on one ball (the cue ball while aiming).
@@ -147,6 +150,11 @@ namespace BilliardsSaloon
         [[nodiscard]] Mesh* meshFor(const StaticMeshComponent& component);
         void countDraw(const Mesh& mesh);
         void gatherLocalLights(Registry& registry);
+        // Draws every visible entity with a mesh; `highlight` may be null.
+        void drawObjects(Registry& registry, float alpha, const Frustum& frustum, const BallHighlight* highlight, bool count);
+        // Recaptures the hall's light probes when its ProbeVolumeComponent changed.
+        void updateProbes(Registry& registry, float alpha);
+        void setCamera(const glm::mat4& view, const glm::mat4& projection, const glm::vec3& position);
         // Chooses the practical lights that reach `world` for the next draw.
         void bindLocalLights(const Bounds& world);
 
@@ -170,6 +178,16 @@ namespace BilliardsSaloon
         int m_shadowKernel {3};
         std::vector<glm::mat4> m_lightMatrices;
         Frustum m_viewFrustum;
+        glm::mat4 m_cameraView {1.0f};
+        glm::mat4 m_cameraProjection {1.0f};
+        glm::vec3 m_cameraPosition {0.0f};
+
+        LightProbes m_probes;
+        int m_probeRevision {-1};
+        glm::vec3 m_probeMin {0.0f};
+        glm::vec3 m_probeMax {1.0f};
+        glm::ivec3 m_probeCounts {1};
+        float m_ambientScale {1.0f};
 
         // Must match MAX_LOCAL_LIGHTS and LIGHTS_PER_DRAW in basic.frag.
         static constexpr int MAX_LOCAL_LIGHTS = 32;

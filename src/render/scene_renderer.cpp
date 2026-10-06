@@ -8,6 +8,7 @@
 #include <glad/gl.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <string>
 
@@ -15,6 +16,9 @@ namespace BilliardsSaloon
 {
     namespace
     {
+        // Shadow maps on unit 0, ball numbers on 1, probe SH on 2..8.
+        constexpr int PROBE_TEXTURE_UNIT = 2;
+
         // Must match BALL_VISUAL_* in basic.frag.
         int ballVisualType(const BallComponent& ball)
         {
@@ -224,15 +228,22 @@ namespace BilliardsSaloon
         m_viewFrustum = Frustum::fromViewProjection(outView.viewProjection);
 
         m_shader->bind();
-        m_shader->setMat4("uView", viewMatrix);
-        m_shader->setMat4("uProjection", projectionMatrix);
-        m_shader->setVec3("uViewPosition", outView.position);
+        m_cameraView = viewMatrix;
+        m_cameraProjection = projectionMatrix;
+        m_cameraPosition = outView.position;
+        setCamera(viewMatrix, projectionMatrix, outView.position);
 
         m_shader->setInt("uActivePointLightCount", static_cast<int>(std::min<std::size_t>(settings.lights.positions.size(), 3)));
         m_shader->setFloat("uReflectionScale", 0.45f);   // a dark hall: the lamps light the scene
         m_shader->setFloat("uEmissionScale", 1.0f);
         m_shader->setFloat("uLightIntensity", settings.lightIntensity);
+        m_ambientScale = settings.ambient;
         m_shader->setFloat("uAmbientScale", settings.ambient);
+        m_shader->setInt("uCapture", 0);
+        for (int t = 0; t < LightProbes::SH_TEXTURES; ++t)
+        {
+            m_shader->setInt("uProbeSH" + std::to_string(t), PROBE_TEXTURE_UNIT + t);
+        }
         m_shader->setInt("uMeasleCueBall", m_measleCueBall ? 1 : 0);
         m_exposure = settings.exposure;
         m_shader->setFloat("uLightRadius", 0.05f);
@@ -257,9 +268,11 @@ namespace BilliardsSaloon
         }
 
         // Statistics for this frame; GPU time from the oldest query in the ring.
-        const float lastGpu = m_stats.gpuMilliseconds;
+        const RenderStats last = m_stats;
         m_stats = RenderStats{};
-        m_stats.gpuMilliseconds = lastGpu;
+        m_stats.gpuMilliseconds = last.gpuMilliseconds;
+        m_stats.probeCaptureMilliseconds = last.probeCaptureMilliseconds;
+        m_stats.probes = last.probes;
         const unsigned int query = m_timerQueries[static_cast<std::size_t>(m_timerIndex)];
         if (m_timerPending[static_cast<std::size_t>(m_timerIndex)])
         {
@@ -373,6 +386,17 @@ namespace BilliardsSaloon
         glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, m_numbers->texture());
         glActiveTexture(GL_TEXTURE0);
+        if (m_probes.ready())
+        {
+            m_probes.bindTextures(PROBE_TEXTURE_UNIT);
+        }
+    }
+
+    void SceneRenderer::setCamera(const glm::mat4& view, const glm::mat4& projection, const glm::vec3& position)
+    {
+        m_shader->setMat4("uView", view);
+        m_shader->setMat4("uProjection", projection);
+        m_shader->setVec3("uViewPosition", position);
     }
 
     void SceneRenderer::renderShadows(Registry& registry, float alpha)
@@ -519,7 +543,12 @@ namespace BilliardsSaloon
     {
         renderShadows(registry, alpha);
         gatherLocalLights(registry);
+        updateProbes(registry, alpha);
+        drawObjects(registry, alpha, m_viewFrustum, &highlight, true);
+    }
 
+    void SceneRenderer::drawObjects(Registry& registry, float alpha, const Frustum& frustum, const BallHighlight* highlight, bool count)
+    {
         registry.view<TransformComponent, StaticMeshComponent, MaterialComponent>().each(
             [&](Entity entity, TransformComponent& transform, StaticMeshComponent& meshComponent, MaterialComponent& material)
             {
@@ -538,24 +567,93 @@ namespace BilliardsSaloon
 
                 const glm::mat4 model = composeInterpolatedMatrix(transform, alpha);
                 const Bounds world = transformBounds(mesh->bounds(), model);
-                if (!m_viewFrustum.intersects(world))
+                if (!frustum.intersects(world))
                 {
-                    ++m_stats.objectsCulled;
+                    m_stats.objectsCulled += count ? 1 : 0;
                     return;
                 }
-                ++m_stats.objectsDrawn;
                 bindLocalLights(world);
 
                 const glm::vec3 dynamicEmission =
-                    (entity == highlight.ball) ? highlight.emission : glm::vec3(0.0f);
+                    ((highlight != nullptr) && (entity == highlight->ball)) ? highlight->emission : glm::vec3(0.0f);
 
                 m_shader->setMat4("uModel", model);
                 const int number = ((ball != nullptr) && !ball->isCueBall) ? ball->number : 0;
                 bindMaterial(material, dynamicEmission, (ball != nullptr) ? ballVisualType(*ball) : 0, number);
                 mesh->draw();
-                countDraw(*mesh);
+                if (count)
+                {
+                    ++m_stats.objectsDrawn;
+                    countDraw(*mesh);
+                }
             }
         );
+    }
+
+    void SceneRenderer::updateProbes(Registry& registry, float alpha)
+    {
+        const ProbeVolumeComponent* volume = nullptr;
+        registry.view<ProbeVolumeComponent>().each([&](Entity, ProbeVolumeComponent& v) { volume = &v; });
+        if (volume == nullptr)
+        {
+            m_shader->setInt("uProbesEnabled", 0);
+            return;
+        }
+        if (volume->revision == m_probeRevision)
+        {
+            return;
+        }
+        m_probeRevision = volume->revision;
+        m_probeMin = volume->min;
+        m_probeMax = volume->max;
+        m_probeCounts = glm::max(volume->counts, glm::ivec3(2));
+        const int probeCount = m_probeCounts.x * m_probeCounts.y * m_probeCounts.z;
+
+        const auto started = std::chrono::steady_clock::now();
+        const glm::mat4 faceProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.02f, 40.0f);
+        m_shader->setVec3("uProbeMin", m_probeMin);
+        m_shader->setVec3("uProbeMax", m_probeMax);
+        m_shader->setVec3("uProbeCounts", glm::vec3(m_probeCounts));
+        m_shader->setInt("uCapture", 1);
+
+        // Two bounces: first the probes see direct light and emitters only;
+        // then again, lit by the first result, so light bounces twice.
+        for (int bounce = 0; bounce < 2; ++bounce)
+        {
+            m_shader->setInt("uProbesEnabled", (bounce > 0) ? 1 : 0);
+            m_shader->setFloat("uAmbientScale", (bounce > 0) ? m_ambientScale : 0.0f);
+            m_probes.beginCapture(probeCount);
+            for (int z = 0; z < m_probeCounts.z; ++z)
+            {
+                for (int y = 0; y < m_probeCounts.y; ++y)
+                {
+                    for (int x = 0; x < m_probeCounts.x; ++x)
+                    {
+                        const int probe = (z * m_probeCounts.y + y) * m_probeCounts.x + x;
+                        const glm::vec3 t = glm::vec3(x, y, z) / glm::vec3(m_probeCounts - 1);
+                        const glm::vec3 eye = glm::mix(m_probeMin, m_probeMax, t);
+                        for (int face = 0; face < 6; ++face)
+                        {
+                            m_probes.bindTile(probe, face);
+                            const glm::mat4 view = LightProbes::faceView(eye, face);
+                            setCamera(view, faceProjection, eye);
+                            drawObjects(registry, alpha, Frustum::fromViewProjection(faceProjection * view), nullptr, false);
+                        }
+                    }
+                }
+            }
+            const std::vector<ShRgb9> captured = m_probes.finishCapture(probeCount);
+            m_probes.upload(captured, m_probeCounts);
+            bindSceneShader();
+        }
+
+        m_shader->setInt("uCapture", 0);
+        m_shader->setInt("uProbesEnabled", 1);
+        m_shader->setFloat("uAmbientScale", m_ambientScale);
+        setCamera(m_cameraView, m_cameraProjection, m_cameraPosition);
+        m_sceneTarget.bindForDrawing();
+        m_stats.probes = probeCount;
+        m_stats.probeCaptureMilliseconds = std::chrono::duration<float, std::milli>(std::chrono::steady_clock::now() - started).count();
     }
 
     void SceneRenderer::setCueStyle(const glm::vec3& shaft, const glm::vec3& forearm, const glm::vec3& wrap, const glm::vec3& joint)

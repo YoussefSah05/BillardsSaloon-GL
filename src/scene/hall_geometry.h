@@ -77,6 +77,11 @@ namespace BilliardsSaloon
     {
         std::vector<HallPart> parts;
         std::vector<HallLight> lights;
+        // Where light probes for indirect light are placed: a grid of
+        // probeCounts over the box probeMin..probeMax (inside the room).
+        glm::vec3 probeMin {-2.0f, -0.7f, -1.5f};
+        glm::vec3 probeMax {2.0f, 1.5f, 1.5f};
+        glm::ivec3 probeCounts {4, 3, 3};
         // The three lamps over the table (game coordinates).
         std::array<glm::vec3, 3> lamps {};
     };

@@ -359,7 +359,7 @@
       ],
       "layout": "saloon",
       "ambient": 1.0,
-      "practical": 1.0
+      "practical": 3.0
     },
     {
       "id": "night_final",

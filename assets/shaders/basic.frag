@@ -51,6 +51,21 @@ uniform vec4 uLocalSpot[MAX_LOCAL_LIGHTS];            // xyz direction, w spot o
 uniform int uLocalIndices[LIGHTS_PER_DRAW];
 uniform int uLocalCount;
 
+// Indirect light: SH irradiance probes on a grid (7 textures hold 27
+// coefficients: 9 per colour), and the capture mode that fills them.
+uniform sampler3D uProbeSH0;
+uniform sampler3D uProbeSH1;
+uniform sampler3D uProbeSH2;
+uniform sampler3D uProbeSH3;
+uniform sampler3D uProbeSH4;
+uniform sampler3D uProbeSH5;
+uniform sampler3D uProbeSH6;
+uniform vec3 uProbeMin;
+uniform vec3 uProbeMax;
+uniform vec3 uProbeCounts;
+uniform int uProbesEnabled;
+uniform int uCapture;   // 1 while rendering probes: diffuse light and emission only
+
 // Ball numbers: a 4 x 4 atlas, cell n holds number n.
 uniform sampler2D uNumberAtlas;
 uniform int uBallNumber;
@@ -279,6 +294,41 @@ float shadowVisibility(int light, vec3 normal)
     return sum / float(uShadowKernel * uShadowKernel);
 }
 
+// The nine SH coefficients (per colour) interpolated at a point.
+void probeCoefficients(vec3 position, out vec3 c[9])
+{
+    vec3 t = clamp((position - uProbeMin) / max(uProbeMax - uProbeMin, vec3(1.0e-3)), 0.0, 1.0);
+    vec3 uvw = (t * (uProbeCounts - 1.0) + 0.5) / uProbeCounts;   // probe centres are texel centres
+    vec4 p0 = texture(uProbeSH0, uvw);
+    vec4 p1 = texture(uProbeSH1, uvw);
+    vec4 p2 = texture(uProbeSH2, uvw);
+    vec4 p3 = texture(uProbeSH3, uvw);
+    vec4 p4 = texture(uProbeSH4, uvw);
+    vec4 p5 = texture(uProbeSH5, uvw);
+    vec4 p6 = texture(uProbeSH6, uvw);
+    c[0] = p0.rgb;
+    c[1] = vec3(p0.a, p1.rg);
+    c[2] = vec3(p1.ba, p2.r);
+    c[3] = p2.gba;
+    c[4] = p3.rgb;
+    c[5] = vec3(p3.a, p4.rg);
+    c[6] = vec3(p4.ba, p5.r);
+    c[7] = p5.gba;
+    c[8] = p6.rgb;
+}
+
+// Sum of c_i * w_i * Y_i(n); with w the clamped-cosine bands this is
+// irradiance (Ramamoorthi & Hanrahan 2001), with w = 1 radiance.
+vec3 evaluateSh(vec3 c[9], vec3 n, vec3 band)
+{
+    vec3 result = c[0] * (0.282095 * band.x);
+    result += (c[1] * n.y + c[2] * n.z + c[3] * n.x) * (0.488603 * band.y);
+    result += (c[4] * (n.x * n.y) * 1.092548 + c[5] * (n.y * n.z) * 1.092548 +
+               c[6] * (3.0 * n.z * n.z - 1.0) * 0.315392 + c[7] * (n.x * n.z) * 1.092548 +
+               c[8] * (n.x * n.x - n.y * n.y) * 0.546274) * band.z;
+    return max(result, vec3(0.0));
+}
+
 struct Surface
 {
     vec3 baseColor;
@@ -318,6 +368,12 @@ vec3 shadeLight(Surface surface, vec3 radiance, vec3 lightDirection, float light
         diffuse = surface.baseColor / PI;
     }
 
+    if (uCapture == 1)
+    {
+        // Probes integrate light over all directions: view-dependent
+        // highlights would only add noise.
+        specular = vec3(0.0);
+    }
     vec3 color = diffuse + specular;
 
     if (surface.clearcoat > 0.0)
@@ -413,23 +469,42 @@ void main()
         }
     }
 
-    // The dim room: a warm floor bounce and a little sky from the ceiling.
-    vec3 ambient = mix(vec3(0.030, 0.022, 0.016), vec3(0.075, 0.064, 0.055), saturate(normal.y * 0.5 + 0.5));
-    ambient *= baseColor * uAmbientScale;
-
     vec3 reflectionDirection = reflect(-viewDirection, normal);
-    vec3 environment = sampleAnalyticEnvironment(reflectionDirection);
-    environment = mix(environment, vec3(0.06, 0.045, 0.035), surface.roughness * 0.8);
+    vec3 ambient;
+    vec3 environment;
+    if (uProbesEnabled == 1)
+    {
+        // Indirect light from the probes: irradiance for diffuse, and the
+        // (blurry) radiance in the mirror direction for reflections. A short
+        // step along the normal keeps surfaces from sampling behind themselves.
+        vec3 c[9];
+        probeCoefficients(vWorldPosition + normal * 0.08, c);
+        vec3 irradiance = evaluateSh(c, normal, vec3(PI, 2.0 * PI / 3.0, PI / 4.0));
+        ambient = baseColor / PI * irradiance * uAmbientScale;
+        environment = evaluateSh(c, reflectionDirection, vec3(1.0)) * uAmbientScale;
+    }
+    else
+    {
+        // No probes yet: a warm floor bounce and a little sky from the ceiling.
+        ambient = mix(vec3(0.030, 0.022, 0.016), vec3(0.075, 0.064, 0.055), saturate(normal.y * 0.5 + 0.5));
+        ambient *= baseColor * uAmbientScale;
+        environment = sampleAnalyticEnvironment(reflectionDirection);
+        environment = mix(environment, vec3(0.06, 0.045, 0.035), surface.roughness * 0.8);
+    }
     vec3 reflections = environment * environmentBrdf(surface.f0, surface.roughness, nDotV);
     if (surface.clearcoat > 0.0)
     {
-        reflections += 0.5 * sampleAnalyticEnvironment(reflectionDirection) * fresnelSchlick(nDotV, vec3(0.04)) * surface.clearcoat;
+        reflections += 0.5 * environment * fresnelSchlick(nDotV, vec3(0.04)) * surface.clearcoat;
     }
     if (surface.cloth)
     {
         reflections *= 0.25;
     }
 
+    if (uCapture == 1)
+    {
+        reflections = vec3(0.0);
+    }
     vec3 color = ambient + lighting + reflections * uReflectionScale + uEmissionColor * uEmissionScale;
 
     // Linear HDR out; the post pass tone maps and encodes for the display.

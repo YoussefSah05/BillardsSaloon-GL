@@ -154,6 +154,7 @@ add_library(bs_game STATIC
     src/scene/hall_geometry.cpp
     src/scene/table_geometry.cpp
     src/scene/visibility.cpp
+    src/scene/spherical_harmonics.cpp
     src/rules/referee.cpp
     src/rules/shot_record.cpp
 )
@@ -184,6 +185,7 @@ add_executable(BilliardsSaloon
     src/platform/timer.cpp
     src/render/scene_renderer.cpp
     src/render/render_targets.cpp
+    src/render/light_probes.cpp
     src/render/number_atlas.cpp
     src/render/screenshot.cpp
     src/render/shader.cpp
@@ -265,6 +267,7 @@ if(BS_BUILD_TESTS)
         tests/test_director.cpp
         tests/test_table_geometry.cpp
         tests/test_visibility.cpp
+        tests/test_spherical_harmonics.cpp
         tests/test_equipment.cpp
         tests/test_audio.cpp
         tests/test_ai.cpp

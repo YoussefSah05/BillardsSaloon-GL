@@ -567,7 +567,9 @@ namespace BilliardsSaloon
                   << "  draws " << stats.drawCalls
                   << "  triangles " << stats.triangles
                   << "  objects " << stats.objectsDrawn << " drawn / " << stats.objectsCulled << " culled"
-                  << "  shadow casters " << stats.shadowCasters << " / " << stats.shadowCulled << " culled\n";
+                  << "  shadow casters " << stats.shadowCasters << " / " << stats.shadowCulled << " culled"
+                  << "  lights " << stats.localLights << " (max " << stats.lightsPerDrawMax << " per draw)"
+                  << "  probes " << stats.probes << " captured in " << stats.probeCaptureMilliseconds << " ms\n";
         m_profileSeconds = 0.0;
         m_profileGpuMilliseconds = 0.0;
         m_profileFrames = 0;

@@ -69,6 +69,17 @@ namespace BilliardsSaloon
         float spotInnerCos {-2.0f};
     };
 
+    // The hall's light probe grid. The renderer recaptures the probes when
+    // `revision` changes (a new hall, other lamps or materials).
+    struct ProbeVolumeComponent
+    {
+        glm::vec3 min {0.0f};
+        glm::vec3 max {0.0f};
+        glm::ivec3 counts {1};
+        int revision {0};
+        std::string lighting;   // the hall option whose lights were captured
+    };
+
     struct StaticMeshComponent
     {
         MeshPrimitive primitive {MeshPrimitive::Cube};

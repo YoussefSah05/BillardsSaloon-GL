@@ -189,7 +189,7 @@ namespace BilliardsSaloon
                 case HallMaterial::CanopyBody: return material(glm::vec3(0.04f, 0.04f, 0.045f), MaterialSurfaceType::Generic, 0.35f, 0.05f, 0.1f);
                 case HallMaterial::Cable: return material(glm::vec3(0.05f), MaterialSurfaceType::Generic, 0.5f, 0.04f, 0.0f);
                 case HallMaterial::WoodFloor: return material(glm::vec3(0.42f, 0.27f, 0.15f), MaterialSurfaceType::Wood, 0.5f, 0.035f, 0.12f);
-                case HallMaterial::WoodPanel: return material(glm::vec3(0.34f, 0.18f, 0.09f), MaterialSurfaceType::Wood, 0.45f, 0.035f, 0.15f);
+                case HallMaterial::WoodPanel: return material(glm::vec3(0.50f, 0.30f, 0.16f), MaterialSurfaceType::Wood, 0.45f, 0.035f, 0.15f);
                 case HallMaterial::Plaster: return material(glm::vec3(0.74f, 0.60f, 0.42f), MaterialSurfaceType::Generic, 0.9f, 0.025f, 0.0f);
                 case HallMaterial::Ceiling: return material(glm::vec3(0.80f, 0.72f, 0.60f), MaterialSurfaceType::Generic, 0.95f, 0.02f, 0.0f);
                 case HallMaterial::Beam: return material(glm::vec3(0.22f, 0.12f, 0.065f), MaterialSurfaceType::Wood, 0.5f, 0.035f, 0.12f);
@@ -236,6 +236,13 @@ namespace BilliardsSaloon
             registry.emplace<HallTagComponent>(entity, HallTagComponent{static_cast<int>(layout)});
         }
 
+        {
+            static int revision = 0;
+            const Entity volume = registry.createEntity();
+            registry.emplace<ProbeVolumeComponent>(volume, ProbeVolumeComponent{hall.probeMin, hall.probeMax, hall.probeCounts, ++revision, {}});
+            registry.emplace<HallTagComponent>(volume, HallTagComponent{static_cast<int>(layout)});
+        }
+
         for (const HallLight& light : hall.lights)
         {
             const Entity entity = registry.createEntity();
@@ -273,6 +280,17 @@ namespace BilliardsSaloon
         }
 
         Registry& registry = session.registry();
+
+        // New lamps light the room differently: recapture its indirect light.
+        registry.view<ProbeVolumeComponent>().each(
+            [&](Entity, ProbeVolumeComponent& volume)
+            {
+                if (volume.lighting != hallChoice.id)
+                {
+                    volume.lighting = hallChoice.id;
+                    ++volume.revision;
+                }
+            });
 
         // Practical lights at the hall's brightness.
         registry.view<LocalLightComponent>().each(

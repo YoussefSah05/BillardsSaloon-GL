@@ -184,6 +184,11 @@ namespace BilliardsSaloon
                 }
             }
 
+            // Probes over the playing area and the lower stands.
+            hall.probeMin = glm::vec3(-arena.x - 2.5f, floorY + 0.25f, -arena.y - 2.5f);
+            hall.probeMax = glm::vec3(arena.x + 2.5f, floorY + 3.2f, arena.y + 2.5f);
+            hall.probeCounts = glm::ivec3(9, 3, 7);
+
             for (HallPart* part : {&carpet, &playing, &barriers, &trim, &stands, &seats, &walls, &furniture, &canopy, &panels, &cables})
             {
                 hall.parts.push_back(std::move(*part));
@@ -713,6 +718,11 @@ namespace BilliardsSaloon
             keep(std::move(cords));
             keep(std::move(brass));
             keep(std::move(pictureFrames));
+
+            // Probes about every metre, kept clear of the walls and the ceiling.
+            hall.probeMin = glm::vec3(-RX + 0.25f, floorY + 0.25f, -RZ + 0.25f);
+            hall.probeMax = glm::vec3(RX - 0.25f, ceiling - 0.3f, RZ - 0.25f);
+            hall.probeCounts = glm::ivec3(9, 3, 7);
 
             hall.parts = std::move(parts);
             return hall;
