@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <iomanip>
 #include <iostream>
 #include <optional>
 #include <chrono>
@@ -130,6 +131,10 @@ namespace BilliardsSaloon
             if (options.fullscreen)
             {
                 settings.fullscreen = true;
+            }
+            if (!options.hall.empty())
+            {
+                settings.equipment.hall = options.hall;
             }
             return settings;
         }
@@ -543,6 +548,33 @@ namespace BilliardsSaloon
         m_window.requestClose();
     }
 
+    void Application::reportProfile(double frameTime)
+    {
+        // Averages over about a second: CPU frame time, GPU time and the
+        // renderer's counts for the latest frame.
+        m_profileSeconds += frameTime;
+        m_profileGpuMilliseconds += static_cast<double>(m_renderer->stats().gpuMilliseconds);
+        ++m_profileFrames;
+        if (m_profileSeconds < 1.0)
+        {
+            return;
+        }
+        const RenderStats& stats = m_renderer->stats();
+        const double frames = static_cast<double>(m_profileFrames);
+        std::cout << std::fixed << std::setprecision(2)
+                  << "frame " << 1000.0 * m_profileSeconds / frames << " ms"
+                  << "  gpu " << m_profileGpuMilliseconds / frames << " ms"
+                  << "  draws " << stats.drawCalls
+                  << "  triangles " << stats.triangles
+                  << "  objects " << stats.objectsDrawn << " drawn / " << stats.objectsCulled << " culled"
+                  << "  shadow casters " << stats.shadowCasters << " / " << stats.shadowCulled << " culled"
+                  << "  lights " << stats.localLights << " (max " << stats.lightsPerDrawMax << " per draw)"
+                  << "  probes " << stats.probes << " captured in " << stats.probeCaptureMilliseconds << " ms\n";
+        m_profileSeconds = 0.0;
+        m_profileGpuMilliseconds = 0.0;
+        m_profileFrames = 0;
+    }
+
     int Application::run()
     {
         m_timer.reset();
@@ -567,6 +599,10 @@ namespace BilliardsSaloon
 
             render(m_accumulator / FIXED_TIME_STEP);
             updateWindowTitle(frameTime, fixedStepsThisFrame);
+            if (m_options.profile)
+            {
+                reportProfile(frameTime);
+            }
 
             ++m_frameCount;
             captureIfDue();
@@ -1520,7 +1556,7 @@ namespace BilliardsSaloon
                 // Plan on a worker thread, from a copy of the table.
                 const Ai::AiTable table = m_session->aiView();
                 const Ai::AiProfile profile = m_aiProfile;
-                const std::uint32_t seed = m_aiRandom();
+                const auto seed = static_cast<std::uint32_t>(m_aiRandom());
                 const bool choosing = m_session->pendingChoice() != Rules::Choice::None;
                 const bool placing = m_session->placingCueBall() ||
                     (m_session->canPlaceCueBall() && (table.frame.phase != Rules::Phase::Break));
@@ -1669,6 +1705,8 @@ namespace BilliardsSaloon
         const ShotState& shot = m_session->shotState();
         const bool frameOver = m_session->frameOver();
         const float renderAlpha = static_cast<float>(alpha);
+
+        m_props.update(*m_session);
 
         FrameSettings settings;
         settings.quality = m_renderQuality;

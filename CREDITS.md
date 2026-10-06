@@ -13,7 +13,30 @@ Third-party software and assets used by Billiards Saloon, with their licences.
 | [RmlUi](https://github.com/mikke89/RmlUi) 6.3 | Menus and HUD (HTML/CSS-style UI) | MIT |
 | [FreeType](https://freetype.org/) 2.13.3 | Font rendering for RmlUi | FreeType License (FTL) |
 | [stb_image_write](https://github.com/nothings/stb) 1.16 | PNG screenshots (`external/stb`) | MIT / public domain |
+| [stb_image](https://github.com/nothings/stb) 2.30 | Model textures (`external/stb`) | MIT / public domain |
+| [cgltf](https://github.com/jkuhlmann/cgltf) 1.15 | glTF 2.0 model loading | MIT |
+| [meshoptimizer](https://github.com/zeux/meshoptimizer) 1.3 | Levels of detail for models | MIT |
+| [miniaudio](https://miniaud.io/) 0.11.22 | Audio playback | Public domain / MIT-0 |
 | [doctest](https://github.com/doctest/doctest) 2.4.12 | Unit tests (not shipped) | MIT |
+
+## Models
+
+Furniture and decor in the saloon, from [Poly Haven](https://polyhaven.com/models), all
+released under [CC0](https://creativecommons.org/publicdomain/zero/1.0/). The 1k glTF
+versions were downloaded and their textures scaled to 512 px (`assets/models/props/`).
+
+| Model | Authors |
+|-------|---------|
+| Arm Chair 01 | Kirill Sannikov |
+| Bar Chair Round 01 | Dairon Sanchez |
+| Coffee Table Round 01 | Ulan Cabanilla |
+| Dartboard | Satyaki Mandal |
+| Potted Plant 04 | James Ray Cock |
+| Sofa 01 | Kirill Sannikov |
+| Vintage Grandfather Clock 01 | Yann Kervran, James Ray Cock |
+| Wall Clock | PierreB3D |
+| Wine Barrel 01 | James Ray Cock |
+| Wine Bottles 01 | Rico Cilliers, Jurita Burger |
 
 ## Fonts
 

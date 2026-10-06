@@ -99,6 +99,7 @@ namespace BilliardsSaloon
                 option.clear = readColor(item.at("clear"));
                 option.layout = item.value("layout", option.layout);
                 option.ambient = item.value("ambient", option.ambient);
+                option.practical = item.value("practical", option.practical);
                 catalog.halls.push_back(option);
             }
 

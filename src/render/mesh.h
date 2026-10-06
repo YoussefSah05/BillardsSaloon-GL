@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include "scene/mesh_data.h"
+#include "scene/visibility.h"
 
 #include <memory>
 #include <vector>
@@ -29,6 +30,10 @@ namespace BilliardsSaloon
 
         void draw() const;
 
+        // Local-space bounds, for culling.
+        [[nodiscard]] const Bounds& bounds() const { return m_bounds; }
+        [[nodiscard]] std::int32_t indexCount() const { return m_indexCount; }
+
         static std::unique_ptr<Mesh> fromData(const MeshData& data);
         static std::unique_ptr<Mesh> createCube();
         static std::unique_ptr<Mesh> createPlane(float width, float depth);
@@ -43,5 +48,6 @@ namespace BilliardsSaloon
         unsigned int m_vbo {0};
         unsigned int m_ebo {0};
         std::int32_t m_indexCount {0};
+        Bounds m_bounds;
     };
 }
