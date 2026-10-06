@@ -49,7 +49,8 @@ namespace BilliardsSaloon
         Canvas,        // pictures (tinted per part)
         SconceShade,   // emissive fabric shades of wall and pendant lights
         Leather,
-        Glass          // bottles (tinted per part)
+        Glass,         // bottles (tinted per part)
+        LedStrip       // emissive accent lines
     };
 
     struct HallPart

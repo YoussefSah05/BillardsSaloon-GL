@@ -90,8 +90,13 @@ namespace BilliardsSaloon
             box(trim.mesh, {arena.x - 0.005f, h, -arena.y}, {arena.x + t + 0.005f, h + 0.012f, arena.y});
 
             // Tiered stands on the two long sides and the foot end.
-            HallPart stands {"Stands", HallMaterial::Stand, {}, false, std::nullopt};
-            HallPart seats {"Seats", HallMaterial::Seat, {}, false, std::nullopt};
+            // One part per side, so a side behind the camera is culled.
+            HallPart stands[3] = {{"Stands North", HallMaterial::Stand, {}, false, std::nullopt},
+                                  {"Stands South", HallMaterial::Stand, {}, false, std::nullopt},
+                                  {"Stands Foot", HallMaterial::Stand, {}, false, std::nullopt}};
+            HallPart seats[3] = {{"Seats North", HallMaterial::Seat, {}, false, std::nullopt},
+                                 {"Seats South", HallMaterial::Seat, {}, false, std::nullopt},
+                                 {"Seats Foot", HallMaterial::Seat, {}, false, std::nullopt}};
             constexpr int TIERS = 7;
             const float rise = 0.34f;
             const float depth = 0.85f;
@@ -102,12 +107,12 @@ namespace BilliardsSaloon
                 const float near = gap + depth * static_cast<float>(tier);
                 const float far = near + depth;
                 // Long sides (z), then the foot end (x).
-                box(stands.mesh, {-arena.x - 1.0f, floorY, arena.y + near}, {arena.x + 1.0f, y, arena.y + far});
-                box(stands.mesh, {-arena.x - 1.0f, floorY, -arena.y - far}, {arena.x + 1.0f, y, -arena.y - near});
-                box(stands.mesh, {arena.x + near, floorY, -arena.y - 0.2f}, {arena.x + far, y, arena.y + 0.2f});
+                box(stands[0].mesh, {-arena.x - 1.0f, floorY, arena.y + near}, {arena.x + 1.0f, y, arena.y + far});
+                box(stands[1].mesh, {-arena.x - 1.0f, floorY, -arena.y - far}, {arena.x + 1.0f, y, -arena.y - near});
+                box(stands[2].mesh, {arena.x + near, floorY, -arena.y - 0.2f}, {arena.x + far, y, arena.y + 0.2f});
 
                 const float seatDepth = 0.42f;
-                const auto seatRow = [&](float from, float to, bool alongX, float line, float back)
+                const auto seatRow = [&](HallPart& row, float from, float to, bool alongX, float line, float back)
                 {
                     for (float s = from; s + 0.48f <= to; s += 0.55f)
                     {
@@ -117,23 +122,23 @@ namespace BilliardsSaloon
                         {
                             const float z0 = std::min(line, line + back * seatDepth);
                             const float z1 = std::max(line, line + back * seatDepth);
-                            box(seats.mesh, {a, y, z0}, {b, y + 0.12f, z1});                                // seat
+                            box(row.mesh, {a, y, z0}, {b, y + 0.12f, z1});                                // seat
                             const float bz = line + back * seatDepth;
-                            box(seats.mesh, {a, y, std::min(bz, bz + back * 0.06f)}, {b, y + 0.48f, std::max(bz, bz + back * 0.06f)});   // back
+                            box(row.mesh, {a, y, std::min(bz, bz + back * 0.06f)}, {b, y + 0.48f, std::max(bz, bz + back * 0.06f)});   // back
                         }
                         else
                         {
                             const float x0 = std::min(line, line + back * seatDepth);
                             const float x1 = std::max(line, line + back * seatDepth);
-                            box(seats.mesh, {x0, y, a}, {x1, y + 0.12f, b});
+                            box(row.mesh, {x0, y, a}, {x1, y + 0.12f, b});
                             const float bx = line + back * seatDepth;
-                            box(seats.mesh, {std::min(bx, bx + back * 0.06f), y, a}, {std::max(bx, bx + back * 0.06f), y + 0.48f, b});
+                            box(row.mesh, {std::min(bx, bx + back * 0.06f), y, a}, {std::max(bx, bx + back * 0.06f), y + 0.48f, b});
                         }
                     }
                 };
-                seatRow(-arena.x - 0.8f, arena.x + 0.8f, true, arena.y + near + 0.2f, 1.0f);
-                seatRow(-arena.x - 0.8f, arena.x + 0.8f, true, -arena.y - near - 0.2f, -1.0f);
-                seatRow(-arena.y, arena.y, false, arena.x + near + 0.2f, 1.0f);
+                seatRow(seats[0], -arena.x - 0.8f, arena.x + 0.8f, true, arena.y + near + 0.2f, 1.0f);
+                seatRow(seats[1], -arena.x - 0.8f, arena.x + 0.8f, true, -arena.y - near - 0.2f, -1.0f);
+                seatRow(seats[2], -arena.y, arena.y, false, arena.x + near + 0.2f, 1.0f);
             }
 
             // Dark walls closing the hall behind the stands and at the head end.
@@ -184,6 +189,55 @@ namespace BilliardsSaloon
                 }
             }
 
+            // A gold LED line along the inside of the barriers.
+            HallPart led {"Barrier LED", HallMaterial::LedStrip, {}, false, std::nullopt};
+            const float ledY0 = h - 0.1f;
+            const float ledY1 = h - 0.07f;
+            box(led.mesh, {-arena.x, ledY0, arena.y - 0.006f}, {arena.x, ledY1, arena.y});
+            box(led.mesh, {-arena.x, ledY0, -arena.y}, {arena.x, ledY1, -arena.y + 0.006f});
+            box(led.mesh, {arena.x - 0.006f, ledY0, -arena.y}, {arena.x, ledY1, arena.y});
+
+            // A lighting truss over the arena. Its spots wash the three stands
+            // and fill the playing area, so the hall reads around the table.
+            HallPart truss {"Lighting Truss", HallMaterial::CanopyBody, {}, false, std::nullopt};
+            HallPart fixtures {"Truss Fixtures", HallMaterial::LampPanel, {}, false, std::nullopt};
+            const float trussY = floorY + 6.2f;
+            const glm::vec2 ring(arena.x + 1.6f, arena.y + 1.6f);
+            box(truss.mesh, {-ring.x, trussY, ring.y - 0.15f}, {ring.x, trussY + 0.3f, ring.y + 0.15f});
+            box(truss.mesh, {-ring.x, trussY, -ring.y - 0.15f}, {ring.x, trussY + 0.3f, -ring.y + 0.15f});
+            box(truss.mesh, {ring.x - 0.15f, trussY, -ring.y}, {ring.x + 0.15f, trussY + 0.3f, ring.y});
+            box(truss.mesh, {-ring.x - 0.15f, trussY, -ring.y}, {-ring.x + 0.15f, trussY + 0.3f, ring.y});
+            const glm::vec3 stage(1.0f, 0.93f, 0.84f);
+            const auto spot = [&](const glm::vec3& at, const glm::vec3& target, float intensity, float range, float outerDegrees)
+            {
+                box(fixtures.mesh, at - glm::vec3(0.12f, 0.1f, 0.12f), at + glm::vec3(0.12f, 0.0f, 0.12f));
+                HallLight light;
+                light.position = at - glm::vec3(0.0f, 0.12f, 0.0f);
+                light.color = stage;
+                light.intensity = intensity;
+                light.range = range;
+                light.direction = glm::normalize(target - light.position);
+                light.spotOuterCos = std::cos(glm::radians(outerDegrees));
+                light.spotInnerCos = std::cos(glm::radians(outerDegrees * 0.6f));
+                hall.lights.push_back(light);
+            };
+            const float standMiddle = gap + depth * 3.5f;
+            const float standY = floorY + rise * 4.0f;
+            for (const float x : {-3.0f, 0.0f, 3.0f})
+            {
+                spot({x, trussY, ring.y}, {x, standY, arena.y + standMiddle}, 9.0f, 11.0f, 45.0f);
+                spot({x, trussY, -ring.y}, {x, standY, -arena.y - standMiddle}, 9.0f, 11.0f, 45.0f);
+            }
+            for (const float z : {-2.0f, 0.0f, 2.0f})
+            {
+                spot({ring.x, trussY, z}, {arena.x + standMiddle, standY, z}, 9.0f, 11.0f, 45.0f);
+            }
+            for (const glm::vec2& corner : {glm::vec2(-1.0f, -1.0f), glm::vec2(1.0f, -1.0f), glm::vec2(-1.0f, 1.0f), glm::vec2(1.0f, 1.0f)})
+            {
+                const glm::vec3 at(corner.x * ring.x, trussY, corner.y * ring.y);
+                spot(at, {corner.x * 2.2f, floorY, corner.y * 1.6f}, 16.0f, 10.0f, 50.0f);
+            }
+
             // Probes over the playing area and the lower stands.
             hall.probeMin = glm::vec3(-arena.x - 2.5f, floorY + 0.25f, -arena.y - 2.5f);
             hall.probeMax = glm::vec3(arena.x + 2.5f, floorY + 3.2f, arena.y + 2.5f);
@@ -192,7 +246,8 @@ namespace BilliardsSaloon
             hall.roomMax = glm::vec3(wallX, wallTop, wallZ);
             hall.reflectionCentre = glm::vec3(0.0f, 0.7f, 0.0f);
 
-            for (HallPart* part : {&carpet, &playing, &barriers, &trim, &stands, &seats, &walls, &furniture, &canopy, &panels, &cables})
+            for (HallPart* part : {&carpet, &playing, &barriers, &trim, &led, &stands[0], &stands[1], &stands[2], &seats[0], &seats[1], &seats[2],
+                                   &walls, &furniture, &canopy, &panels, &cables, &truss, &fixtures})
             {
                 hall.parts.push_back(std::move(*part));
             }

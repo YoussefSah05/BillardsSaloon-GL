@@ -178,13 +178,13 @@ namespace BilliardsSaloon
         {
             switch (kind)
             {
-                case HallMaterial::Carpet: return material(glm::vec3(0.07f, 0.07f, 0.08f), MaterialSurfaceType::Generic, 0.95f, 0.02f, 0.0f);
-                case HallMaterial::PlayingCarpet: return material(glm::vec3(0.07f, 0.10f, 0.20f), MaterialSurfaceType::Generic, 0.95f, 0.02f, 0.0f);
-                case HallMaterial::Barrier: return material(glm::vec3(0.05f, 0.055f, 0.07f), MaterialSurfaceType::Generic, 0.45f, 0.04f, 0.2f);
+                case HallMaterial::Carpet: return material(glm::vec3(0.13f, 0.13f, 0.16f), MaterialSurfaceType::Generic, 0.95f, 0.02f, 0.0f);
+                case HallMaterial::PlayingCarpet: return material(glm::vec3(0.10f, 0.16f, 0.32f), MaterialSurfaceType::Generic, 0.95f, 0.02f, 0.0f);
+                case HallMaterial::Barrier: return material(glm::vec3(0.09f, 0.10f, 0.14f), MaterialSurfaceType::Generic, 0.45f, 0.04f, 0.2f);
                 case HallMaterial::GoldTrim: return material(glm::vec3(0.83f, 0.66f, 0.29f), MaterialSurfaceType::Generic, 0.30f, 0.55f, 0.0f);
-                case HallMaterial::Stand: return material(glm::vec3(0.06f, 0.06f, 0.07f), MaterialSurfaceType::Generic, 0.85f, 0.02f, 0.0f);
-                case HallMaterial::Seat: return material(glm::vec3(0.22f, 0.04f, 0.05f), MaterialSurfaceType::Generic, 0.60f, 0.03f, 0.0f);
-                case HallMaterial::Wall: return material(glm::vec3(0.09f, 0.075f, 0.065f), MaterialSurfaceType::Generic, 0.92f, 0.02f, 0.0f);
+                case HallMaterial::Stand: return material(glm::vec3(0.20f, 0.20f, 0.23f), MaterialSurfaceType::Generic, 0.85f, 0.02f, 0.0f);
+                case HallMaterial::Seat: return material(glm::vec3(0.50f, 0.09f, 0.11f), MaterialSurfaceType::Generic, 0.60f, 0.03f, 0.0f);
+                case HallMaterial::Wall: return material(glm::vec3(0.16f, 0.16f, 0.19f), MaterialSurfaceType::Generic, 0.92f, 0.02f, 0.0f);
                 case HallMaterial::Furniture: return material(glm::vec3(0.05f, 0.05f, 0.055f), MaterialSurfaceType::Generic, 0.40f, 0.04f, 0.25f);
                 case HallMaterial::CanopyBody: return material(glm::vec3(0.04f, 0.04f, 0.045f), MaterialSurfaceType::Generic, 0.35f, 0.05f, 0.1f);
                 case HallMaterial::Cable: return material(glm::vec3(0.05f), MaterialSurfaceType::Generic, 0.5f, 0.04f, 0.0f);
@@ -205,6 +205,13 @@ namespace BilliardsSaloon
                     pane.emissionColor = glm::vec3(0.50f, 0.58f, 0.78f);
                     pane.emissionIntensity = 1.6f;
                     return pane;
+                }
+                case HallMaterial::LedStrip:
+                {
+                    MaterialComponent strip = material(glm::vec3(0.9f, 0.75f, 0.4f), MaterialSurfaceType::LampGlass, 0.3f, 0.04f, 0.0f);
+                    strip.emissionColor = glm::vec3(1.0f, 0.78f, 0.38f);
+                    strip.emissionIntensity = 4.0f;
+                    return strip;
                 }
                 case HallMaterial::SconceShade:
                 {

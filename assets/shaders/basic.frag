@@ -423,6 +423,17 @@ void main()
     vec3 viewDirection = normalize(uViewPosition - vWorldPosition);
     float nDotV = max(dot(normal, viewDirection), 1.0e-4);
 
+    // Light fittings (lamp panels, globes, shades, window panes) show only
+    // their glow. The lamps that stand in for them sit centimetres away, and
+    // lighting the fitting with its own lamp would make it a second, far
+    // brighter emitter (and flood the light probes).
+    if (uMaterialSurfaceType == SURFACE_LAMP)
+    {
+        float glow = (uCapture == 1) ? 0.0 : uEmissionScale;
+        FragColor = vec4(uEmissionColor * glow, uAlpha);
+        return;
+    }
+
     // Material colours are authored in sRGB; light them in linear space.
     vec3 baseColor = pow(max(uMaterialAlbedo, vec3(0.0)), vec3(2.2));
     if (uMaterialSurfaceType == SURFACE_CLOTH)
@@ -532,11 +543,15 @@ void main()
         reflections *= 0.25;
     }
 
+    // Light fittings glow, but their light already reaches the room through
+    // the lamps and practical lights: probes leave the glow out so it is
+    // not counted twice.
+    float emission = (uCapture == 1) ? 0.0 : uEmissionScale;
     if (uCapture == 1)
     {
         reflections = vec3(0.0);
     }
-    vec3 color = ambient + lighting + reflections * uReflectionScale + uEmissionColor * uEmissionScale;
+    vec3 color = ambient + lighting + reflections * uReflectionScale + uEmissionColor * emission;
 
     // Linear HDR out; the post pass tone maps and encodes for the display.
     FragColor = vec4(color, uAlpha);
