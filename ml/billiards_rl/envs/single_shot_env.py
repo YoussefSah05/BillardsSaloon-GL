@@ -68,6 +68,8 @@ class SingleShotEnv(gym.Env):
         noise: tuple[float, float] = (0.0, 0.0),
         layouts: list[np.ndarray] | None = None,
         limits: dict | None = None,
+        smooth_samples: int = 0,
+        smooth_sigma: float = 0.0,
     ):
         super().__init__()
         if obs_mode not in OBS_MODES:
@@ -88,6 +90,11 @@ class SingleShotEnv(gym.Env):
         # Curriculum: generate shots within these limits instead of a band
         # (keys max_cut, max_cue_distance, max_object_distance); None = band.
         self.limits = dict(limits) if limits else None
+        # Robustness reward (Experiment 8): the mean reward of `smooth_samples`
+        # replays of the intended shot with aim noise `smooth_sigma` degrees,
+        # i.e. an estimate of its expected reward under execution error.
+        self.smooth_samples = int(smooth_samples)
+        self.smooth_sigma = float(smooth_sigma)
 
         table = rl.table_info()
         self.width = float(table["width"])
@@ -131,7 +138,25 @@ class SingleShotEnv(gym.Env):
     def step(self, action):
         result, info = self._play(action)
         reward = float(self._reward(result))
+        if self.smooth_samples > 0:
+            reward = self._smoothed_reward(info)
+            info["smoothed_reward"] = reward
         return self._observe(), reward, True, False, info
+
+    def _smoothed_reward(self, info: dict[str, Any]) -> float:
+        """Mean reward of the intended shot replayed with aim noise."""
+        k = self.smooth_samples
+        strikes = np.tile(np.array([info["speed"], info["phi"], 0.0, 0.0, 0.0]), (k, 1))
+        strikes[:, 1] = (strikes[:, 1] + self.np_random.normal(0.0, self.smooth_sigma, k)) % 360.0
+        layouts = np.broadcast_to(self._positions, (k,) + self._positions.shape).copy()
+        out = rl.simulate_batch(layouts, strikes, 1)
+        total = 0.0
+        for i in range(k):
+            total += self._reward(ShotResult(
+                object_pocket=int(out["pocket_of"][i, 1]), scratch=bool(out["scratch"][i]),
+                first_contact=int(out["first_contact"][i]), object_final=np.asarray(out["final_positions"][i, 1]),
+                target_pocket=self.target_pocket))
+        return total / k
 
     def _play(self, action) -> tuple[ShotResult, dict[str, Any]]:
         """Plays the action (with any execution noise) and describes the outcome."""

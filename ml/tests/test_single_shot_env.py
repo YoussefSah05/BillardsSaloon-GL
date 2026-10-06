@@ -155,3 +155,24 @@ def test_bad_configuration_is_rejected():
         SingleShotEnv(action_frame="polar")
     with pytest.raises(ValueError):
         SingleShotEnv(reward="dense")
+
+
+def test_smoothed_reward_estimates_success_under_noise():
+    env = SingleShotEnv(band="easy", reward="sparse_target", smooth_samples=64, smooth_sigma=0.25)
+    env.reset(seed=7)
+    values = []
+    for _ in range(20):
+        shot = rl.geometry_shot(env.positions, pocket=env.target_pocket)
+        if shot is None:
+            env.reset()
+            continue
+        _, reward, _, _, info = env.step(env.action_for(shot["strike"][1], shot["strike"][0]))
+        assert -1.0 <= reward <= 1.0
+        assert reward == info["smoothed_reward"]
+        values.append(reward)
+        env.reset()
+    # Graded, not just the three sparse values: it reflects the window's width.
+    assert len({round(v, 4) for v in values}) > 3
+    # A far-off shot gets the miss value from every replay.
+    _, reward, _, _, _ = env.step(env.action_for(env.reference_phi() + 90.0, 2.0))
+    assert reward <= -0.09
