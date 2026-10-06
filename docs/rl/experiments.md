@@ -524,3 +524,67 @@ ghost-relative with curriculum:
   Expected to carry the coarse skill to harder shots.
 - Milestone 8: the goal-conditioned environment and HER, the brief's other
   answer to sparse rewards.
+
+---
+
+## Experiment 5 — Curriculum gates for the absolute frame
+
+**Hypothesis.** In Experiment 4 the absolute frame's curriculum froze on
+stage 0, below the 0.8 gate (62–68%). Letting it advance, by a lower gate or
+on a plateau, and reviewing earlier stages so they are not forgotten, carries
+the coarse aiming skill to harder shots.
+
+**Setup.** As in Experiment 4: SAC, absolute frame, positions, 300k steps,
+5 seeds, validation-suite selection. The curriculum wrapper gains two
+options:
+
+- **plateau advance:** advance when the best windowed success has not
+  improved by 0.02 for 15,000 episodes;
+- **review:** 20% of episodes draw a layout from a random earlier stage.
+  These episodes do not count towards advancing.
+
+| Variant | Gate | Plateau advance | Review |
+|---|---|---|---|
+| Exp. 4 | 0.8 | no | 0% |
+| A | 0.5 | no | 20% |
+| B | 0.8 | yes (15k episodes, +0.02) | 20% |
+
+**Command.** `bash scripts/experiment5_curriculum_gates.sh`;
+`summarise_runs runs/experiment5`.
+
+**Results** (mean ± sd over 5 seeds):
+
+| Policy | easy | medium | hard | easy, σ=0.25° | medium, σ=0.25° | hard, σ=0.25° | Stage reached |
+|---|---|---|---|---|---|---|---|
+| no curriculum (Exp. 4) | 1.9% ± 0.7 | 1.4% ± 0.5 | 1.0% ± 0.5 | 1.9% | 1.3% | 0.9% | — |
+| gate 0.8 (Exp. 4) | 19.6% ± 2.1 | 4.2% ± 0.7 | 1.8% ± 0.8 | 19.1% | 4.0% | 2.1% | 0 |
+| A: gate 0.5 + review | **32.9% ± 4.3** | 6.5% ± 1.6 | 2.6% ± 0.8 | 33.3% | 6.0% | 3.1% | 1 (at 74–100k episodes) |
+| B: plateau + review | 30.1% ± 2.5 | 6.5% ± 1.4 | 2.6% ± 0.5 | 30.7% | 6.1% | 2.6% | 5, full distribution (at 168–246k) |
+
+Learning curves on the validation suite: both variants rise steadily from
+3% at 10k steps to 14–16% at 300k, still rising.
+
+**Interpretation.**
+
+1. **Unfreezing the curriculum helps on easy shots.** Easy success rises from
+   19.6% to 30–33%, about 1.6 times Experiment 4. It is the best
+   absolute-frame result so far, and 10–17 times the no-curriculum control.
+2. **Reaching harder stages did not transfer to harder shots.** Variant B
+   walked through every stage to the full distribution, yet does no better
+   than A, which stopped at stage 1. Both stay at 6.5% on medium and 2.6% on
+   hard.
+   - The policy advanced on plateaus, not on mastery: it moved on without
+     having learned the stage.
+   - The gate is therefore no longer the bottleneck. Learning in the absolute
+     frame is simply slow: validation success is still rising at 300k.
+3. **Under noise, absolute-frame policies lose nothing** (A: 33.3% at
+   σ = 0.25° against 32.9% without). They pot only shots with wide windows,
+   so a 0.25° error rarely matters. Precise shots are what they have not
+   learned.
+4. **Compared with the ghost-relative frame** (82–89%), the absolute frame
+   remains far behind after 300k steps and every curriculum tried. Supplying
+   the geometric reference aim is worth more than any curriculum here.
+
+**Next.** Experiment 6 tests HER, the brief's other answer to sparse rewards,
+on a goal-conditioned environment whose goals (where the object ball ends
+up) make every shot informative.

@@ -60,7 +60,7 @@ def main() -> None:
         print(f"  training time per run: {np.mean(times[group]):.0f} s")
         for final, history in stages.get(group, []):
             print(f"  curriculum: final stage {final}; advances at episodes " +
-                  ", ".join(f"{episode} -> stage {stage}" for episode, stage in history[1:]) if len(history) > 1
+                  ", ".join(f"{h[0]} -> stage {h[1]}" + (f" ({h[2]})" if len(h) > 2 else "") for h in history[1:]) if len(history) > 1
                   else f"  curriculum: stayed at stage {final}")
 
 

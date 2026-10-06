@@ -16,6 +16,9 @@ curriculum:
   enabled: true
   threshold: 0.8          # success over the last `window` episodes of a stage
   window: 2000
+  plateau_episodes: null  # advance after this many episodes without improvement (null: never)
+  plateau_improvement: 0.02
+  review_fraction: 0.0    # share of episodes drawn from earlier stages
   stages:
     - {max_cut: 5,  max_cue_distance: 0.4, max_object_distance: 0.4}
     - {max_cut: 25, max_cue_distance: 0.5, max_object_distance: 0.5}

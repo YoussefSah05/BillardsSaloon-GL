@@ -19,12 +19,11 @@ from pathlib import Path
 
 import numpy as np
 import yaml
-from stable_baselines3 import PPO, SAC, TD3
 
 from billiards_rl.baselines import make_baseline
 from billiards_rl.evaluation.evaluate import evaluate
+from billiards_rl.training.models import load_policy_model
 
-ALGORITHMS = {"sac": SAC, "td3": TD3, "ppo": PPO}
 SUITES = ("easy", "medium", "hard")
 
 
@@ -58,7 +57,7 @@ def main() -> None:
     for run in sorted(p for p in args.root.iterdir() if (p / "checkpoints" / "best.zip").exists()):
         config = yaml.safe_load((run / "config.yaml").read_text())
         frame, obs = config["env"]["action_frame"], config["env"]["obs_mode"]
-        model = ALGORITHMS[config["algorithm"]].load(run / "checkpoints" / "best", device="cpu")
+        model = load_policy_model(config["algorithm"], run / "checkpoints" / "best")
         group = re.sub(r"-s\d+$", "", run.name)
         for suite in SUITES:
             key = (suite, frame, obs)
@@ -66,7 +65,8 @@ def main() -> None:
                 _, episodes = evaluate(make_baseline(args.baseline), suite, (args.noise, 0.0), action_frame="absolute", obs_mode=obs)
                 baseline_cache[key] = np.array([e["success"] for e in episodes])
             base = baseline_cache[key]
-            _, episodes = evaluate(Checkpoint(model, run.name), suite, (args.noise, 0.0), action_frame=frame, obs_mode=obs)
+            _, episodes = evaluate(Checkpoint(model, run.name), suite, (args.noise, 0.0), action_frame=frame, obs_mode=obs,
+                                   goal_conditioned=config["env"].get("goal_conditioned", False))
             mine = np.array([e["success"] for e in episodes])
             b, c = int(np.sum(mine & ~base)), int(np.sum(~mine & base))
             rows[(group, suite)].append((mine.mean(), base.mean(), b, c))

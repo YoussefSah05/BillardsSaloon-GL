@@ -128,6 +128,12 @@ class SingleShotEnv(gym.Env):
         return self._observe(), self._info_reset()
 
     def step(self, action):
+        result, info = self._play(action)
+        reward = float(self._reward(result))
+        return self._observe(), reward, True, False, info
+
+    def _play(self, action) -> tuple[ShotResult, dict[str, Any]]:
+        """Plays the action (with any execution noise) and describes the outcome."""
         strike, phi, speed = self.strike_for(action)
         executed = strike.copy()
         if self.noise[0] > 0.0:
@@ -143,7 +149,6 @@ class SingleShotEnv(gym.Env):
             object_final=np.asarray(out["final_positions"][1]),
             target_pocket=self.target_pocket,
         )
-        reward = float(self._reward(result))
         info = {
             "potted": result.potted,
             "pocket": result.object_pocket,
@@ -158,8 +163,9 @@ class SingleShotEnv(gym.Env):
             "phi": phi,
             "speed": speed,
             "success": result.potted and not result.scratch,
+            "target_success": result.potted and not result.scratch and result.object_pocket == self.target_pocket,
         }
-        return self._observe(), reward, True, False, info
+        return result, info
 
     # ---- Mapping -------------------------------------------------------------
 

@@ -22,10 +22,13 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.logger import configure
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.noise import NormalActionNoise
+from stable_baselines3.her.her_replay_buffer import HerReplayBuffer
 
 from billiards_rl.curriculum import Curriculum
+from billiards_rl.envs.goal_shot_env import GoalShotEnv
 from billiards_rl.envs.single_shot_env import SingleShotEnv
 from billiards_rl.evaluation.evaluate import evaluate
+from billiards_rl.training.models import load_policy_model
 from billiards_rl.training.run_logger import RunLogger
 
 ALGORITHMS = {"sac": SAC, "td3": TD3, "ppo": PPO}
@@ -45,7 +48,8 @@ def apply_overrides(config: dict, overrides: list[str]) -> dict:
 
 
 def make_env(env_config: dict) -> SingleShotEnv:
-    return SingleShotEnv(
+    env_class = GoalShotEnv if env_config.get("goal_conditioned", False) else SingleShotEnv
+    return env_class(
         band=env_config.get("band", "any"),
         obs_mode=env_config.get("obs_mode", "positions"),
         action_frame=env_config.get("action_frame", "absolute"),
@@ -82,7 +86,8 @@ class EvaluationCallback(BaseCallback):
         if self.num_timesteps % self.every != 0:
             return True
         metrics, _ = evaluate(TrainedPolicy(self.model, self.name), self.suite, self.noise, action_frame=self.env_config["action_frame"],
-                              obs_mode=self.env_config["obs_mode"], limit=self.limit)
+                              obs_mode=self.env_config["obs_mode"], limit=self.limit,
+                              goal_conditioned=self.env_config.get("goal_conditioned", False))
         self.history.append((self.num_timesteps, metrics.success_rate))
         if self.curriculum is not None:
             self.logger.record("curriculum/stage", self.curriculum.stage)
@@ -108,7 +113,10 @@ def train(config: dict, seed: int, runs_root: Path = Path("runs"), name: str | N
     curriculum_config = config.get("curriculum") or {}
     if curriculum_config.get("enabled", False):
         curriculum = Curriculum(base_env, curriculum_config["stages"], curriculum_config.get("threshold", 0.8),
-                                curriculum_config.get("window", 2000))
+                                curriculum_config.get("window", 2000),
+                                plateau_episodes=curriculum_config.get("plateau_episodes"),
+                                plateau_improvement=curriculum_config.get("plateau_improvement", 0.02),
+                                review_fraction=curriculum_config.get("review_fraction", 0.0), seed=seed)
         base_env = curriculum
     env = Monitor(base_env)
     env.reset(seed=seed)
@@ -116,7 +124,16 @@ def train(config: dict, seed: int, runs_root: Path = Path("runs"), name: str | N
     if algorithm == "td3" and "action_noise_sigma" in kwargs:
         sigma = kwargs.pop("action_noise_sigma")
         kwargs["action_noise"] = NormalActionNoise(np.zeros(2), sigma * np.ones(2))
-    model = ALGORITHMS[algorithm]("MlpPolicy", env, seed=seed, device=training.get("device", "cpu"), verbose=0, **kwargs)
+    policy_class = "MlpPolicy"
+    if env_config.get("goal_conditioned", False):
+        policy_class = "MultiInputPolicy"
+        her = config.get("her") or {}
+        if her.get("enabled", False):
+            # One-step episodes: "future" relabels a shot with its own outcome.
+            kwargs["replay_buffer_class"] = HerReplayBuffer
+            kwargs["replay_buffer_kwargs"] = {"n_sampled_goal": her.get("n_sampled_goal", 4),
+                                              "goal_selection_strategy": her.get("goal_selection_strategy", "future")}
+    model = ALGORITHMS[algorithm](policy_class, env, seed=seed, device=training.get("device", "cpu"), verbose=0, **kwargs)
     model.set_logger(configure(str(run.dir), ["csv", "tensorboard"]))
 
     evaluation = config["eval"]
@@ -133,13 +150,13 @@ def train(config: dict, seed: int, runs_root: Path = Path("runs"), name: str | N
     model.save(run.dir / "checkpoints" / "last")
 
     # Final evaluation of the best checkpoint on every suite and noise level.
-    best = ALGORITHMS[algorithm].load(run.dir / "checkpoints" / "best", device="cpu")
+    best = load_policy_model(algorithm, run.dir / "checkpoints" / "best")
     policy = TrainedPolicy(best, f"{algorithm}:{run.dir.name}")
     final = {}
     for suite in evaluation["final_suites"]:
         for sigma in evaluation["final_noise"]:
             metrics, _ = evaluate(policy, suite, (sigma, 0.0), action_frame=env_config["action_frame"],
-                                  obs_mode=env_config["obs_mode"])
+                                  obs_mode=env_config["obs_mode"], goal_conditioned=env_config.get("goal_conditioned", False))
             run.log_eval(f"final-{suite}-noise{sigma:g}", metrics)
             final[f"{suite}@{sigma:g}"] = metrics.success_rate
     if curriculum is not None:

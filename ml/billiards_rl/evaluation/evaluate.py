@@ -20,6 +20,7 @@ from pathlib import Path
 
 import numpy as np
 
+from billiards_rl.envs.goal_shot_env import GoalShotEnv
 from billiards_rl.envs.single_shot_env import ENV_VERSION, SingleShotEnv
 from billiards_rl.evaluation.suites import load_suite, suite_positions
 
@@ -38,6 +39,7 @@ class Metrics:
     mean_distance_after_miss: float
     mean_reward: float
     seconds: float
+    target_success_rate: float = float("nan")   # potted in the intended pocket
     env_version: str = ENV_VERSION
 
 
@@ -54,10 +56,11 @@ def wilson_interval(successes: int, n: int, z: float = 1.96) -> tuple[float, flo
 
 def evaluate(policy, suite_name: str, noise: tuple[float, float] = (0.0, 0.0), *,
              action_frame: str = "absolute", obs_mode: str = "positions", noise_seed: int = 12345,
-             limit: int | None = None) -> tuple[Metrics, list[dict]]:
+             limit: int | None = None, goal_conditioned: bool = False) -> tuple[Metrics, list[dict]]:
     suite = load_suite(suite_name)
     layouts = suite_positions(suite)[:limit]
-    env = SingleShotEnv(layouts=layouts, noise=noise, action_frame=action_frame, obs_mode=obs_mode)
+    env_class = GoalShotEnv if goal_conditioned else SingleShotEnv
+    env = env_class(layouts=layouts, noise=noise, action_frame=action_frame, obs_mode=obs_mode)
     obs, _ = env.reset(seed=noise_seed)
     episodes, start = [], time.perf_counter()
     for index in range(len(layouts)):
@@ -66,7 +69,7 @@ def evaluate(policy, suite_name: str, noise: tuple[float, float] = (0.0, 0.0), *
         action = policy.act(env, obs)
         _, reward, _, _, info = env.step(action)
         episodes.append({"index": index, "reward": reward, **{k: info[k] for k in
-                         ("success", "potted", "pocket", "scratch", "legal_contact", "object_to_pocket_after", "phi", "speed")}})
+                         ("success", "target_success", "potted", "pocket", "scratch", "legal_contact", "object_to_pocket_after", "phi", "speed")}})
     seconds = time.perf_counter() - start
 
     n = len(episodes)
@@ -85,6 +88,7 @@ def evaluate(policy, suite_name: str, noise: tuple[float, float] = (0.0, 0.0), *
         mean_distance_after_miss=float(np.mean(misses)) if misses else 0.0,
         mean_reward=float(np.mean([e["reward"] for e in episodes])),
         seconds=seconds,
+        target_success_rate=sum(e["target_success"] for e in episodes) / n,
     )
     return metrics, episodes
 
@@ -95,11 +99,11 @@ class ModelPolicy:
     privileged = False
 
     def __init__(self, path: str):
-        from stable_baselines3 import PPO, SAC, TD3
-        for cls in (SAC, TD3, PPO):
+        from billiards_rl.training.models import ALGORITHMS, load_policy_model
+        for name in ALGORITHMS:
             try:
-                self.model = cls.load(path)
-                self.name = f"{cls.__name__.lower()}:{Path(path).parent.parent.name}"
+                self.model = load_policy_model(name, path)
+                self.name = f"{name}:{Path(path).parent.parent.name}"
                 return
             except Exception:   # noqa: BLE001 - try the next algorithm
                 continue
