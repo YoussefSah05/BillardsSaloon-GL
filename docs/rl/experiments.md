@@ -1266,3 +1266,77 @@ optimal. Experiment 10's gain came from assuming perfect execution, and a
 strategy that learns the true reliability rediscovers the heuristic.
 Choosing *goals* alone has little left to give. The next lever is choosing
 the *shot* within a goal, which is what search does (Experiment 11).
+
+### Experiment 11 — Candidate shots plus sampled expectimax (Milestone 12)
+
+**Hypothesis.** Experiment 10b showed that choosing *goals* has little
+left to give. Choosing the *shot* by simulating it under the player's own
+execution noise, and valuing the position it leaves, should lift the run
+length a lot.
+
+**Method.** `ExpectimaxPlayer` (`ml/billiards_rl/search/expectimax.py`).
+
+1. **Candidates.** For every goal the proposer (π_L) gives a shot. The
+   search varies its speed (×0.8, 1, 1.25) and follow/draw
+   ($b \in \{-0.3, 0, 0.3\}$), which gives up to 72 candidates per turn.
+2. **Chance nodes.** Each candidate is replayed $K = 16$ times with
+   Gaussian aim error of the player's $\sigma$. The search draws its own
+   samples, not the evaluation's draws.
+3. **Value.** The action value is
+
+$$
+Q(s, a) = \frac1K \sum_{k=1}^{K} \Big[ r(s, a + \varepsilon_k) + \mathbb 1[\text{turn kept}]\, \max_{g'} \hat p(s'_k, g') \Big],
+$$
+
+where $\hat p$ is the next goal's simulated pot rate over 4 replays of its
+geometry shot. Depth 1 omits the second term.
+
+With exact execution ($\sigma = 0$) there is a single sample, and the
+search's model is then **exact**: it sees the outcome of the shot it will
+play. Those rows measure an upper bound on what candidate selection can do,
+not skill under uncertainty.
+
+**Setup.**
+- `uv run python -m scripts.experiment11_search`.
+- The `run3` suite (1,000 racks).
+- Paired per rack with easiest-first using the same proposer as executor and
+  the same evaluation noise draws.
+- 95% bootstrap intervals of the mean difference.
+- Cost (smoke test, M3 Pro, one thread): about 0.02 s per rack at depth 1 and
+  0.09 s at depth 2.
+
+**Results** (balls per rack; cleared = all 3 potted):
+
+| Proposer | Aim noise | Easiest-first | Search d=1 | Search d=2 | d=2 − easiest [95% CI] | Cleared: easiest → d=2 |
+|---|---|---|---|---|---|---|
+| SAC $\pi_L$ | 0° | 2.08 | 2.84 | 2.93 | +0.85 [0.78, 0.93] | 55% → 95% |
+| SAC $\pi_L$ | 0.25° | 1.19 | 1.59 | **1.84** | **+0.65 [0.58, 0.74]** | 20% → 45% |
+| geometry | 0° | 2.14 | 2.91 | 2.99 | +0.85 [0.78, 0.93] | 58% → 99.5% |
+| geometry | 0.25° | 1.16 | 1.60 | **1.78** | **+0.62 [0.54, 0.69]** | 17% → 41% |
+
+For reference, the learned $\pi_H$ trained under noise (Experiment 10b)
+reaches 1.22 balls with the SAC executor at 0.25°.
+
+**Interpretation.**
+- **Search is the largest gain of the project so far.** Under realistic noise
+  it adds +0.62 to +0.65 balls per rack (+53% to +55%) over the heuristic, and
+  more than doubles the share of cleared racks. Every interval is far from 0.
+- **Depth matters under noise.** Depth 2 adds +0.25 (SAC) and +0.18
+  (geometry) over depth 1. Valuing the leave pays most when execution is
+  imperfect, because the leave decides whether the next shot is easy enough
+  to survive the noise.
+- **Most of the depth-1 gain** comes from the speed and spin variations and
+  from evaluating goals by simulation instead of ease.
+- **The proposer matters little once search is on.** SAC and geometry
+  proposers end within 0.07 of each other: the search corrects the proposals.
+  The learned π_L's value is speed (one forward pass) rather than better
+  shots, which matters when the branching factor grows (full racks, 15 balls).
+- **Limits.**
+  - The leaf value is a hand-made heuristic (best next-shot pot rate), not a
+    learned value of the whole rack.
+  - The search's noise model equals the true one; a mismatched model is
+    untested.
+  - Three balls, no rules and no opponent.
+
+  Replacing $\hat p$ with a value network trained on the search's own games
+  (self-play / expert iteration) is the next milestone.
