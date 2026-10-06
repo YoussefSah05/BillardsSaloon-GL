@@ -1234,3 +1234,35 @@ Validation curves rise over training, for example geometry seed 3:
 are reliable as well as useful. Then Milestone 12: candidate shots plus
 search, evaluating the next state explicitly instead of learning it, with
 Experiment 8's robustness estimate.
+
+### Experiment 10b — The strategic layer trained under noise
+
+**Hypothesis.** Trained with the executor's noise (0.25°), $\pi_H$ learns
+which goals are *reliable* as well as useful, and beats easiest-first under
+noise.
+
+**Setup.** As Experiment 10, with `RunEnv(noise=(0.25, 0))` during training
+and checkpoint selection under the same noise.
+`uv run python -m scripts.experiment10_hierarchy --train-noise 0.25 --out runs/experiment10b`.
+
+**Results** (balls per rack; learned = mean of 5 seeds):
+
+| Executor | Aim noise | Easiest-first | Learned $\pi_H$, trained under noise | Seeds better / worse |
+|---|---|---|---|---|
+| geometry | 0° | 2.14 | 2.12 ± 0.04 | 0 / 0 |
+| geometry | 0.25° | 1.16 | 1.16 ± 0.03 | 0 / 0 |
+| SAC $\pi_L$ | 0° | 2.08 | 2.13 ± 0.02 | 2 / 0 |
+| SAC $\pi_L$ | 0.25° | 1.19 | 1.22 ± 0.02 | 1 / 0 |
+
+**Interpretation.** Trained under realistic noise, the strategic policy
+converges to **about easiest-first**:
+
+- no worse anywhere;
+- marginally better with the learned executor (+0.03, 1 seed significant);
+- no longer better with exact execution.
+
+With these goals and this execution error, easiest-first is close to
+optimal. Experiment 10's gain came from assuming perfect execution, and a
+strategy that learns the true reliability rediscovers the heuristic.
+Choosing *goals* alone has little left to give. The next lever is choosing
+the *shot* within a goal, which is what search does (Experiment 11).

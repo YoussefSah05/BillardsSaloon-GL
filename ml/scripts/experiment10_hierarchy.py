@@ -2,6 +2,7 @@
 
     uv run python -m scripts.experiment10_hierarchy             # suites (once), training, evaluation
     uv run python -m scripts.experiment10_hierarchy --suites    # only (re)generate the suites
+    uv run python -m scripts.experiment10_hierarchy --train-noise 0.25 --out runs/experiment10b   # experiment 10b
 
 Suites: `run3` (1000 racks, seed 1007) and `run3_validation` (600, seed 1008):
 a cue ball and 3 object balls, legal, with at least one clear goal. For each
@@ -71,21 +72,23 @@ def play_suite(suite_name: str, strategy, executor_obj, noise: float, noise_seed
     return np.array(returns)
 
 
-def train_one(args: tuple[str, int]) -> dict:
-    """300 iterations of 64 racks, in 12 blocks; keeps the best on validation."""
-    executor_name, seed = args
+def train_one(args: tuple[str, int, float, str]) -> dict:
+    """300 iterations of 64 racks, in 12 blocks; keeps the best on validation
+    (selected under the noise it trains with)."""
+    executor_name, seed, train_noise, out = args
     torch.set_num_threads(1)
     ex = executor(executor_name)
-    env = RunEnv(balls=3)
+    env = RunEnv(balls=3, noise=(train_noise, 0.0))
+    env.rng = np.random.default_rng(seed)
     scorer, optimizer = None, None
     best, best_state, history = -1e9, None, []
     for block in range(12):
         scorer, optimizer = train_strategy(env, ex, iterations=25, seed=seed * 100 + block, scorer=scorer, optimizer=optimizer)
-        score = play_suite("run3_validation", LearnedStrategy(scorer), ex, 0.0).mean()
+        score = play_suite("run3_validation", LearnedStrategy(scorer), ex, train_noise).mean()
         history.append(float(score))
         if score > best:
             best, best_state = score, {k: v.clone() for k, v in scorer.state_dict().items()}
-    path = OUT / f"scorer-{executor_name}-s{seed}.pt"
+    path = Path(out) / f"scorer-{executor_name}-s{seed}.pt"
     torch.save(best_state, path)
     return {"executor": executor_name, "seed": seed, "validation_best": float(best), "validation_history": history, "path": str(path)}
 
@@ -93,13 +96,16 @@ def train_one(args: tuple[str, int]) -> dict:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--suites", action="store_true")
+    parser.add_argument("--train-noise", type=float, default=0.0, help="aim noise sd (degrees) while training pi_H")
+    parser.add_argument("--out", default=str(OUT))
     args = parser.parse_args()
+    out = Path(args.out)
     if args.suites or not (SUITE_DIR / "run3.json").exists():
         make_suites()
         if args.suites:
             return
-    OUT.mkdir(parents=True, exist_ok=True)
-    jobs = [(e, s) for e in ("geometry", "sac") for s in range(1, 6)]
+    out.mkdir(parents=True, exist_ok=True)
+    jobs = [(e, s, args.train_noise, str(out)) for e in ("geometry", "sac") for s in range(1, 6)]
     with ProcessPoolExecutor(max_workers=6) as pool:
         trained = list(pool.map(train_one, jobs))
     for t in trained:
@@ -130,7 +136,7 @@ def main() -> None:
             }
             results["evaluation"].append(row)
             print(json.dumps(row), flush=True)
-    (OUT / "results.json").write_text(json.dumps(results, indent=1) + "\n")
+    (out / "results.json").write_text(json.dumps({"train_noise": args.train_noise, **results}, indent=1) + "\n")
 
 
 def bootstrap(d: np.ndarray, n: int = 2000, seed: int = 0) -> np.ndarray:
