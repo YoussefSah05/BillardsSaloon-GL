@@ -36,3 +36,8 @@ def load_suite(name: str, directory: Path = SUITE_DIR) -> dict:
 
 def suite_positions(suite: dict) -> list[np.ndarray]:
     return [np.array([layout["cue"], layout["object"]], dtype=np.float64) for layout in suite["layouts"]]
+
+
+def suite_cue_targets(suite: dict) -> list[np.ndarray]:
+    """Cue-ball targets of a position suite (Milestone 10)."""
+    return [np.array(layout["cue_target"], dtype=np.float64) for layout in suite["layouts"]]

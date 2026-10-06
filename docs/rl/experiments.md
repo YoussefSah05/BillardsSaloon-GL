@@ -1059,3 +1059,96 @@ get slower) and the step to position play (Milestone 10) both need control
 of where the cue ball goes, so spin and speed are next. Candidate generation
 plus search (Milestone 12) can use the same robustness estimate to rank
 shots at decision time.
+
+---
+
+## Experiment 9 — Position play (Milestone 10)
+
+**Hypothesis.** With speed and spin in the action and a target for the cue
+ball in the observation, SAC learns position play: potting while leaving the
+cue ball near a target, beyond the geometry baseline, which ignores position.
+Spin (follow, draw, side) should matter: it is how players control where the
+cue ball goes.
+
+**Setup.** `PositionShotEnv`:
+
+- **Action** (4): aim correction (±4° around the ghost-ball line), speed,
+  side spin, and follow/draw. Tip offsets are up to $0.525R$, the game's
+  range.
+- **Observation** (8): both balls, the target pocket's mouth, and the
+  cue-ball target.
+- **Targets are feasible by construction:** the geometric aim, played at a
+  random speed (0.7–1.8× the friction model's) and spin until it pots in the
+  target pocket without a scratch; the cue ball's resting spot is the
+  target.
+- **Reward:** −1 for a scratch, −0.1 for no target pot, and for a pot
+  $1 + \max(0, 1 - d/0.5\,\mathrm{m})$, with $d$ the cue ball's distance to
+  its target.
+- **Position success:** a target pot with $d < 0.15$ m.
+- **Suites:** `position` (1,000) and `position_validation` (600), with
+  bands cycling easy, medium, hard, and targets stored and hashed.
+- **Runs:** SAC (SB3 defaults), 200k steps, 5 seeds, with spin and with spin
+  locked at zero; checkpoints chosen by mean validation reward.
+
+**Baselines.**
+
+- *geometry:* no spin, the friction-model speed.
+- *position search:* aim ±1° × 6 speeds × 5 follow/draw × 3 side settings
+  (about 3,700 simulated shots per layout); plays the target pot that leaves
+  the cue ball nearest its target.
+
+**Commands.** `bash scripts/experiment9_position.sh`;
+`uv run python -m scripts.experiment9_baselines`.
+
+**Results** (position suite; mean ± sd over 5 seeds):
+
+| Policy | Target pot | Position success | Median cue distance after a pot | Target pot, σ=0.25° | Position, σ=0.25° |
+|---|---|---|---|---|---|
+| geometry | 92.0% | 29.6% | 0.25 m | 70.4% | 23.6% |
+| SAC, no spin | **94.3% ± 0.4** | **35.8% ± 1.1** | 0.21 m | 72.2% ± 1.0 | **28.0% ± 0.6** |
+| SAC, with spin | 93.4% ± 0.4 | 32.9% ± 1.5 | 0.22 m | 72.6% ± 0.7 | 26.2% ± 1.0 |
+| position search | 100.0% | 98.8% | 0.011 m | 67.5% | 59.3% |
+
+Validation reward rose from 0.6–1.1 to 1.37–1.44 over 200k steps and was
+still rising slowly. The spin-locked runs started higher, because their
+random spin is always zero.
+
+**Diagnostic: does the spin policy use spin purposefully?** On 300 layouts:
+its follow/draw output varies (sd 0.30, mean +0.2), but correlates with
+whether the target lies beyond the object ball or behind it at only
+$r = -0.06$ and $-0.02$ (seeds 1 and 2). It has not learned the basic rule:
+follow to go forward, draw to come back.
+
+**Interpretation.**
+
+1. **SAC learns some position play, by speed alone.** Without spin it beats
+   geometry by 6 points of position success and 2 of pot rate, and keeps the
+   edge under noise (28.0% against 23.6%). Varying the pace moves the cue
+   ball along its natural path towards the target.
+2. **Spin was not learned.** Adding it made results slightly worse: a larger
+   action space for the same budget, with no use made of it. Follow/draw is a
+   simple rule for a player, but for the critic it is a 4-D landscape with
+   narrow potting ridges. Position on top of potting adds a second, coupled
+   precision requirement.
+3. **Search shows how much is possible:** 98.8% position success with
+   exact execution. The policy is about 63 points below it. That is the
+   strongest argument so far for combining a learned proposer with simulated
+   search (Milestone 12) rather than asking a single network for the exact
+   shot.
+4. **Search optimises position, not robustness.** Under noise it pots less
+   than geometry or SAC (67.5% against 70–73%), because it picks precise
+   shots. A practical player would trade some position for robustness, as
+   Experiment 8 did for potting.
+
+**Failure modes and caveats.**
+
+- Targets come from shots along the geometric aim, so they favour
+  geometry's natural cue-ball paths. That explains geometry's 30% position
+  success with no intent at all, and makes the comparison conservative for
+  the learned policies.
+- 200k steps; the curves were still rising slowly.
+
+**Next.** Milestone 11 (the hierarchy) and Milestone 12 (candidate shots plus
+search). Experiment 9 suggests the search can do what the single network
+could not: use spin and pace to place the cue ball, with the robustness
+estimate of Experiment 8 to stay reliable under noise.

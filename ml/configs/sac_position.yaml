@@ -1,0 +1,36 @@
+# SAC on PositionShotEnv (Milestone 10): pot into the target pocket and leave
+# the cue ball near its target. Action: aim correction, speed, side spin,
+# follow/draw. SB3's SAC defaults; spin: false is the ablation.
+algorithm: sac
+
+env:
+  task: position
+  band: any
+  action_frame: ghost_relative
+  spin: true
+  noise: [0.0, 0.0]
+
+sac:
+  learning_rate: 0.0003
+  buffer_size: 1000000
+  learning_starts: 1000
+  batch_size: 256
+  tau: 0.005
+  gamma: 0.99
+  train_freq: 1
+  gradient_steps: 1
+  ent_coef: auto
+  policy_kwargs:
+    net_arch: [256, 256]
+
+training:
+  total_timesteps: 200000
+  eval_every: 10000
+  device: cpu
+
+eval:
+  during_training_suite: position_validation
+  during_training_limit: 600
+  selection_metric: mean_reward     # values both the pot and the position
+  final_suites: [position]
+  final_noise: [0.0, 0.25]

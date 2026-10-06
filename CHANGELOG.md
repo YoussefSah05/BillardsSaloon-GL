@@ -55,6 +55,9 @@ All notable changes to Billiards Saloon. The format follows
 - A robustness reward (mean outcome of noisy replays of the intended shot):
   the first learned policy to match the geometry baseline under aiming noise
   (experiment 8).
+- Position play: `PositionShotEnv` (pot and leave the cue ball near a target,
+  with speed and spin), hashed position suites and a position-search
+  baseline (experiment 9).
 
 ### Documentation
 - Theory documents with equations in LaTeX: the physics (motion on cloth,

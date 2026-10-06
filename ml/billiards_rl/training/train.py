@@ -49,6 +49,10 @@ def apply_overrides(config: dict, overrides: list[str]) -> dict:
 
 
 def make_env(env_config: dict) -> SingleShotEnv:
+    if env_config.get("task", "single") == "position":
+        from billiards_rl.envs.position_shot_env import PositionShotEnv
+        return PositionShotEnv(band=env_config.get("band", "any"), action_frame=env_config.get("action_frame", "ghost_relative"),
+                               noise=tuple(env_config.get("noise", (0.0, 0.0))), spin=env_config.get("spin", True))
     extra = {}
     env_class = SingleShotEnv
     if env_config.get("goal_conditioned", False):
@@ -84,31 +88,31 @@ class EvaluationCallback(BaseCallback):
     """Evaluates on part of a fixed suite every `every` steps; keeps the best."""
 
     def __init__(self, run: RunLogger, env_config: dict, suite: str, limit: int, every: int, name: str,
-                 noise: tuple[float, float] = (0.0, 0.0), curriculum: Curriculum | None = None):
+                 noise: tuple[float, float] = (0.0, 0.0), curriculum: Curriculum | None = None,
+                 selection_metric: str = "success_rate"):
         super().__init__()
+        self.selection_metric = selection_metric
         self.curriculum = curriculum
         self.run, self.env_config, self.suite, self.limit, self.every, self.name = run, env_config, suite, limit, every, name
         self.noise = noise
-        self.best = -1.0
+        self.best = -float("inf")
         self.history: list[tuple[int, float]] = []
 
     def _on_step(self) -> bool:
         if self.num_timesteps % self.every != 0:
             return True
-        metrics, _ = evaluate(TrainedPolicy(self.model, self.name), self.suite, self.noise, action_frame=self.env_config["action_frame"],
-                              obs_mode=self.env_config["obs_mode"], limit=self.limit,
-                              goal_conditioned=self.env_config.get("goal_conditioned", False),
-                              require_contact=self.env_config.get("require_contact", False),
-                              goal_type=self.env_config.get("goal_type", "position"))
-        self.history.append((self.num_timesteps, metrics.success_rate))
+        metrics, _ = evaluate(TrainedPolicy(self.model, self.name), self.suite, self.noise, limit=self.limit,
+                              env_config=self.env_config)
+        score = getattr(metrics, self.selection_metric)
+        self.history.append((self.num_timesteps, score))
         if self.curriculum is not None:
             self.logger.record("curriculum/stage", self.curriculum.stage)
             self.logger.record("curriculum/success_rate", self.curriculum.success_rate)
         self.logger.record("eval/success_rate", metrics.success_rate)
         self.logger.record("eval/scratch_rate", metrics.scratch_rate)
         self.run.log_eval(f"step{self.num_timesteps:08d}-{self.suite}", metrics)
-        if metrics.success_rate > self.best:
-            self.best = metrics.success_rate
+        if score > self.best:
+            self.best = score
             self.model.save(self.run.dir / "checkpoints" / "best")
         return True
 
@@ -154,7 +158,7 @@ def train(config: dict, seed: int, runs_root: Path = Path("runs"), name: str | N
     selection_noise = tuple(evaluation.get("during_training_noise", env_config.get("noise", (0.0, 0.0))))
     callback = EvaluationCallback(run, env_config, evaluation["during_training_suite"],
                                   evaluation["during_training_limit"], training["eval_every"], f"{algorithm}:{run.dir.name}",
-                                  selection_noise, curriculum)
+                                  selection_noise, curriculum, evaluation.get("selection_metric", "success_rate"))
     start = time.perf_counter()
     # One episode is one step: log every 1,000 episodes, not SB3's default 4.
     model.learn(total_timesteps=training["total_timesteps"], callback=callback, log_interval=1000, progress_bar=False)
@@ -167,10 +171,7 @@ def train(config: dict, seed: int, runs_root: Path = Path("runs"), name: str | N
     final = {}
     for suite in evaluation["final_suites"]:
         for sigma in evaluation["final_noise"]:
-            metrics, _ = evaluate(policy, suite, (sigma, 0.0), action_frame=env_config["action_frame"],
-                                  obs_mode=env_config["obs_mode"], goal_conditioned=env_config.get("goal_conditioned", False),
-                                  require_contact=env_config.get("require_contact", False),
-                                  goal_type=env_config.get("goal_type", "position"))
+            metrics, _ = evaluate(policy, suite, (sigma, 0.0), env_config=env_config)
             run.log_eval(f"final-{suite}-noise{sigma:g}", metrics)
             final[f"{suite}@{sigma:g}"] = metrics.success_rate
     if curriculum is not None:

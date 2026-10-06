@@ -41,6 +41,8 @@ class Metrics:
     mean_reward: float
     seconds: float
     target_success_rate: float = float("nan")   # potted in the intended pocket
+    position_success_rate: float = float("nan") # position tasks: pot with the cue ball within reach of its target
+    median_cue_distance: float = float("nan")   # position tasks: after target pots (m)
     env_version: str = ENV_VERSION
 
 
@@ -58,10 +60,25 @@ def wilson_interval(successes: int, n: int, z: float = 1.96) -> tuple[float, flo
 def evaluate(policy, suite_name: str, noise: tuple[float, float] = (0.0, 0.0), *,
              action_frame: str = "absolute", obs_mode: str = "positions", noise_seed: int = 12345,
              limit: int | None = None, goal_conditioned: bool = False,
-             require_contact: bool = False, goal_type: str = "position") -> tuple[Metrics, list[dict]]:
+             require_contact: bool = False, goal_type: str = "position",
+             env_config: dict | None = None) -> tuple[Metrics, list[dict]]:
+    """Plays every layout of a suite once. `env_config` (a training config's
+    `env` section) overrides the keyword arguments that describe the env."""
+    if env_config is not None:
+        action_frame = env_config.get("action_frame", action_frame)
+        obs_mode = env_config.get("obs_mode", obs_mode)
+        goal_conditioned = env_config.get("goal_conditioned", goal_conditioned)
+        require_contact = env_config.get("require_contact", require_contact)
+        goal_type = env_config.get("goal_type", goal_type)
+    task = (env_config or {}).get("task", "single")
     suite = load_suite(suite_name)
     layouts = suite_positions(suite)[:limit]
-    if goal_conditioned and goal_type == "direction":
+    if task == "position":
+        from billiards_rl.envs.position_shot_env import PositionShotEnv
+        targets = [np.asarray(layout["cue_target"]) for layout in suite["layouts"]][:limit]
+        env = PositionShotEnv(layouts=layouts, cue_targets=targets, noise=noise, action_frame=action_frame,
+                              spin=(env_config or {}).get("spin", True))
+    elif goal_conditioned and goal_type == "direction":
         env = DirectionGoalEnv(layouts=layouts, noise=noise, action_frame=action_frame, obs_mode=obs_mode)
     elif goal_conditioned:
         env = GoalShotEnv(layouts=layouts, noise=noise, action_frame=action_frame, obs_mode=obs_mode,
@@ -76,7 +93,8 @@ def evaluate(policy, suite_name: str, noise: tuple[float, float] = (0.0, 0.0), *
         action = policy.act(env, obs)
         _, reward, _, _, info = env.step(action)
         episodes.append({"index": index, "reward": reward, **{k: info[k] for k in
-                         ("success", "target_success", "potted", "pocket", "scratch", "legal_contact", "object_to_pocket_after", "phi", "speed")}})
+                         ("success", "target_success", "potted", "pocket", "scratch", "legal_contact", "object_to_pocket_after", "phi", "speed")},
+                         **{k: info[k] for k in ("position_success", "cue_distance") if k in info}})
     seconds = time.perf_counter() - start
 
     n = len(episodes)
@@ -97,6 +115,10 @@ def evaluate(policy, suite_name: str, noise: tuple[float, float] = (0.0, 0.0), *
         seconds=seconds,
         target_success_rate=sum(e["target_success"] for e in episodes) / n,
     )
+    if task == "position":
+        metrics.position_success_rate = sum(e["position_success"] for e in episodes) / n
+        distances = [e["cue_distance"] for e in episodes if e["target_success"]]
+        metrics.median_cue_distance = float(np.median(distances)) if distances else float("nan")
     return metrics, episodes
 
 
