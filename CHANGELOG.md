@@ -6,6 +6,16 @@ All notable changes to Billiards Saloon. The format follows
 
 ## [Unreleased]
 
+### Documentation
+- Theory documents with equations in LaTeX: the physics (motion on cloth,
+  event detection, ball, cushion and cue models, validation), rendering
+  (microfacet shading, sheen, shadows, bloom, tone mapping), audio (modal
+  synthesis, crowd, event-driven mix), the computer opponents (ghost-ball
+  geometry, error propagation, expected utility under noise) and the
+  intelligence plan (value functions, proper scoring, set encoders, TD
+  learning, Elo, Bayesian skill estimation). The referee's design is
+  explained in the rules document.
+
 ### Fixed
 - Linux and Windows builds: a test variable named `raise` clashed with the C
   library function used inside doctest's macros on Linux; files that loop over
