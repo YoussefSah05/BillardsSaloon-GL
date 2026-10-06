@@ -11,13 +11,13 @@ from billiards_rl.rewards.single_shot import ShotResult, sparse, sparse_target
 rl = bs.rl
 
 
-@pytest.mark.parametrize("obs_mode", ["positions", "positions+geometry"])
+@pytest.mark.parametrize("obs_mode", ["positions", "positions+geometry", "positions+target"])
 @pytest.mark.parametrize("frame", ["absolute", "ghost_relative"])
 def test_passes_gymnasium_checks(obs_mode, frame):
     check_env(SingleShotEnv(obs_mode=obs_mode, action_frame=frame), skip_render_check=True)
 
 
-@pytest.mark.parametrize("obs_mode", ["positions", "positions+geometry"])
+@pytest.mark.parametrize("obs_mode", ["positions", "positions+geometry", "positions+target"])
 def test_observations_have_a_stable_shape_and_stay_in_bounds(obs_mode):
     env = SingleShotEnv(obs_mode=obs_mode)
     obs, _ = env.reset(seed=0)

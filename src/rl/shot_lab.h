@@ -20,6 +20,7 @@ namespace BilliardsSaloon::Rl
         std::vector<glm::dvec2> finalPositions;
         bool scratch {false};               // the cue ball was pocketed
         int firstContact {-1};              // first ball the cue ball touched, -1 if none
+        glm::dvec2 contactVelocity {0.0};   // that ball's velocity just after the contact (m/s)
         int events {0};
         bool complete {true};               // false if the simulator's event limit was reached
 
