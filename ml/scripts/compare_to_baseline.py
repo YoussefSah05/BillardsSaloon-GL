@@ -67,7 +67,8 @@ def main() -> None:
             base = baseline_cache[key]
             _, episodes = evaluate(Checkpoint(model, run.name), suite, (args.noise, 0.0), action_frame=frame, obs_mode=obs,
                                    goal_conditioned=config["env"].get("goal_conditioned", False),
-                                   require_contact=config["env"].get("require_contact", False))
+                                   require_contact=config["env"].get("require_contact", False),
+                                   goal_type=config["env"].get("goal_type", "position"))
             mine = np.array([e["success"] for e in episodes])
             b, c = int(np.sum(mine & ~base)), int(np.sum(~mine & base))
             rows[(group, suite)].append((mine.mean(), base.mean(), b, c))

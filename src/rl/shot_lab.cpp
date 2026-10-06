@@ -17,8 +17,9 @@ namespace BilliardsSaloon::Rl
         outcome.events = static_cast<int>(trajectory.events.size());
         outcome.complete = trajectory.complete;
 
-        for (const Sim::ShotEvent& event : trajectory.events)
+        for (std::size_t e = 0; e < trajectory.events.size(); ++e)
         {
+            const Sim::ShotEvent& event = trajectory.events[e];
             const auto ball = static_cast<std::size_t>(event.ball);
             switch (event.type)
             {
@@ -26,6 +27,9 @@ namespace BilliardsSaloon::Rl
                     if ((outcome.firstContact < 0) && ((event.ball == 0) || (event.other == 0)))
                     {
                         outcome.firstContact = (event.ball == 0) ? event.other : event.ball;
+                        // states[e] is every ball's state right after event e.
+                        const Sim::BallState& hit = trajectory.states[e][static_cast<std::size_t>(outcome.firstContact)];
+                        outcome.contactVelocity = glm::dvec2(hit.v.x, hit.v.y);
                     }
                     break;
                 case Sim::EventType::LinearCushion:

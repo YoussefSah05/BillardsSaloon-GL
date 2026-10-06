@@ -80,6 +80,7 @@ namespace
         d["pot_order"] = outcome.potOrder;
         d["scratch"] = outcome.scratch;
         d["first_contact"] = outcome.firstContact;
+        d["contact_velocity"] = py::make_tuple(outcome.contactVelocity.x, outcome.contactVelocity.y);
         d["events"] = outcome.events;
         d["complete"] = outcome.complete;
         return d;
@@ -201,6 +202,7 @@ void bindShotLab(py::module_& parent)
             py::array_t<double> finals({batch, balls, py::ssize_t{2}});
             py::array_t<bool> scratch(batch);
             py::array_t<int> firstContact(batch);
+            py::array_t<double> contactVelocity({batch, py::ssize_t{2}});
             py::array_t<int> events(batch);
             py::array_t<bool> complete(batch);
             auto po = pocketOf.mutable_unchecked<2>();
@@ -208,6 +210,7 @@ void bindShotLab(py::module_& parent)
             auto fi = finals.mutable_unchecked<3>();
             auto sc = scratch.mutable_unchecked<1>();
             auto fc = firstContact.mutable_unchecked<1>();
+            auto cv = contactVelocity.mutable_unchecked<2>();
             auto ev = events.mutable_unchecked<1>();
             auto co = complete.mutable_unchecked<1>();
             for (py::ssize_t i = 0; i < batch; ++i)
@@ -222,6 +225,8 @@ void bindShotLab(py::module_& parent)
                 }
                 sc(i) = o.scratch;
                 fc(i) = o.firstContact;
+                cv(i, 0) = o.contactVelocity.x;
+                cv(i, 1) = o.contactVelocity.y;
                 ev(i) = o.events;
                 co(i) = o.complete;
             }
@@ -231,6 +236,7 @@ void bindShotLab(py::module_& parent)
             d["final_positions"] = finals;
             d["scratch"] = scratch;
             d["first_contact"] = firstContact;
+            d["contact_velocity"] = contactVelocity;
             d["events"] = events;
             d["complete"] = complete;
             return d;

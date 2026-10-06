@@ -732,3 +732,98 @@ The validation curve stays at 1–2% throughout 200k steps.
   `sparse_target` reward).
 - **Then Milestone 9,** elite-sample / advantage-weighted regression, aimed
   at the precision gap diagnosed in Experiment 3.
+
+### Experiment 6c — HER with departure-direction goals
+
+**Hypothesis.** The object ball's departure direction is set by the contact
+alone and is smooth in the aim. As a hindsight goal it should let HER teach
+the contact geometry (aim → departure direction) from every shot that touches
+the object ball, which then transfers to pocket goals.
+
+**Setup.** `DirectionGoalEnv`. Goals are
+$(\cos\theta, \sin\theta, \text{potted}, \text{scratch}, \text{no\_contact})$:
+
+- **desired goal:** the direction to the target pocket's mouth, with
+  potted = 1;
+- **achieved goal:**
+  - after a pot, the direction to the mouth the ball entered (pocket goals
+    stay exact);
+  - after a contact without a pot, the departure direction;
+  - after a miss, nothing.
+
+Directions must agree within 1°. The simulator now reports the contacted
+ball's velocity right after the first contact. SAC, absolute frame, 200k
+steps, 5 seeds, with and without HER.
+
+**Results:**
+
+| Policy | easy | medium | hard | Validation at 200k |
+|---|---|---|---|---|
+| direction goals, no HER | 2.0% ± 1.0 | 0.9% ± 0.3 | 0.9% ± 0.3 | 1% |
+| direction goals, HER | 4.2% ± 1.4 | 1.5% ± 0.6 | 0.6% ± 0.6 | 3% |
+
+**Diagnostic.** On 300 *medium* layouts, each policy was asked for a random
+departure direction (potted = 0):
+
+| Policy | Contact with the object ball | Direction error given contact (median) | Within 10° | Within 1° |
+|---|---|---|---|---|
+| no HER | 15% | 104° | 3% | 0.4% |
+| HER | 19% | 90° | 6% | 0.4% |
+| uniformly random direction | — | 90° | 5.6% | 0.6% |
+
+**Interpretation.**
+
+1. **Direction goals do not rescue HER either.** Success doubles again from
+   a negligible base (2.0% → 4.2% on easy). The HER policy's departure
+   directions are no better than random: median error 90°, 6% within 10°.
+   It has not learned the contact geometry it was relabelled to learn.
+2. **Why: smooth is not the same as easy.** The departure direction depends
+   smoothly on the aim, but steeply. Across the roughly 6° of aim (about 2%
+   of the action range at a metre) that touches the object ball, the
+   departure direction sweeps through about 180°. The policy must first hit
+   the ball (it does so one time in five), then place its aim within that
+   window to a fraction of a degree, computing the geometry from raw
+   coordinates. Hindsight relabelling supplies more successes, but not an
+   easier function to fit through a critic.
+3. **Across Experiments 1–6c, one picture emerges.** In the absolute frame
+   every variant (algorithm, curriculum, gate, HER with three goal types)
+   fails or learns slowly. Supplying the geometric reference aim
+   (ghost-relative frame) solves most of the task at once. What the
+   policies lack is precise geometry, which off-policy RL with a scalar
+   reward recovers poorly. This motivates Milestone 9: learning from the
+   successful samples themselves (elite or advantage-weighted regression)
+   rather than through a critic.
+
+### Experiment 6d — Why the goal-conditioned ghost-relative policy is better
+
+**Question.** In Experiment 6, the goal-conditioned ghost-relative policy
+matched geometry on *medium* and *hard*, where `SingleShotEnv`'s SAC was
+worse. Two things changed at once: (1) the policy sees the target pocket's
+mouth, and (2) only the target pocket counts as success. Which matters?
+
+**Setup.** A 2×2 in the ghost-relative frame, SAC, 100k steps, 5 seeds. The
+two new cells use `SingleShotEnv` with
+`reward=sparse_target, obs_mode=positions` and with
+`reward=sparse, obs_mode=positions+target` (positions plus the target mouth).
+
+**Results** (mean ± sd over 5 seeds):
+
+| Target mouth as input | Target-only reward | easy | medium | hard | Source |
+|---|---|---|---|---|---|
+| no | no | 86.9% ± 0.7 | 83.3% ± 0.8 | 82.2% ± 0.9 | Exp. 2 |
+| no | yes | 86.6% ± 0.4 | 83.6% ± 1.1 | 82.8% ± 1.0 | Exp. 6d |
+| yes | no | 87.1% ± 0.3 | 83.0% ± 1.6 | 84.0% ± 1.1 | Exp. 6d |
+| yes | yes | 87.2% ± 0.7 | 84.5% ± 0.4 | 84.9% ± 0.4 | Exp. 6 (`GoalShotEnv`, no HER) |
+
+On *hard*, Welch's t-test against the first row:
+
+- input only: +1.8 points, $t \approx 2.8$;
+- reward only: +0.6, $t \approx 1.0$, not significant;
+- both: +2.7, $t \approx 6$.
+
+**Interpretation.** Most of the gain comes from **telling the policy which
+pocket its reference aim points at.** With positions only, the network must
+infer that from the coordinates. The target-only reward adds a little on top,
+roughly additively. The effects are small (1–3 points) next to the 14–17
+point gap to search. The last row also differs in network input format
+(SB3's `MultiInputPolicy` over a Dict); that is a minor confound.

@@ -102,6 +102,9 @@ TEST_CASE("outcomes read pots, scratches and first contact from the events")
     CHECK(pot.firstContact == 1);
     CHECK(pot.potOrder == std::vector<int>{1});
     CHECK(pot.cushionsBeforePot[1] == 0);
+    // Straight in: the object ball leaves along the line to the mouth.
+    REQUIRE(glm::length(pot.contactVelocity) > 0.1);
+    CHECK(glm::dot(glm::normalize(pot.contactVelocity), glm::normalize(corner.centre - object)) > 0.999);
 }
 
 TEST_CASE("a batch gives exactly the shots played one by one")

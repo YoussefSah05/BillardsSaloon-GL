@@ -24,7 +24,7 @@ rl = bs.rl
 # change, so results and evaluation suites record what they were made with.
 ENV_VERSION = "single_shot-v1"
 
-OBS_MODES = ("positions", "positions+geometry")
+OBS_MODES = ("positions", "positions+geometry", "positions+target")
 ACTION_FRAMES = ("absolute", "ghost_relative")
 
 
@@ -35,6 +35,7 @@ class SingleShotEnv(gym.Env):
         "positions"           [x_c, y_c, x_o, y_o] scaled to [-1, 1]
         "positions+geometry"  plus, per pocket: cos(cut), cue-to-ghost and
                               object-to-mouth distances / table length, blocked
+        "positions+target"    plus the target pocket's mouth (as GoalShotEnv's goal)
 
     Action (``action_frame``), in [-1, 1]^2:
         "absolute"        phi = 180 deg * a0
@@ -93,7 +94,7 @@ class SingleShotEnv(gym.Env):
         self.length = float(table["length"])
         self.mouths = np.asarray(table["mouths"])
 
-        size = 4 if obs_mode == "positions" else 4 + 6 * 4
+        size = {"positions": 4, "positions+geometry": 4 + 6 * 4, "positions+target": 6}[obs_mode]
         self.observation_space = spaces.Box(-1.0, 1.0, shape=(size,), dtype=np.float32)
         self.action_space = spaces.Box(-1.0, 1.0, shape=(2,), dtype=np.float32)
 
@@ -154,6 +155,7 @@ class SingleShotEnv(gym.Env):
             "pocket": result.object_pocket,
             "scratch": result.scratch,
             "first_contact": result.first_contact,
+            "contact_velocity": np.asarray(out["contact_velocity"], dtype=np.float64),
             "legal_contact": result.first_contact == 1,
             "object_to_pocket_after": 0.0 if result.potted else float(np.min(np.linalg.norm(self.mouths - result.object_final, axis=1))),
             "events": int(out["events"]),
@@ -226,6 +228,11 @@ class SingleShotEnv(gym.Env):
         ])
         if self.obs_mode == "positions":
             return scaled.astype(np.float32)
+        if self.obs_mode == "positions+target":
+            # The target pocket's mouth: what GoalShotEnv's desired goal shows.
+            mouth = self.mouths[max(self.target_pocket, 0)]
+            target = np.array([2.0 * mouth[0] / self.width - 1.0, 2.0 * mouth[1] / self.length - 1.0])
+            return np.clip(np.concatenate([scaled, target]), -1.0, 1.0).astype(np.float32)
         geometry = np.column_stack([
             np.cos(np.radians(self._aims["cut"])),
             np.clip(self._aims["cue_distance"] / self.length, 0.0, 1.0),

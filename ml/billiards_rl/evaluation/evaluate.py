@@ -20,6 +20,7 @@ from pathlib import Path
 
 import numpy as np
 
+from billiards_rl.envs.direction_goal_env import DirectionGoalEnv
 from billiards_rl.envs.goal_shot_env import GoalShotEnv
 from billiards_rl.envs.single_shot_env import ENV_VERSION, SingleShotEnv
 from billiards_rl.evaluation.suites import load_suite, suite_positions
@@ -57,10 +58,12 @@ def wilson_interval(successes: int, n: int, z: float = 1.96) -> tuple[float, flo
 def evaluate(policy, suite_name: str, noise: tuple[float, float] = (0.0, 0.0), *,
              action_frame: str = "absolute", obs_mode: str = "positions", noise_seed: int = 12345,
              limit: int | None = None, goal_conditioned: bool = False,
-             require_contact: bool = False) -> tuple[Metrics, list[dict]]:
+             require_contact: bool = False, goal_type: str = "position") -> tuple[Metrics, list[dict]]:
     suite = load_suite(suite_name)
     layouts = suite_positions(suite)[:limit]
-    if goal_conditioned:
+    if goal_conditioned and goal_type == "direction":
+        env = DirectionGoalEnv(layouts=layouts, noise=noise, action_frame=action_frame, obs_mode=obs_mode)
+    elif goal_conditioned:
         env = GoalShotEnv(layouts=layouts, noise=noise, action_frame=action_frame, obs_mode=obs_mode,
                           require_contact=require_contact)
     else:
@@ -128,7 +131,7 @@ def main() -> None:
     parser.add_argument("--noise", type=float, default=0.0, help="aim error sd, degrees")
     parser.add_argument("--speed-noise", type=float, default=0.0, help="relative speed error sd")
     parser.add_argument("--action-frame", default="absolute", choices=["absolute", "ghost_relative"])
-    parser.add_argument("--obs-mode", default="positions", choices=["positions", "positions+geometry"])
+    parser.add_argument("--obs-mode", default="positions", choices=["positions", "positions+geometry", "positions+target"])
     parser.add_argument("--limit", type=int)
     parser.add_argument("--out", help="write metrics JSON here")
     args = parser.parse_args()
