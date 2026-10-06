@@ -1,0 +1,41 @@
+# SAC on the goal-conditioned GoalShotEnv, with Hindsight Experience Replay
+# (Milestone 8). Goal: where the object ball should end up (a pocket mouth,
+# or a resting spot when relabelled). Everything else as sac_single_ball.yaml.
+algorithm: sac
+
+env:
+  band: any                 # train on all legal layouts; evaluate on the fixed suites
+  obs_mode: positions
+  action_frame: absolute    # experiment 1 compares with ghost_relative
+  reward: sparse_target     # potting the target pocket; GoalShotEnv computes it from goals
+  goal_conditioned: true
+  noise: [0.0, 0.0]         # (aim sd in degrees, relative speed sd)
+
+her:
+  enabled: true
+  n_sampled_goal: 4         # relabelled goals per real transition (SB3 default)
+  goal_selection_strategy: future
+
+sac:
+  learning_rate: 0.0003
+  buffer_size: 1000000
+  learning_starts: 1000
+  batch_size: 256
+  tau: 0.005
+  gamma: 0.99               # one-step episodes: no bootstrapping, gamma has no effect
+  train_freq: 1
+  gradient_steps: 1
+  ent_coef: auto
+  policy_kwargs:
+    net_arch: [256, 256]
+
+training:
+  total_timesteps: 100000
+  eval_every: 10000         # evaluate on the validation suite for checkpoint selection
+  device: cpu               # small MLPs: the CPU beats MPS here
+
+eval:
+  during_training_suite: validation   # checkpoint selection; never a test suite
+  during_training_limit: 600
+  final_suites: [easy, medium, hard]
+  final_noise: [0.0, 0.25]

@@ -55,6 +55,7 @@ def test_curriculum_advances_on_success_and_records_it():
     assert env.stage == 1
     assert env.unwrapped.limits is None
     assert env.history[-1][1] == 1
+    assert env.history[-1][2] == "threshold"
     assert info["curriculum_stage"] in (0, 1)
     # Stage-1 layouts respect the limits.
     env2 = SingleShotEnv(limits=stages[0])
@@ -72,5 +73,24 @@ def test_a_short_curriculum_run_records_its_history(tmp_path):
     ])
     run = train(config, seed=4, runs_root=tmp_path, name="curriculum-run")
     meta = json.loads((run / "meta.json").read_text())
-    assert meta["curriculum_history"][0] == [0, 0]
+    assert meta["curriculum_history"][0] == [0, 0, "start"]
     assert "curriculum_final_stage" in meta
+
+
+def test_curriculum_advances_on_a_plateau_and_reviews_earlier_stages():
+    from billiards_rl.curriculum import Curriculum
+    from billiards_rl.envs import SingleShotEnv
+
+    stages = [{"max_cut": 5, "max_cue_distance": 0.4, "max_object_distance": 0.4},
+              {"max_cut": 25, "max_cue_distance": 0.5, "max_object_distance": 0.5}, None]
+    # A policy that always misses: success never improves, so the plateau rule fires.
+    env = Curriculum(SingleShotEnv(), stages, threshold=0.9, window=10, plateau_episodes=15, review_fraction=0.5, seed=1)
+    env.reset(seed=0)
+    reviews = 0
+    for _ in range(120):
+        _, _, _, _, info = env.step([0.0, -1.0])    # a soft shot along +x: (almost) never pots
+        reviews += int(info["curriculum_review"])
+        env.reset()
+    assert env.stage == 2
+    assert [h[2] for h in env.history[1:]] == ["plateau", "plateau"]
+    assert reviews > 10                             # earlier stages are revisited
