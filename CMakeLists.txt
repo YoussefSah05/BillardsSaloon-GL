@@ -48,6 +48,25 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(miniaudio)
 
+# Models: cgltf (MIT) parses glTF 2.0, header only; meshoptimizer (MIT)
+# builds levels of detail. SOURCE_SUBDIR again fetches cgltf's sources only.
+FetchContent_Declare(
+    cgltf
+    GIT_REPOSITORY https://github.com/jkuhlmann/cgltf.git
+    GIT_TAG v1.15
+    GIT_SHALLOW TRUE
+    SOURCE_SUBDIR none
+)
+FetchContent_MakeAvailable(cgltf)
+
+FetchContent_Declare(
+    meshoptimizer
+    GIT_REPOSITORY https://github.com/zeux/meshoptimizer.git
+    GIT_TAG v1.3
+    GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(meshoptimizer)
+
 FetchContent_Declare(
     nlohmann_json
     URL https://github.com/nlohmann/json/releases/download/v3.11.3/json.tar.xz
@@ -155,6 +174,9 @@ add_library(bs_game STATIC
     src/scene/table_geometry.cpp
     src/scene/visibility.cpp
     src/scene/spherical_harmonics.cpp
+    src/scene/model_loader.cpp
+    src/scene/model_codecs.cpp
+    src/scene/prop_layout.cpp
     src/rules/referee.cpp
     src/rules/shot_record.cpp
 )
@@ -162,8 +184,10 @@ add_library(bs_game STATIC
 target_include_directories(bs_game PUBLIC src)
 target_link_libraries(bs_game
     PUBLIC glm::glm bs_sim
-    PRIVATE nlohmann_json::nlohmann_json
+    PRIVATE nlohmann_json::nlohmann_json meshoptimizer
 )
+target_include_directories(bs_game SYSTEM PRIVATE ${cgltf_SOURCE_DIR} external/stb)
+set_source_files_properties(src/scene/model_codecs.cpp PROPERTIES COMPILE_OPTIONS "$<IF:$<CXX_COMPILER_ID:MSVC>,/w,-w>")
 target_compile_definitions(bs_game PRIVATE
     BS_SOURCE_ASSET_DIR="${CMAKE_SOURCE_DIR}/assets"
 )
@@ -178,6 +202,7 @@ add_executable(BilliardsSaloon
     src/app/locker_screen.cpp
     src/app/match_setup_screen.cpp
     src/app/saloon_scene.cpp
+    src/app/prop_loader.cpp
     src/app/settings_screen.cpp
     src/app/shell_menus.cpp
     src/platform/input.cpp
@@ -269,6 +294,7 @@ if(BS_BUILD_TESTS)
         tests/test_table_geometry.cpp
         tests/test_visibility.cpp
         tests/test_spherical_harmonics.cpp
+        tests/test_model_loader.cpp
         tests/test_equipment.cpp
         tests/test_audio.cpp
         tests/test_ai.cpp

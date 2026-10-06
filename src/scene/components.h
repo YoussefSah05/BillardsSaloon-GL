@@ -5,9 +5,11 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include "scene/mesh_data.h"
+#include "scene/model_loader.h"
 
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace BilliardsSaloon
 {
@@ -81,6 +83,7 @@ namespace BilliardsSaloon
         glm::vec3 roomMin {0.0f};          // reflections: the room's box...
         glm::vec3 roomMax {0.0f};
         glm::vec3 reflectionCentre {0.0f}; // ...and the capture point
+        int pendingModels {0};             // models still loading: capture after them
     };
 
     struct StaticMeshComponent
@@ -110,6 +113,16 @@ namespace BilliardsSaloon
         float clearcoatStrength {0.0f};
         glm::vec3 emissionColor {0.0f, 0.0f, 0.0f};
         float emissionIntensity {0.0f};
+        // A loaded model's glTF material (textures, metallic-roughness);
+        // when set it replaces the colour and finish above.
+        std::shared_ptr<const ModelMaterial> textured {};
+    };
+
+    // Levels of detail for a model part: the renderer draws lods[i] by how
+    // large the part's bounding sphere is on screen.
+    struct LodComponent
+    {
+        std::vector<std::shared_ptr<const MeshData>> lods;
     };
 
     enum class BallRuleTag

@@ -1706,6 +1706,8 @@ namespace BilliardsSaloon
         const bool frameOver = m_session->frameOver();
         const float renderAlpha = static_cast<float>(alpha);
 
+        m_props.update(*m_session);
+
         FrameSettings settings;
         settings.quality = m_renderQuality;
         const HallOption& hall = findOption(equipmentCatalog().halls, m_settings.equipment.hall);

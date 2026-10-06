@@ -75,6 +75,20 @@ uniform vec3 uRoomMax;
 uniform vec3 uReflectionCentre;
 uniform float uReflectionMaxLod;
 
+// Loaded models: glTF metallic-roughness materials with texture maps.
+uniform int uTextured;
+uniform sampler2D uBaseColorMap;
+uniform sampler2D uNormalMap;
+uniform sampler2D uOrmMap;     // R occlusion, G roughness, B metal
+uniform vec4 uBaseColorFactor;
+uniform float uMetallicFactor;
+uniform float uRoughnessFactor;
+uniform int uHasBaseColorMap;
+uniform int uHasNormalMap;
+uniform int uHasOrmMap;
+uniform int uOcclusionInOrm;
+uniform int uAlphaMask;
+
 // Ball numbers: a 4 x 4 atlas, cell n holds number n.
 uniform sampler2D uNumberAtlas;
 uniform int uBallNumber;
@@ -357,6 +371,22 @@ vec3 roomReflection(vec3 direction, float roughness)
     return textureLod(uReflection, lookup, roughness * uReflectionMaxLod).rgb;
 }
 
+// Tangent-space normal mapping without stored tangents: the frame comes
+// from screen-space derivatives of position and UV (Schueler 2006).
+vec3 perturbNormal(vec3 n, vec3 mapped)
+{
+    vec3 dp1 = dFdx(vWorldPosition);
+    vec3 dp2 = dFdy(vWorldPosition);
+    vec2 duv1 = dFdx(vTexCoord);
+    vec2 duv2 = dFdy(vTexCoord);
+    vec3 dp2perp = cross(dp2, n);
+    vec3 dp1perp = cross(n, dp1);
+    vec3 t = dp2perp * duv1.x + dp1perp * duv2.x;
+    vec3 b = dp2perp * duv1.y + dp1perp * duv2.y;
+    float scale = inversesqrt(max(max(dot(t, t), dot(b, b)), 1.0e-20));
+    return normalize(mat3(t * scale, b * scale, n) * mapped);
+}
+
 struct Surface
 {
     vec3 baseColor;
@@ -420,6 +450,10 @@ vec3 shadeLight(Surface surface, vec3 radiance, vec3 lightDirection, float light
 void main()
 {
     vec3 normal = normalize(vWorldNormal);
+    if (!gl_FrontFacing)
+    {
+        normal = -normal;   // the back of a double-sided surface
+    }
     vec3 viewDirection = normalize(uViewPosition - vWorldPosition);
     float nDotV = max(dot(normal, viewDirection), 1.0e-4);
 
@@ -462,6 +496,41 @@ void main()
         surface.roughness = 0.06;
         surface.f0 = vec3(0.045);
         surface.clearcoat = 0.0;
+    }
+
+    float occlusion = 1.0;
+    if (uTextured == 1)
+    {
+        vec4 base = uBaseColorFactor;
+        if (uHasBaseColorMap == 1)
+        {
+            base *= texture(uBaseColorMap, vTexCoord);   // sRGB texture: already linear
+        }
+        if ((uAlphaMask == 1) && (base.a < 0.5))
+        {
+            discard;
+        }
+        float roughness = uRoughnessFactor;
+        float metallic = uMetallicFactor;
+        if (uHasOrmMap == 1)
+        {
+            vec3 orm = texture(uOrmMap, vTexCoord).rgb;
+            roughness *= orm.g;
+            metallic *= orm.b;
+            occlusion = (uOcclusionInOrm == 1) ? orm.r : 1.0;
+        }
+        if (uHasNormalMap == 1)
+        {
+            normal = perturbNormal(normal, texture(uNormalMap, vTexCoord).xyz * 2.0 - 1.0);
+            nDotV = max(dot(normal, viewDirection), 1.0e-4);
+        }
+        // Metals have no diffuse and tinted reflectance; dielectrics 4%.
+        surface.baseColor = base.rgb * (1.0 - metallic);
+        surface.f0 = mix(vec3(0.04), base.rgb, metallic);
+        surface.roughness = clamp(roughness, 0.04, 1.0);
+        surface.clearcoat = 0.0;
+        surface.cloth = false;
+        baseColor = surface.baseColor;
     }
 
     vec3 lighting = vec3(0.0);
@@ -547,6 +616,8 @@ void main()
     // the lamps and practical lights: probes leave the glow out so it is
     // not counted twice.
     float emission = (uCapture == 1) ? 0.0 : uEmissionScale;
+    ambient *= occlusion;
+    reflections *= occlusion;
     if (uCapture == 1)
     {
         reflections = vec3(0.0);

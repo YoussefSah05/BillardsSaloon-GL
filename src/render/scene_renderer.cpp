@@ -20,6 +20,8 @@ namespace BilliardsSaloon
         // room's reflection cube map on 9.
         constexpr int PROBE_TEXTURE_UNIT = 2;
         constexpr int REFLECTION_TEXTURE_UNIT = 9;
+        // A model's base colour, normal and occlusion-roughness-metal maps.
+        constexpr int MATERIAL_TEXTURE_UNIT = 10;
 
         // Must match BALL_VISUAL_* in basic.frag.
         int ballVisualType(const BallComponent& ball)
@@ -146,6 +148,10 @@ namespace BilliardsSaloon
     SceneRenderer::~SceneRenderer()
     {
         glDeleteQueries(TIMER_QUERIES, m_timerQueries.data());
+        for (const auto& [key, cached] : m_textures)
+        {
+            glDeleteTextures(1, &cached.texture);
+        }
         glDeleteVertexArrays(1, &m_emptyVertexArray);
     }
 
@@ -247,6 +253,9 @@ namespace BilliardsSaloon
             m_shader->setInt("uProbeSH" + std::to_string(t), PROBE_TEXTURE_UNIT + t);
         }
         m_shader->setInt("uReflection", REFLECTION_TEXTURE_UNIT);
+        m_shader->setInt("uBaseColorMap", MATERIAL_TEXTURE_UNIT);
+        m_shader->setInt("uNormalMap", MATERIAL_TEXTURE_UNIT + 1);
+        m_shader->setInt("uOrmMap", MATERIAL_TEXTURE_UNIT + 2);
         m_shader->setFloat("uReflectionMaxLod", static_cast<float>(ReflectionProbe::LEVELS - 1));
         // Real reflections of the room carry their own brightness; the old
         // analytic environment was dimmed for a dark hall.
@@ -314,7 +323,7 @@ namespace BilliardsSaloon
         m_shader->setInt("uLocalCount", 0);
     }
 
-    void SceneRenderer::bindLocalLights(const Bounds& world)
+    SceneRenderer::LightChoice SceneRenderer::chooseLocalLights(const Bounds& world) const
     {
         // Lights whose sphere of influence touches the box, brightest at the
         // box first (by intensity over squared distance to it).
@@ -331,15 +340,82 @@ namespace BilliardsSaloon
                 reaching[static_cast<std::size_t>(count++)] = {light.intensity / (distanceSquared + 0.25f), static_cast<int>(i)};
             }
         }
-        const int used = std::min(count, LIGHTS_PER_DRAW);
-        std::partial_sort(reaching.begin(), reaching.begin() + used, reaching.begin() + count,
+        LightChoice choice;
+        choice.count = std::min(count, LIGHTS_PER_DRAW);
+        std::partial_sort(reaching.begin(), reaching.begin() + choice.count, reaching.begin() + count,
                           [](const auto& a, const auto& b) { return a.first > b.first; });
-        for (int i = 0; i < used; ++i)
+        for (int i = 0; i < choice.count; ++i)
         {
-            m_shader->setInt("uLocalIndices[" + std::to_string(i) + "]", reaching[static_cast<std::size_t>(i)].second);
+            choice.indices[static_cast<std::size_t>(i)] = reaching[static_cast<std::size_t>(i)].second;
         }
-        m_shader->setInt("uLocalCount", used);
-        m_stats.lightsPerDrawMax = std::max(m_stats.lightsPerDrawMax, used);
+        return choice;
+    }
+
+    void SceneRenderer::uploadLocalLights(const LightChoice& choice)
+    {
+        m_shader->setInts("uLocalIndices", choice.indices.data(), LIGHTS_PER_DRAW);
+        m_shader->setInt("uLocalCount", choice.count);
+        m_stats.lightsPerDrawMax = std::max(m_stats.lightsPerDrawMax, choice.count);
+    }
+
+    std::vector<SceneRenderer::CaptureItem> SceneRenderer::captureItems(Registry& registry, float alpha)
+    {
+        // Everything a probe sees, resolved once: the coarsest mesh, its
+        // transform and bounds, material and lights. Small things (balls,
+        // bottles) hardly change the light a room bounces and are left out.
+        std::vector<CaptureItem> items;
+        registry.view<TransformComponent, StaticMeshComponent, MaterialComponent>().each(
+            [&](Entity entity, TransformComponent& transform, StaticMeshComponent& meshComponent, MaterialComponent& material)
+            {
+                const BallComponent* ball = registry.tryGet<BallComponent>(entity);
+                if ((ball != nullptr) && ball->pocketed)
+                {
+                    return;
+                }
+                Mesh* mesh = meshFor(meshComponent);
+                if (mesh == nullptr)
+                {
+                    return;
+                }
+                CaptureItem item;
+                item.model = composeInterpolatedMatrix(transform, alpha);
+                item.world = transformBounds(mesh->bounds(), item.model);
+                if (glm::length(item.world.extent()) < 0.1f)
+                {
+                    return;
+                }
+                if (const LodComponent* lod = registry.tryGet<LodComponent>(entity); (lod != nullptr) && !lod->lods.empty())
+                {
+                    if (Mesh* coarse = meshForData(lod->lods.back()))
+                    {
+                        mesh = coarse;
+                    }
+                }
+                item.mesh = mesh;
+                item.material = &material;
+                item.lights = chooseLocalLights(item.world);
+                item.ballVisual = (ball != nullptr) ? ballVisualType(*ball) : 0;
+                item.ballNumber = ((ball != nullptr) && !ball->isCueBall) ? ball->number : 0;
+                items.push_back(item);
+            });
+        return items;
+    }
+
+    void SceneRenderer::drawCaptureItems(const std::vector<CaptureItem>& items, const Frustum& frustum)
+    {
+        for (const CaptureItem& item : items)
+        {
+            if (!frustum.intersects(item.world))
+            {
+                continue;
+            }
+            uploadLocalLights(item.lights);
+            m_shader->setMat4("uModel", item.model);
+            glEnable(GL_CULL_FACE);
+            bindMaterial(*item.material, glm::vec3(0.0f), item.ballVisual, item.ballNumber);
+            item.mesh->draw();
+        }
+        glEnable(GL_CULL_FACE);
     }
 
     void SceneRenderer::countDraw(const Mesh& mesh)
@@ -361,12 +437,17 @@ namespace BilliardsSaloon
             case MeshPrimitive::Custom:
                 break;
         }
-        if (!component.custom)
+        return meshForData(component.custom);
+    }
+
+    Mesh* SceneRenderer::meshForData(const std::shared_ptr<const MeshData>& data)
+    {
+        if (!data)
         {
             return nullptr;
         }
 
-        const MeshData* key = component.custom.get();
+        const MeshData* key = data.get();
         auto found = m_customMeshes.find(key);
         if ((found != m_customMeshes.end()) && found->second.data.expired())
         {
@@ -380,9 +461,44 @@ namespace BilliardsSaloon
             {
                 it = it->second.data.expired() ? m_customMeshes.erase(it) : std::next(it);
             }
-            found = m_customMeshes.emplace(key, CachedMesh{component.custom, Mesh::fromData(*component.custom)}).first;
+            found = m_customMeshes.emplace(key, CachedMesh{data, Mesh::fromData(*data)}).first;
         }
         return found->second.mesh.get();
+    }
+
+    unsigned int SceneRenderer::textureFor(const std::shared_ptr<const ModelTexture>& texture, bool srgb)
+    {
+        if (!texture || texture->rgba.empty())
+        {
+            return 0;
+        }
+        auto found = m_textures.find(texture.get());
+        if ((found != m_textures.end()) && found->second.data.expired())
+        {
+            glDeleteTextures(1, &found->second.texture);
+            m_textures.erase(found);
+            found = m_textures.end();
+        }
+        if (found != m_textures.end())
+        {
+            return found->second.texture;
+        }
+
+        unsigned int name = 0;
+        glGenTextures(1, &name);
+        glBindTexture(GL_TEXTURE_2D, name);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        // Colour maps are stored in sRGB and sampled as linear; data maps raw.
+        glTexImage2D(GL_TEXTURE_2D, 0, srgb ? GL_SRGB8_ALPHA8 : GL_RGBA8, texture->width, texture->height, 0,
+                     GL_RGBA, GL_UNSIGNED_BYTE, texture->rgba.data());
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glBindTexture(GL_TEXTURE_2D, 0);
+        m_textures.emplace(texture.get(), CachedTexture{texture, name});
+        return name;
     }
 
     void SceneRenderer::bindSceneShader()
@@ -405,6 +521,8 @@ namespace BilliardsSaloon
 
     void SceneRenderer::setCamera(const glm::mat4& view, const glm::mat4& projection, const glm::vec3& position)
     {
+        m_eye = position;
+        m_tanHalfFov = 1.0f / std::max(projection[1][1], 1.0e-4f);   // projection[1][1] = cot(fov / 2)
         m_shader->setMat4("uView", view);
         m_shader->setMat4("uProjection", projection);
         m_shader->setVec3("uViewPosition", position);
@@ -455,6 +573,15 @@ namespace BilliardsSaloon
                         return;
                     }
                     ++m_stats.shadowCasters;
+                    // Props cast shadows at their coarsest level of detail: the
+                    // shadow map's texels are millimetres wide at best.
+                    if (const LodComponent* lod = registry.tryGet<LodComponent>(entity); (lod != nullptr) && !lod->lods.empty())
+                    {
+                        if (Mesh* coarse = meshForData(lod->lods.back()))
+                        {
+                            mesh = coarse;
+                        }
+                    }
                     m_shadowShader->setMat4("uModel", model);
                     mesh->draw();
                     countDraw(*mesh);
@@ -548,6 +675,40 @@ namespace BilliardsSaloon
         m_shader->setFloat("uMaterialClearcoatStrength", material.clearcoatStrength);
         m_shader->setVec3("uEmissionColor", material.emissionColor * material.emissionIntensity + dynamicEmission);
         m_shader->setInt("uBallVisualType", visualType);
+
+        const ModelMaterial* model = material.textured.get();
+        m_shader->setInt("uTextured", (model != nullptr) ? 1 : 0);
+        if (model != nullptr)
+        {
+            const unsigned int maps[3] = {textureFor(model->baseColorMap, true), textureFor(model->normalMap, false), textureFor(model->ormMap, false)};
+            for (int i = 0; i < 3; ++i)
+            {
+                glActiveTexture(static_cast<GLenum>(GL_TEXTURE0 + MATERIAL_TEXTURE_UNIT + i));
+                glBindTexture(GL_TEXTURE_2D, maps[i]);
+            }
+            glActiveTexture(GL_TEXTURE0);
+            m_shader->setVec4("uBaseColorFactor", model->baseColor);
+            m_shader->setFloat("uMetallicFactor", model->metallic);
+            m_shader->setFloat("uRoughnessFactor", model->roughness);
+            m_shader->setInt("uHasBaseColorMap", maps[0] != 0 ? 1 : 0);
+            m_shader->setInt("uHasNormalMap", maps[1] != 0 ? 1 : 0);
+            m_shader->setInt("uHasOrmMap", maps[2] != 0 ? 1 : 0);
+            m_shader->setInt("uOcclusionInOrm", model->occlusionInOrm ? 1 : 0);
+            m_shader->setInt("uAlphaMask", model->alphaMask ? 1 : 0);
+        }
+        // Thin double-sided model surfaces (leaves) are drawn from both
+        // sides. Other draws keep the caller's culling (the cue turns it off).
+        if (model != nullptr)
+        {
+            if (model->doubleSided)
+            {
+                glDisable(GL_CULL_FACE);
+            }
+            else
+            {
+                glEnable(GL_CULL_FACE);
+            }
+        }
     }
 
     void SceneRenderer::drawWorld(Registry& registry, float alpha, const BallHighlight& highlight)
@@ -585,10 +746,27 @@ namespace BilliardsSaloon
                 }
                 bindLocalLights(world);
 
+                // A coarser level of detail when the part is small on screen.
+                if (const LodComponent* lod = registry.tryGet<LodComponent>(entity); (lod != nullptr) && (lod->lods.size() > 1))
+                {
+                    const float coverage = glm::length(world.extent()) /
+                                           (std::max(glm::length(world.centre() - m_eye), 1.0e-3f) * m_tanHalfFov);
+                    // Probe captures are 32 texels a face: the coarsest level is plenty.
+                    const std::size_t level = !count ? lod->lods.size() - 1
+                                            : (coverage > 0.12f) ? 0U : ((coverage > 0.04f) ? 1U : 2U);
+                    const std::size_t chosen = std::min(level, lod->lods.size() - 1);
+                    if (Mesh* coarser = meshForData(lod->lods[chosen]))
+                    {
+                        mesh = coarser;
+                    }
+                    m_stats.lodReduced += (count && (chosen > 0)) ? 1 : 0;
+                }
+
                 const glm::vec3 dynamicEmission =
                     ((highlight != nullptr) && (entity == highlight->ball)) ? highlight->emission : glm::vec3(0.0f);
 
                 m_shader->setMat4("uModel", model);
+                glEnable(GL_CULL_FACE);   // bindMaterial turns it off for double-sided models
                 const int number = ((ball != nullptr) && !ball->isCueBall) ? ball->number : 0;
                 bindMaterial(material, dynamicEmission, (ball != nullptr) ? ballVisualType(*ball) : 0, number);
                 mesh->draw();
@@ -599,6 +777,7 @@ namespace BilliardsSaloon
                 }
             }
         );
+        glEnable(GL_CULL_FACE);
     }
 
     void SceneRenderer::updateProbes(Registry& registry, float alpha)
@@ -615,6 +794,15 @@ namespace BilliardsSaloon
         {
             return;
         }
+        if (volume->pendingModels > 0)
+        {
+            // The hall's furniture is still loading: capture once it is all
+            // in. Meanwhile, no indirect light from the previous hall.
+            m_shader->setInt("uProbesEnabled", 0);
+            m_shader->setInt("uReflectionEnabled", 0);
+            m_shader->setFloat("uReflectionScale", 0.45f);
+            return;
+        }
         m_probeRevision = volume->revision;
         m_probeMin = volume->min;
         m_probeMax = volume->max;
@@ -627,6 +815,8 @@ namespace BilliardsSaloon
         m_shader->setVec3("uProbeMax", m_probeMax);
         m_shader->setVec3("uProbeCounts", glm::vec3(m_probeCounts));
         m_shader->setInt("uCapture", 1);
+
+        const std::vector<CaptureItem> items = captureItems(registry, alpha);
 
         // Two bounces: first the probes see direct light and emitters only;
         // then again, lit by the first result, so light bounces twice.
@@ -649,7 +839,7 @@ namespace BilliardsSaloon
                             m_probes.bindTile(probe, face);
                             const glm::mat4 view = LightProbes::faceView(eye, face);
                             setCamera(view, faceProjection, eye);
-                            drawObjects(registry, alpha, Frustum::fromViewProjection(faceProjection * view), nullptr, false);
+                            drawCaptureItems(items, Frustum::fromViewProjection(faceProjection * view));
                         }
                     }
                 }

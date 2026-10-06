@@ -601,23 +601,10 @@ namespace BilliardsSaloon
                 bottles[i].tint = glassTints[i];
                 keep(std::move(bottles[i]));
             }
-            // Stools in front of the counter.
-            HallPart stools = part("Bar Stools", HallMaterial::Leather, true);
-            HallPart stoolFrames = part("Stool Frames", HallMaterial::Brass, true);
-            for (float z = -1.8f; z <= 1.81f; z += 0.9f)
-            {
-                const glm::vec3 base(counterFront - 0.5f, floorY, z);
-                cylinder(stoolFrames.mesh, base, 0.2f, 0.2f, 0.03f, 16);
-                cylinder(stoolFrames.mesh, base, 0.025f, 0.025f, 0.72f, 8);
-                cylinder(stoolFrames.mesh, base + glm::vec3(0.0f, 0.3f, 0.0f), 0.17f, 0.17f, 0.02f, 16);
-                cylinder(stools.mesh, base + glm::vec3(0.0f, 0.72f, 0.0f), 0.19f, 0.18f, 0.07f, 18);
-            }
             keep(std::move(counter));
             keep(std::move(barTop));
             keep(std::move(backBar));
             keep(std::move(mirror));
-            keep(std::move(stools));
-            keep(std::move(stoolFrames));
 
             // Pendant lights over the bar.
             HallPart shades = part("Lamp Shades", HallMaterial::SconceShade);
@@ -684,7 +671,6 @@ namespace BilliardsSaloon
             hang(rackWall, 2.4f, 0.9f, 0.65f, floorY + 1.85f);
             hang(rackWall, -3.9f, 0.45f, 0.6f, floorY + 1.8f);
             hang(rackWall, 3.9f, 0.45f, 0.6f, floorY + 1.8f);
-            hang(doorWall, -2.0f, 0.8f, 1.0f, floorY + 1.85f);
             hang(doorWall, 2.0f, 0.8f, 1.0f, floorY + 1.85f);
 
             // Wall sconces: a brass plate, an arm and a fabric shade.
@@ -714,22 +700,8 @@ namespace BilliardsSaloon
                 sconce(doorWall, a, floorY + 2.05f);
             }
 
-            // Seating at the head end: a leather bench and two small tables.
-            HallPart bench = part("Bench", HallMaterial::Leather, true);
-            HallPart smallTables = part("Side Tables", HallMaterial::Beam, true);
-            boxOn(bench.mesh, doorWall, -3.0f, -1.25f, floorY, floorY + 0.45f, 0.05f, 0.62f);
-            boxOn(bench.mesh, doorWall, -3.0f, -1.25f, floorY + 0.45f, floorY + 0.95f, 0.05f, 0.2f);
-            boxOn(bench.mesh, doorWall, 1.25f, 3.0f, floorY, floorY + 0.45f, 0.05f, 0.62f);
-            boxOn(bench.mesh, doorWall, 1.25f, 3.0f, floorY + 0.45f, floorY + 0.95f, 0.05f, 0.2f);
-            for (const float a : {-2.1f, 2.1f})
-            {
-                const glm::vec3 base = doorWall.at(a, floorY, 1.05f);
-                cylinder(smallTables.mesh, base, 0.22f, 0.22f, 0.03f, 18);
-                cylinder(smallTables.mesh, base, 0.035f, 0.035f, 0.68f, 10);
-                cylinder(smallTables.mesh, base + glm::vec3(0.0f, 0.68f, 0.0f), 0.32f, 0.32f, 0.035f, 24);
-            }
-            keep(std::move(bench));
-            keep(std::move(smallTables));
+            // Seating, clocks, the dartboard and plants are loaded models
+            // (assets/data/halls/props.json).
 
             // Ceiling fixtures over the walkways around the table.
             for (const glm::vec3& at : {glm::vec3(-3.2f, 0.0f, -2.2f), glm::vec3(-3.2f, 0.0f, 2.2f), glm::vec3(1.8f, 0.0f, -2.6f), glm::vec3(1.8f, 0.0f, 2.6f)})

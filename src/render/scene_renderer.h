@@ -83,6 +83,7 @@ namespace BilliardsSaloon
         int objectsCulled {0};        // scene pass, outside the view
         int shadowCasters {0};        // summed over the lamps
         int shadowCulled {0};
+        int lodReduced {0};           // scene pass objects drawn at a coarser level of detail
         int localLights {0};          // practical lights in the hall
         int lightsPerDrawMax {0};     // the most any one draw shaded
         float gpuMilliseconds {0.0f}; // the frame before last (queries are read without waiting)
@@ -149,6 +150,9 @@ namespace BilliardsSaloon
         void renderShadows(Registry& registry, float alpha);
         void bindSceneShader();
         [[nodiscard]] Mesh* meshFor(const StaticMeshComponent& component);
+        [[nodiscard]] Mesh* meshForData(const std::shared_ptr<const MeshData>& data);
+        // The GL texture for a model image, uploaded with mipmaps on first use.
+        [[nodiscard]] unsigned int textureFor(const std::shared_ptr<const ModelTexture>& texture, bool srgb);
         void countDraw(const Mesh& mesh);
         void gatherLocalLights(Registry& registry);
         // Draws every visible entity with a mesh; `highlight` may be null.
@@ -156,8 +160,29 @@ namespace BilliardsSaloon
         // Recaptures the hall's light probes when its ProbeVolumeComponent changed.
         void updateProbes(Registry& registry, float alpha);
         void setCamera(const glm::mat4& view, const glm::mat4& projection, const glm::vec3& position);
-        // Chooses the practical lights that reach `world` for the next draw.
-        void bindLocalLights(const Bounds& world);
+        // The practical lights that reach `world`, brightest first.
+        struct LightChoice
+        {
+            std::array<int, 8> indices {};
+            int count {0};
+        };
+        [[nodiscard]] LightChoice chooseLocalLights(const Bounds& world) const;
+        void uploadLocalLights(const LightChoice& choice);
+        // Chooses and uploads the lights for the next draw.
+        void bindLocalLights(const Bounds& world) { uploadLocalLights(chooseLocalLights(world)); }
+        // Renders the probe grid's cube faces from a list built once.
+        struct CaptureItem
+        {
+            Mesh* mesh {nullptr};
+            glm::mat4 model {1.0f};
+            Bounds world;
+            const MaterialComponent* material {nullptr};
+            LightChoice lights;
+            int ballVisual {0};
+            int ballNumber {0};
+        };
+        [[nodiscard]] std::vector<CaptureItem> captureItems(Registry& registry, float alpha);
+        void drawCaptureItems(const std::vector<CaptureItem>& items, const Frustum& frustum);
 
         std::unique_ptr<Shader> m_shader;
         std::unique_ptr<Shader> m_shadowShader;
@@ -182,6 +207,10 @@ namespace BilliardsSaloon
         glm::mat4 m_cameraView {1.0f};
         glm::mat4 m_cameraProjection {1.0f};
         glm::vec3 m_cameraPosition {0.0f};
+        // The eye and lens of whatever is being drawn now (camera or capture),
+        // for choosing levels of detail.
+        glm::vec3 m_eye {0.0f};
+        float m_tanHalfFov {1.0f};
 
         LightProbes m_probes;
         ReflectionProbe m_reflection;
@@ -231,6 +260,13 @@ namespace BilliardsSaloon
             std::unique_ptr<Mesh> mesh;
         };
         std::unordered_map<const MeshData*, CachedMesh> m_customMeshes;
+
+        struct CachedTexture
+        {
+            std::weak_ptr<const ModelTexture> data;
+            unsigned int texture {0};
+        };
+        std::unordered_map<const ModelTexture*, CachedTexture> m_textures;
 
         void beginTranslucent();
         void endTranslucent();
