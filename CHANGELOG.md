@@ -68,6 +68,10 @@ All notable changes to Billiards Saloon. The format follows
 - Expert iteration: a DeepSets rack-value network trained on the search's own
   racks as its leaf; it matches the hand-made leaf at 5x the speed but does
   not improve on it over 4 generations (experiment 12, a documented null result).
+- Adversarial self-play under WPA 9-ball rules: `play_classical(value=...)`
+  lets a Python frame-win value replace the classical planner's scoring; three
+  generations of self-play reach parity with the hand-made scoring, not a gain
+  (experiment 13).
 
 ### Documentation
 - Theory documents with equations in LaTeX: the physics (motion on cloth,

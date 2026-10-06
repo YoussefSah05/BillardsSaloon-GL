@@ -50,3 +50,8 @@ print(env.winner())
 (tip offset), `elevation` (degrees), `call` ((ball, pocket) or None),
 `push_out`. `env.shoot(input)` plays a shot to rest and returns the
 referee's verdict.
+
+`env.play_classical(profile, seed, with_error=True, value=None)`: with
+`value`, a Python callable `features -> P(the player wins the frame)`, the
+planner scores every simulated outcome with it instead of its hand-made
+evaluation (`billiards_rl/selfplay/frame_value.py`, experiment 13).

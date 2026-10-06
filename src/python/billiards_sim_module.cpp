@@ -124,13 +124,26 @@ PYBIND11_MODULE(billiards_sim, m)
         .def("shoot", [](Ai::Environment& e, const ShotInput& input) { return resultDict(e.shoot(input)); })
         .def("place", [](Ai::Environment& e, float x, float z) { return e.place(glm::vec2(x, z)); })
         .def("choose", &Ai::Environment::choose)
-        .def("play_classical", [](Ai::Environment& e, const std::string& profile, std::uint32_t seed, bool withError)
+        .def("play_classical", [](Ai::Environment& e, const std::string& profile, std::uint32_t seed, bool withError,
+                                  const py::object& value)
         {
-            py::gil_scoped_release release;
-            const Ai::StepResult result = e.playClassical(Ai::findAiProfile(profile), seed, withError);
-            py::gil_scoped_acquire acquire;
-            return resultDict(result);
-        }, py::arg("profile"), py::arg("seed"), py::arg("with_error") = true)
+            if (value.is_none())
+            {
+                py::gil_scoped_release release;
+                const Ai::StepResult result = e.playClassical(Ai::findAiProfile(profile), seed, withError);
+                py::gil_scoped_acquire acquire;
+                return resultDict(result);
+            }
+            // A learned evaluation from Python: features (FEATURE_COUNT floats, the
+            // player's point of view) -> P(that player wins the frame). It replaces
+            // the planner's hand-made scoring; called with the GIL held.
+            const Ai::ValueFunction function = [&value](const Ai::AiTable& table, int player)
+            {
+                return value(toArray(Ai::encodeTable(table, player))).cast<double>();
+            };
+            return resultDict(e.playClassical(Ai::findAiProfile(profile), seed, withError, function));
+        }, py::arg("profile"), py::arg("seed"), py::arg("with_error") = true, py::arg("value") = py::none(),
+           "Plays the classical AI's move; `value(features) -> P(win)` replaces its position scoring")
         .def("plan_shot", [](const Ai::Environment& e, const std::string& profile, std::uint32_t seed)
         {
             py::gil_scoped_release release;
