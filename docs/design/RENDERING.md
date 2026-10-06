@@ -1,8 +1,8 @@
 # Billiards Saloon — Rendering
 
-Status: physically based renderer, milestone M6 (0.6.0). Last revised
-2026-10-06. Code: `src/render/`, shaders in `assets/shaders/`, table and hall
-geometry in `src/scene/`.
+Status: physically based renderer with indirect light, reflections and
+streamed models (after 0.8.0). Last revised 2026-10-06. Code: `src/render/`,
+shaders in `assets/shaders/`, table, hall and model geometry in `src/scene/`.
 
 This document explains the image formation model: what is computed per pixel
 and why, the approximations made to run in real time on OpenGL 4.1 (the most
@@ -12,8 +12,11 @@ the renderer approximates, the specific models chosen, and their trade-offs.
 ## 1. The frame
 
 ```text
+once per hall      light probes: 189 cube faces ×2 bounces → SH textures;
+                   reflection cube map, prefiltered by roughness       (Section 6)
 shadow pass   ×3   depth from each lamp, looking down            → shadow map array
-scene pass         every object, lit, into a multisampled HDR buffer (RGBA16F)
+scene pass         visible objects only (Section 10), lit, into a
+                   multisampled HDR buffer (RGBA16F)
 resolve            MSAA samples averaged                           → HDR texture
 bloom              downsample ×6, upsample and accumulate          → bloom texture
 post               bloom mix, exposure, ACES tone curve, vignette, sRGB, dither
@@ -40,11 +43,13 @@ where $f_r$ is the surface's BRDF (how much light arriving from $\mathbf{l}$ is
 reflected towards $\mathbf{v}$). The renderer evaluates this integral in three
 parts:
 
-1. **Direct light from the three lamps**, the dominant term in a darkened hall,
-   as a sum over lights with visibility from shadow maps (Sections 3–5).
-2. **Indirect light from the room**, as a pre-integrated analytic environment
-   (Section 6).
-3. **Emission**, for lamp panels and highlights.
+1. **Direct light** from the three table lamps, with visibility from shadow
+   maps, and from up to 32 practical lights in the hall: sconces, ceiling
+   fixtures, window light (Sections 3–5).
+2. **Indirect light**, the light the room itself reflects: diffuse from a grid
+   of spherical-harmonic light probes, specular from a prefiltered reflection
+   cube map of the room (Section 6).
+3. **Emission**, for lamp panels, shades and windows.
 
 ## 3. The microfacet BRDF
 
@@ -117,6 +122,46 @@ with $\varepsilon$ a small constant that avoids a singularity right at the
 light. The three lamps' colour and intensity come from the hall's lighting mood
 (`assets/data/equipment/catalog.json`).
 
+### Practical lights
+
+A room lit only by the table lamps is a black box around a bright table. Real
+saloons and arenas are lit by many fittings. Each hall declares them in its
+geometry (`HallGeometry::lights`); they become `LocalLightComponent` entities,
+scaled by the hall's `practical` brightness. A light has a finite **range**
+$r$: its radiance falls with the inverse square, multiplied by a window that
+reaches zero smoothly at $r$ (Karis 2013):
+
+$$
+L_i(d) = \frac{I\,\mathbf{c}}{d^2 + \varepsilon}\,\left[\operatorname{saturate}\!\left(1 - (d/r)^4\right)\right]^2 .
+$$
+
+The window changes the light little near it (at $d = r/2$ it is $0.88$) and
+removes the long tail, where an inverse-square light contributes almost
+nothing but still costs a shader evaluation. Spots multiply by a smooth cone,
+$\operatorname{smoothstep}(\cos\theta_\text{outer}, \cos\theta_\text{inner}, -\mathbf{l}\cdot\hat{\mathbf{s}})$.
+
+**Choosing the lights per draw.** A finite range makes the set of lights that
+can reach an object exact: light $k$ reaches a bounding box $B$ when the
+closest point of $B$ to the light, $\mathbf{q} = \operatorname{clamp}(\mathbf{p}_k, B_\text{min}, B_\text{max})$,
+is within range, $\lVert\mathbf{p}_k - \mathbf{q}\rVert < r_k$. All of a hall's
+lights are uploaded once a frame; each draw names the (at most 8) that reach
+it, brightest first by $I_k / (d_k^2 + 0.25)$. This is *forward shading with
+per-object light lists*, the simplest scheme that scales with the number of
+lights without compute shaders, which OpenGL 4.1 does not have. With 20 lights
+in the saloon a draw shades at most 8.
+
+Practical lights cast no shadows. Their light is soft and comes from many
+directions at once, the table lamps' shadows carry the contact shading that
+matters, and the probes (Section 6) supply the occlusion of large shapes.
+
+**Fittings show only their glow.** A lamp panel or a globe is drawn as an
+emissive surface, and its light comes from the point light placed inside it.
+If the fitting were also lit by that light, a few centimetres away, it would
+reflect $\rho/\pi \cdot I/d^2$, which is enormous: the arena's canopy panels
+became a second emitter about 60 times brighter than the room, flooded the
+probes and washed out the cloth. Surfaces of the lamp type therefore output
+their emission and nothing else.
+
 ## 5. Materials
 
 **Balls: polished phenolic resin.** One hard dielectric layer: roughness
@@ -157,21 +202,127 @@ $$
 
 ## 6. Light from the room
 
-Each pixel cannot integrate the whole environment. The environment term is
-split into two pre-integrated factors (the "split-sum" approximation): the
-environment's radiance in the reflected direction, blurred by roughness, times
-the BRDF's integral against a white environment. The second factor depends only
-on $F_0$, roughness and $\mathbf{n}\cdot\mathbf{v}$. It uses Karis's
-closed-form fit instead of a lookup texture:
+The second term of the rendering equation needs the radiance arriving from
+every direction: the walls, the ceiling, the floor, the cloth. That light has
+itself been reflected, so it is the hard part of global illumination. A real
+time renderer cannot trace it per pixel. Here it is precomputed when a hall
+loads, in two parts that mirror the split of the BRDF into diffuse and
+specular.
+
+### Diffuse: light probes in spherical harmonics
+
+For a Lambertian surface the reflected light depends only on the
+**irradiance**, the cosine-weighted integral of incoming radiance:
 
 $$
-\int f_r\,(\mathbf{n}\cdot\mathbf{l})\,d\omega \approx F_0\,A(\alpha, \mathbf{n}\cdot\mathbf{v}) + B(\alpha, \mathbf{n}\cdot\mathbf{v}),
+E(\mathbf{x}, \mathbf{n}) = \int_{\Omega} L_i(\mathbf{x}, \boldsymbol{\omega})\, \max(\mathbf{n}\cdot\boldsymbol{\omega}, 0)\, d\omega,
+\qquad
+L_o = \frac{\rho}{\pi}\, E .
 $$
 
-with $A$ and $B$ small polynomial and exponential expressions. The environment
-itself is analytic: a dark floor, horizon and ceiling, plus a warm lobe above
-for the lamps. The halls are dark, so it is kept weak (scaled by $0.45$), and
-the lamps dominate as they do on television.
+Irradiance varies slowly with $\mathbf{n}$: the clamped cosine is a low-pass
+filter. Ramamoorthi and Hanrahan (2001) showed that if the radiance is
+expanded in real spherical harmonics $Y_{lm}$,
+
+$$
+L(\boldsymbol{\omega}) \approx \sum_{l=0}^{2}\sum_{m=-l}^{l} c_{lm}\, Y_{lm}(\boldsymbol{\omega}),
+\qquad
+c_{lm} = \int_{S^2} L(\boldsymbol{\omega})\, Y_{lm}(\boldsymbol{\omega})\, d\omega,
+$$
+
+then convolution with the clamped cosine multiplies each band by a constant,
+$\hat A_0 = \pi$, $\hat A_1 = 2\pi/3$, $\hat A_2 = \pi/4$, and higher bands
+nearly vanish ($\hat A_3 = 0$, $\hat A_4 = -\pi/24$). Nine coefficients per
+colour therefore give irradiance with an average error around 1%:
+
+$$
+E(\mathbf{n}) = \sum_{l=0}^{2}\sum_{m} \hat A_l\, c_{lm}\, Y_{lm}(\mathbf{n}).
+$$
+
+**Capture.** A grid of probes covers the room (9×3×7 in the saloon, about a
+metre apart). From each probe the lit room is rendered into the six
+$32\times32$ faces of a cube map, all faces of all probes as tiles of one
+atlas, read back once. Each texel's direction $\boldsymbol{\omega}$ and solid
+angle weight the projection. A texel at face coordinates $(u, v) \in [-1, 1]^2$
+covers
+
+$$
+\Delta\omega \approx \frac{\Delta u\, \Delta v}{(1 + u^2 + v^2)^{3/2}},
+$$
+
+so $c_{lm} \approx \sum_\text{texels} L\, Y_{lm}(\boldsymbol{\omega})\, \Delta\omega$,
+normalised so the weights sum to exactly $4\pi$. The coefficients (27 numbers
+per probe) are packed into seven RGBA 3D textures. The shader samples them with
+hardware trilinear filtering, so each pixel blends its eight nearest probes,
+and evaluates $E(\mathbf{n})$. It samples a little in front of the surface,
+$\mathbf{x} + 0.08\,\mathbf{n}$, so that a probe just behind a wall does not
+leak light from the other side into it. The projection and its accuracy are
+unit-tested (`tests/test_spherical_harmonics.cpp`): a uniform environment must
+give $E = \pi L$ in every direction, and hemisphere lighting must light floors
+and not ceilings.
+
+**Two bounces.** The capture runs twice. The first time, the probes see only
+direct light. The second time the room is drawn lit by the first result, so
+the probes see light that has bounced once, and the final probes hold two
+bounces. This is the first two terms of the Neumann series of the rendering
+equation, $L = L_e + TL_e + T^2L_e + \dots$, where $T$ is the transport
+operator. Each bounce off the room's surfaces, with albedos of 0.1–0.5, keeps
+a fraction of the light, so the third bounce would add a few percent at most.
+During capture, surfaces are shaded diffuse only (view-dependent highlights
+would be noise to a probe), and emission is left out: every fitting's light
+already enters through its lamp.
+
+**When it runs.** Once per hall and lighting change, after the hall's models
+have loaded (Section 10). It draws from a list of objects resolved once, each
+with its coarsest level of detail and its lights already chosen, and skips
+objects under about 20 cm. That brought the capture from 2.5 s to 0.8 s on the
+development Mac.
+
+### Specular: a parallax-corrected reflection cube map
+
+Glossy and mirror surfaces need radiance from one direction, with detail. The
+room is rendered once more into a $256^2$ cube map from above the table. The
+split-sum approximation (Karis 2013) separates the specular integral into the
+environment, pre-convolved with the GGX lobe, times the BRDF's response to a
+white environment (the closed form given above, $F_0 A + B$). The
+pre-convolution assumes $\mathbf{n} = \mathbf{v} = \mathbf{r}$ and is stored
+as mip levels, roughness $k/5$ at level $k$:
+
+$$
+\tilde L(\mathbf{r}, \alpha) = \frac{\sum_j L(\mathbf{l}_j)\,(\mathbf{n}\cdot\mathbf{l}_j)}{\sum_j \mathbf{n}\cdot\mathbf{l}_j},
+\qquad \mathbf{l}_j = 2(\mathbf{r}\cdot\mathbf{h}_j)\mathbf{h}_j - \mathbf{r},
+\quad \mathbf{h}_j \sim D_\text{GGX}.
+$$
+
+The 64 half vectors per texel come from a Hammersley sequence. **Filtered
+importance sampling** (Křivánek and Colbert 2008) removes the noise: a sample
+represents the solid angle $\Omega_s = 1/(N\,p)$, with
+$p = D(\mathbf{h})/4$ the pdf of $\mathbf{l}$ when $\mathbf{n} = \mathbf{v}$.
+It reads the source mip whose texels cover that angle,
+
+$$
+\text{lod} = \tfrac12 \log_2\!\frac{\Omega_s}{\Omega_t} + 1,
+\qquad \Omega_t = \frac{4\pi}{6\,W^2},
+$$
+
+where $W$ is the face width in texels.
+
+A cube map treats everything it sees as infinitely far away, which is wrong
+inside a room: the bar mirror would reflect the far wall as if seen from the
+capture point. **Box projection** (Lagarde and Zanuttini 2012) corrects this.
+The room is approximated by its box. The reflected ray from the shaded point
+$\mathbf{x}$ is intersected with the box, and the cube map is looked up in the
+direction from the capture point $\mathbf{c}$ to that hit:
+
+$$
+t = \min_{i \in \{x,y,z\}} \max\!\left(\frac{b^\text{max}_i - x_i}{r_i},\ \frac{b^\text{min}_i - x_i}{r_i}\right),
+\qquad
+\mathbf{d} = \mathbf{x} + t\,\mathbf{r} - \mathbf{c}.
+$$
+
+Rough lobes are wide, and a single corrected direction would make the box's
+corners visible in them, so the lookup blends back towards $\mathbf{r}$ by
+$\alpha^2$.
 
 ## 7. Shadows
 
@@ -257,6 +408,35 @@ last, so smooth dark gradients on the cloth and walls do not show banding at
 
 ## 9. Geometry
 
+### Loaded models
+
+Furniture and decor are glTF 2.0 models (`assets/models/props/`, CC0 from Poly
+Haven). The loader (`src/scene/model_loader.cpp`, cgltf and stb_image) bakes
+node transforms into the vertices, with the inverse transpose for normals, and
+restores the winding under mirroring transforms ($\det < 0$). It decodes each
+texture once, even when materials share it. glTF's **metallic-roughness**
+model maps onto the same microfacet BRDF: a metal has no diffuse term and
+tinted reflectance, a dielectric has 4%:
+
+$$
+\rho_\text{diffuse} = \mathbf{b}\,(1 - m), \qquad F_0 = \operatorname{mix}(0.04,\ \mathbf{b},\ m),
+$$
+
+with $\mathbf{b}$ the base colour (stored as sRGB textures, so the hardware
+returns linear values), and $m$ and the roughness from the blue and green
+channels of the packed map, whose red channel is ambient occlusion. Occlusion
+scales the indirect terms only, since direct light has its own shadows.
+
+**Normal maps without tangents.** Tangent-space normal maps need a tangent
+frame per vertex. Instead, the shader builds one per pixel from screen-space
+derivatives (Schüler 2006). The UV gradient with respect to surface position
+is solved from $\partial\mathbf{p}/\partial x$, $\partial\mathbf{p}/\partial y$
+and the matching UV derivatives. This gives the cotangent frame
+$(\mathbf{T}, \mathbf{B}, \mathbf{n})$, scaled so its larger axis has unit
+length. It costs a few instructions and no vertex data.
+
+### Procedural geometry
+
 The table is generated, not modelled by hand, from the simulator's own table
 (`src/scene/table_geometry.cpp`):
 
@@ -280,7 +460,73 @@ prototype's sphere mesh, went unnoticed for months: culling showed the inside
 of the far half of every ball. The physically based shading exposed it,
 because the visible surface's normals pointed away from the lamps.
 
-## 10. Quality presets
+## 10. Visibility, levels of detail and streaming
+
+**Frustum culling.** Each mesh keeps its local bounding box. A draw transforms
+it to world space with Arvo's (1990) method: the centre moves with the matrix,
+and each world half-extent is $h'_i = \sum_j \lvert M_{ij}\rvert\, h_j$, exact
+for the transformed box. The six planes of the camera's frustum come straight
+from the rows $\mathbf{m}_i$ of the view-projection matrix (Gribb and Hartmann
+2001): $\mathbf{m}_4 \pm \mathbf{m}_1$, $\mathbf{m}_4 \pm \mathbf{m}_2$,
+$\mathbf{m}_4 \pm \mathbf{m}_3$, normalised. A box with centre $\mathbf{c}$ and
+half-extents $\mathbf{h}$ is outside plane $(\mathbf{n}, w)$ when
+
+$$
+\mathbf{n}\cdot\mathbf{c} + w < -\left(h_x\lvert n_x\rvert + h_y\lvert n_y\rvert + h_z\lvert n_z\rvert\right),
+$$
+
+the box's projected radius on the normal. A box outside any plane is skipped.
+The test is conservative: it never culls a visible box. The shadow pass culls
+against each lamp's frustum the same way. For culling to help, scenery is
+built as spatially separate parts (each wall, each side of the stands, each
+furniture group), never as one mesh spanning the room.
+
+**Levels of detail.** Each model part gets three levels: the original, then
+about 35% and 12% of its triangles. They are made with meshoptimizer's
+simplifier, which collapses edges by the quadric error metric (Garland and
+Heckbert 1997) within a bound on the geometric error. Exported meshes split
+vertices along every UV and normal seam, and the simplifier will not collapse
+across such borders. Each mesh is therefore first welded by position alone
+(a "shadow" index buffer); the seams it blurs are invisible at distance. Parts
+made of many small pieces (the bar stools' rods) still cannot shrink within
+the error bound, so the coarsest levels fall back to vertex clustering on a
+grid ("sloppy" simplification). The renderer picks a level by how large the
+part's bounding sphere of radius $R$ looks at distance $d$, for a vertical
+field of view $\phi$:
+
+$$
+s = \frac{R}{d\,\tan(\phi/2)}, \qquad
+\text{level} = \begin{cases} 0 & s > 0.12 \\ 1 & 0.04 < s \le 0.12 \\ 2 & \text{otherwise.} \end{cases}
+$$
+
+Shadow maps and light probes always use the coarsest level: a shadow-map texel
+is several millimetres wide, and a probe face is 32 texels across.
+
+**Streaming.** Models load on worker threads (`std::async`). The game keeps
+running, and each model's placements (`assets/data/halls/props.json`) appear
+as it finishes. Parsing, texture decoding and LOD generation all happen off the
+render thread; only the GPU upload happens on first draw. Loaded models stay
+cached, so a new match or a return to a hall costs nothing. The light probes
+wait for the last model, so they are captured once with all the furniture in
+place.
+
+**What was measured, and what was left out.** At 3110×1800 with 4× MSAA on
+the development Mac (Apple GPU):
+
+| Scene | GPU / frame | Draws | Triangles | Objects drawn / culled |
+|---|---|---|---|---|
+| Old hall, before this work | 6.5 ms | ~100 | ~200k | all |
+| Furnished saloon, culling + LOD | 10.5 ms | ~300 | 330k | 57 / 125 |
+
+The cost is dominated by shading pixels, not by geometry. **Occlusion
+culling** (hardware queries or a depth pyramid) was therefore not
+implemented: a single room seen from inside hides little behind its few large
+occluders, and the queries' latency would cost more than it saves. **Asset
+streaming by visibility**, keeping only what the camera sees in memory, would
+pay off for open worlds, not for a room whose assets total under 6 MB. Both
+remain options if halls grow beyond one room.
+
+## 11. Quality presets
 
 | Preset | MSAA | Shadow map | PCF | Bloom |
 |---|---|---|---|---|
@@ -299,4 +545,13 @@ because the visible surface's normals pointed away from the lamps.
 - Neubelt, D., Pettineo, M. *Crafting a Next-Gen Material Pipeline for The Order: 1886.* SIGGRAPH course notes, 2013.
 - Jimenez, J. *Next Generation Post Processing in Call of Duty: Advanced Warfare.* SIGGRAPH course notes, 2014.
 - Hill, S. *ACES fitted tone curve* (BakingLab), 2016; Academy Color Encoding System.
+- Ramamoorthi, R., Hanrahan, P. *An Efficient Representation for Irradiance Environment Maps.* SIGGRAPH 2001.
+- Sloan, P.-P. *Stupid Spherical Harmonics (SH) Tricks.* GDC 2008.
+- Křivánek, J., Colbert, M. *Real-time Shading with Filtered Importance Sampling.* EGSR 2008.
+- Lagarde, S., Zanuttini, A. *Local Image-based Lighting with Parallax-corrected Cubemap.* SIGGRAPH 2012 talk.
+- Schüler, C. *Normal Mapping without Precomputed Tangents.* ShaderX5, 2006.
+- Arvo, J. *Transforming Axis-Aligned Bounding Boxes.* Graphics Gems, 1990.
+- Gribb, G., Hartmann, K. *Fast Extraction of Viewing Frustum Planes from the World-View-Projection Matrix.* 2001.
+- Garland, M., Heckbert, P. *Surface Simplification Using Quadric Error Metrics.* SIGGRAPH 1997.
+- Kapoulkine, A. *meshoptimizer.* https://github.com/zeux/meshoptimizer
 - Williams, L. *Casting Curved Shadows on Curved Surfaces.* SIGGRAPH 1978 (shadow mapping); Reeves, W. et al., *Rendering Antialiased Shadows with Depth Maps*, SIGGRAPH 1987 (PCF).
