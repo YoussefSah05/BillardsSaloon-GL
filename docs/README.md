@@ -30,6 +30,8 @@ presented like a televised tournament. Four pillars:
 | [design/AUDIO.md](design/AUDIO.md) | The sound: modal synthesis, crowd textures, from simulator events to a positioned mix |
 | [design/AI.md](design/AI.md) | The computer opponents: ghost-ball geometry, error propagation, expected utility under execution noise, position value |
 | [design/INTELLIGENCE.md](design/INTELLIGENCE.md) | The AI/ML plan and its theory: value functions, proper scoring, set encoders, TD learning, expert iteration, Elo, Bayesian skill estimation |
+| [rl/current-game-audit.md](rl/current-game-audit.md) | What the simulator offers reinforcement learning, measured: API, throughput, determinism, the narrow potting windows, risks |
+| [rl/rl-system-design.md](rl/rl-system-design.md) | The RL system: shot-level API, `SingleShotEnv`, baselines, evaluation protocol, algorithms and milestones |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | The code: modules, targets, data flow of a shot, milestone order |
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | How work flows: branches, commits, merges, releases |
 | [../CHANGELOG.md](../CHANGELOG.md) | What changed in each version |
