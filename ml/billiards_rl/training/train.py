@@ -63,6 +63,8 @@ def make_env(env_config: dict) -> SingleShotEnv:
         action_frame=env_config.get("action_frame", "absolute"),
         reward=env_config.get("reward", "sparse"),
         noise=tuple(env_config.get("noise", (0.0, 0.0))),
+        smooth_samples=env_config.get("smooth_samples", 0),
+        smooth_sigma=env_config.get("smooth_sigma", 0.0),
     )
 
 

@@ -968,3 +968,94 @@ explain why.**
 These lead naturally to the brief's next milestones. Cue-ball position play
 needs speed control anyway. Candidate generation plus search can score
 candidates by simulated robustness.
+
+---
+
+## Experiment 8 — Rewarding robustness directly
+
+**Hypothesis.** Experiment 7 showed that learned policies lose to geometry by
+hitting too hard, which narrows the potting window. Rewarding a shot by its
+*expected* success under aiming error, rather than by the one outcome
+played, pays directly for window width. The policy should learn gentler,
+more robust shots.
+
+Experiment 3's noise training targeted the same quantity with *one* noisy
+sample per shot: unbiased but high-variance. Averaging 16 replays should make
+the signal usable.
+
+**Setup.** `SingleShotEnv` with `smooth_samples=16, smooth_sigma=0.25`: the
+reward is the mean `sparse_target` reward of the intended shot replayed 16
+times with $\varepsilon_\varphi \sim \mathcal N(0, 0.25°^2)$ (one batch call):
+
+$$
+\hat r(s, a) = \frac{1}{16}\sum_{k=1}^{16} r\big(s, a + (\varepsilon_k, 0)\big)
+\approx \mathbb E_\varepsilon\left[r(s, a + \varepsilon)\right].
+$$
+
+- SAC, ghost-relative frame, target mouth as input, target-only reward,
+  100k steps, 5 seeds.
+- Checkpoints selected under 0.25° noise, the objective being robustness.
+- Controls in the same environment: clean training (Experiment 7's
+  `sac-ghost-target-100k`), and one noisy sample per shot (`noise=[0.25, 0]`).
+
+**Command.** `bash scripts/experiment8_robust_reward.sh` (548 s per run, 1.5×
+the clean runs, for the replays).
+
+**Results** (mean ± sd over 5 seeds):
+
+| Policy | easy | medium | hard | easy, σ=0.25° | medium, σ=0.25° | hard, σ=0.25° |
+|---|---|---|---|---|---|---|
+| SAC, clean (Exp. 7) | 86.9% ± 1.3 | 84.1% ± 0.6 | **84.0% ± 0.5** | **83.2%** | 60.4% | 42.4% |
+| SAC, one noisy sample | 85.5% ± 0.7 | 83.8% ± 1.7 | 77.5% ± 2.4 | 81.6% ± 0.7 | 62.4% ± 0.9 | 44.2% ± 1.1 |
+| SAC, robustness reward | 85.8% ± 0.6 | **86.4% ± 0.7** | 81.3% ± 1.3 | 81.5% ± 0.9 | **64.5% ± 0.4** | **46.3% ± 1.5** |
+| geometry (Exp. 0) | 82.6% | 86.1% | 85.4% | 80.9% | 65.1% | 47.3% |
+
+**Paired with geometry** (seeds significantly better / worse):
+
+| Policy | Noise | easy | medium | hard |
+|---|---|---|---|---|
+| robustness reward | 0.25° | 0/5 either way | 0/5 either way | worse in 2/5 |
+| robustness reward | none | better 5/5 | 0/5 either way | worse 5/5 |
+| one noisy sample | 0.25° | 0/5 either way | worse 3/5 | worse 3/5 |
+
+**Diagnostic** (200 layouts per suite, best checkpoints, the same window scan
+as Experiment 7):
+
+| Suite | Policy | Aim inside its window | Window width (median) | Speed (median) |
+|---|---|---|---|---|
+| medium | SAC, clean | 82% | 0.49° | 2.02 m/s |
+| medium | SAC, robust (seeds 1, 2) | 86%, 87% | 0.58°, 0.60° | 1.34, 1.30 m/s |
+| hard | SAC, clean | 80% | 0.28° | 2.02 m/s |
+| hard | SAC, robust (seeds 1, 2) | 78%, 80% | 0.34°, 0.36° | 1.49, 1.48 m/s |
+
+**Interpretation.**
+
+1. **The hypothesis is supported.** The robustness reward teaches what it
+   pays for:
+   - speeds drop from 2.0 to 1.3–1.5 m/s;
+   - windows widen by 18–28%;
+   - under 0.25° of noise, success rises by about 4 points on *medium* and
+     *hard* over clean training (64.5% against 60.4%, 46.3% against 42.4%).
+2. **It is the first learned policy to match the geometry baseline under
+   noise.** It shows no significant difference on *easy* and *medium*, and is
+   worse on *hard* in 2 of 5 seeds. Without noise it reaches 86.4% on
+   *medium*, the best learned *medium* result, level with geometry.
+3. **Averaging replays is what makes noise training work.** One noisy sample
+   per shot (Experiment 3's approach, repeated here in the same environment)
+   is worse on every suite. The robustness signal is there, but a single
+   Bernoulli outcome per shot is too noisy for the critic to rank shots by
+   window width.
+4. **The trade-off on hard layouts.** Slower long shots throw more, so their
+   windows move further from the ghost-ball line. The robust policy's
+   windows are wider, but it lands in them no more often (78–80%), and
+   without noise it loses 2.7 points on *hard* to clean SAC. Wider windows
+   help only if the aim follows them.
+5. **This uses the simulator during training** (16 replays per shot) but
+   never at decision time: the trained policy acts in one forward pass.
+   Unlike the search baseline, it is a deployable policy.
+
+**Next.** The remaining gap on *hard* (an aim correction that grows as shots
+get slower) and the step to position play (Milestone 10) both need control
+of where the cue ball goes, so spin and speed are next. Candidate generation
+plus search (Milestone 12) can use the same robustness estimate to rank
+shots at decision time.
