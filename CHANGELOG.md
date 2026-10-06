@@ -6,6 +6,41 @@ All notable changes to Billiards Saloon. The format follows
 
 ## [Unreleased]
 
+### Added
+- A furnished, well-lit saloon: plaster and panelled walls, a beamed ceiling,
+  windows with evening light, a bar with back-bar shelves, bottles, a mirror
+  and stools, a cue rack and scoreboard, pictures, a dartboard, clocks, a sofa
+  and armchair, wine barrels and plants. Twenty practical lights (sconces,
+  pendants, ceiling fixtures, window light) light the room around the table.
+- The arena gets a lighting truss whose spots light the stands and the
+  playing area, and a gold LED line along the barriers.
+- Indirect light: light probes capture the lit hall (two bounces) when it
+  loads, so walls, floors and furniture away from the lamps are lit by the
+  light the room reflects.
+- Reflections of the room itself, corrected for the room's shape: the bar
+  mirror, the balls and varnished wood reflect the walls where they are.
+- Furniture and decor are loaded from glTF models (CC0, Poly Haven) on worker
+  threads while the game runs, each with three levels of detail.
+- Frustum culling of the scene and shadow passes; `--profile` prints frame
+  time, draw calls, triangles and culling once a second; `--hall ID` starts
+  in a given hall.
+
+### Documentation
+- Theory documents with equations in LaTeX: the physics (motion on cloth,
+  event detection, ball, cushion and cue models, validation), rendering
+  (microfacet shading, sheen, shadows, bloom, tone mapping), audio (modal
+  synthesis, crowd, event-driven mix), the computer opponents (ghost-ball
+  geometry, error propagation, expected utility under noise) and the
+  intelligence plan (value functions, proper scoring, set encoders, TD
+  learning, Elo, Bayesian skill estimation). The referee's design is
+  explained in the rules document.
+
+### Fixed
+- Linux and Windows builds: a test variable named `raise` clashed with the C
+  library function used inside doctest's macros on Linux; files that loop over
+  braced lists now include `<initializer_list>` instead of relying on other
+  headers to pull it in; MSVC reads sources as UTF-8.
+
 ## [0.8.0] - 2026-10-06
 
 Computer opponents (M8).

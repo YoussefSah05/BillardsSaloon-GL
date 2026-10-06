@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "note": "Loaded models placed in each hall. Positions in metres in game space (x along the table, z across, y above the floor); yaw in degrees turns the model's front (+z) towards +x at 90. Models are CC0 from Poly Haven (see CREDITS.md).",
+  "halls": {
+    "saloon": [
+      {"model": "models/props/bar_chair_round_01/bar_chair_round_01_1k.gltf", "position": [2.75, 0.0, -1.8], "yaw": -90},
+      {"model": "models/props/bar_chair_round_01/bar_chair_round_01_1k.gltf", "position": [2.75, 0.0, -0.9], "yaw": -80},
+      {"model": "models/props/bar_chair_round_01/bar_chair_round_01_1k.gltf", "position": [2.75, 0.0, 0.0], "yaw": -95},
+      {"model": "models/props/bar_chair_round_01/bar_chair_round_01_1k.gltf", "position": [2.75, 0.0, 0.9], "yaw": -100},
+      {"model": "models/props/bar_chair_round_01/bar_chair_round_01_1k.gltf", "position": [2.75, 0.0, 1.8], "yaw": -85},
+
+      {"model": "models/props/dartboard/dartboard_1k.gltf", "position": [-4.59, 1.73, -2.0], "yaw": 90},
+      {"model": "models/props/wall_clock/wall_clock_1k.gltf", "position": [-4.59, 2.55, 0.0], "yaw": 90},
+      {"model": "models/props/vintage_grandfather_clock_01/vintage_grandfather_clock_01_1k.gltf", "position": [-4.3, 0.0, 2.3], "yaw": 0},
+
+      {"model": "models/props/Sofa_01/Sofa_01_1k.gltf", "position": [-4.15, 0.0, -0.8], "yaw": 90},
+      {"model": "models/props/ArmChair_01/ArmChair_01_1k.gltf", "position": [-3.2, 0.0, -2.75], "yaw": 25},
+      {"model": "models/props/coffee_table_round_01/coffee_table_round_01_1k.gltf", "position": [-3.35, 0.0, -1.0], "yaw": 0, "scale": 0.6},
+
+      {"model": "models/props/wine_barrel_01/wine_barrel_01_1k.gltf", "position": [2.85, 0.0, -2.95], "yaw": 10},
+      {"model": "models/props/wine_barrel_01/wine_barrel_01_1k.gltf", "position": [3.7, 0.0, -2.95], "yaw": 70},
+      {"model": "models/props/wine_bottles_01/wine_bottles_01_1k.gltf", "position": [3.6, 1.07, -1.95], "yaw": 0},
+      {"model": "models/props/wine_bottles_01/wine_bottles_01_1k.gltf", "position": [3.65, 1.07, -1.84], "yaw": 40},
+      {"model": "models/props/wine_bottles_01/wine_bottles_01_1k.gltf", "position": [3.55, 1.07, 0.55], "yaw": 80},
+      {"model": "models/props/wine_bottles_01/wine_bottles_01_1k.gltf", "position": [3.7, 1.87, -2.55], "yaw": 0},
+      {"model": "models/props/wine_bottles_01/wine_bottles_01_1k.gltf", "position": [3.7, 0.95, 2.6], "yaw": 0},
+
+      {"model": "models/props/potted_plant_04/potted_plant_04_1k.gltf", "position": [4.25, 0.0, 3.05], "yaw": 0, "scale": 3.2},
+      {"model": "models/props/potted_plant_04/potted_plant_04_1k.gltf", "position": [-4.25, 0.0, -3.1], "yaw": 60, "scale": 3.4},
+      {"model": "models/props/potted_plant_04/potted_plant_04_1k.gltf", "position": [-3.9, 0.0, 3.1], "yaw": 140, "scale": 3.0},
+      {"model": "models/props/potted_plant_04/potted_plant_04_1k.gltf", "position": [3.55, 1.07, 2.05], "yaw": 30},
+      {"model": "models/props/potted_plant_04/potted_plant_04_1k.gltf", "position": [-3.35, 0.3, -1.0], "yaw": 0, "scale": 0.8}
+    ],
+    "arena": []
+  }
+}

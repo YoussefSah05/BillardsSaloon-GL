@@ -41,6 +41,54 @@ uniform int uShadowsEnabled;
 uniform int uShadowKernel;          // PCF taps per side: 1, 3 or 5
 uniform float uShadowTexel;
 
+// Practical lights (sconces, ceiling and bar lights): all of the hall's are
+// uploaded once a frame; each draw names the few that reach it.
+const int MAX_LOCAL_LIGHTS = 32;
+const int LIGHTS_PER_DRAW = 8;
+uniform vec4 uLocalPositionRange[MAX_LOCAL_LIGHTS];   // xyz position, w range
+uniform vec4 uLocalColor[MAX_LOCAL_LIGHTS];           // rgb colour x intensity, w spot inner cosine
+uniform vec4 uLocalSpot[MAX_LOCAL_LIGHTS];            // xyz direction, w spot outer cosine (< -1: point light)
+uniform int uLocalIndices[LIGHTS_PER_DRAW];
+uniform int uLocalCount;
+
+// Indirect light: SH irradiance probes on a grid (7 textures hold 27
+// coefficients: 9 per colour), and the capture mode that fills them.
+uniform sampler3D uProbeSH0;
+uniform sampler3D uProbeSH1;
+uniform sampler3D uProbeSH2;
+uniform sampler3D uProbeSH3;
+uniform sampler3D uProbeSH4;
+uniform sampler3D uProbeSH5;
+uniform sampler3D uProbeSH6;
+uniform vec3 uProbeMin;
+uniform vec3 uProbeMax;
+uniform vec3 uProbeCounts;
+uniform int uProbesEnabled;
+uniform int uCapture;   // 1 while rendering probes: diffuse light and emission only
+
+// Reflections: the room as a prefiltered cube map (mip = roughness), its
+// parallax corrected against the room's box.
+uniform samplerCube uReflection;
+uniform int uReflectionEnabled;
+uniform vec3 uRoomMin;
+uniform vec3 uRoomMax;
+uniform vec3 uReflectionCentre;
+uniform float uReflectionMaxLod;
+
+// Loaded models: glTF metallic-roughness materials with texture maps.
+uniform int uTextured;
+uniform sampler2D uBaseColorMap;
+uniform sampler2D uNormalMap;
+uniform sampler2D uOrmMap;     // R occlusion, G roughness, B metal
+uniform vec4 uBaseColorFactor;
+uniform float uMetallicFactor;
+uniform float uRoughnessFactor;
+uniform int uHasBaseColorMap;
+uniform int uHasNormalMap;
+uniform int uHasOrmMap;
+uniform int uOcclusionInOrm;
+uniform int uAlphaMask;
+
 // Ball numbers: a 4 x 4 atlas, cell n holds number n.
 uniform sampler2D uNumberAtlas;
 uniform int uBallNumber;
@@ -269,6 +317,76 @@ float shadowVisibility(int light, vec3 normal)
     return sum / float(uShadowKernel * uShadowKernel);
 }
 
+// The nine SH coefficients (per colour) interpolated at a point.
+void probeCoefficients(vec3 position, out vec3 c[9])
+{
+    vec3 t = clamp((position - uProbeMin) / max(uProbeMax - uProbeMin, vec3(1.0e-3)), 0.0, 1.0);
+    vec3 uvw = (t * (uProbeCounts - 1.0) + 0.5) / uProbeCounts;   // probe centres are texel centres
+    vec4 p0 = texture(uProbeSH0, uvw);
+    vec4 p1 = texture(uProbeSH1, uvw);
+    vec4 p2 = texture(uProbeSH2, uvw);
+    vec4 p3 = texture(uProbeSH3, uvw);
+    vec4 p4 = texture(uProbeSH4, uvw);
+    vec4 p5 = texture(uProbeSH5, uvw);
+    vec4 p6 = texture(uProbeSH6, uvw);
+    c[0] = p0.rgb;
+    c[1] = vec3(p0.a, p1.rg);
+    c[2] = vec3(p1.ba, p2.r);
+    c[3] = p2.gba;
+    c[4] = p3.rgb;
+    c[5] = vec3(p3.a, p4.rg);
+    c[6] = vec3(p4.ba, p5.r);
+    c[7] = p5.gba;
+    c[8] = p6.rgb;
+}
+
+// Sum of c_i * w_i * Y_i(n); with w the clamped-cosine bands this is
+// irradiance (Ramamoorthi & Hanrahan 2001), with w = 1 radiance.
+vec3 evaluateSh(vec3 c[9], vec3 n, vec3 band)
+{
+    vec3 result = c[0] * (0.282095 * band.x);
+    result += (c[1] * n.y + c[2] * n.z + c[3] * n.x) * (0.488603 * band.y);
+    result += (c[4] * (n.x * n.y) * 1.092548 + c[5] * (n.y * n.z) * 1.092548 +
+               c[6] * (3.0 * n.z * n.z - 1.0) * 0.315392 + c[7] * (n.x * n.z) * 1.092548 +
+               c[8] * (n.x * n.x - n.y * n.y) * 0.546274) * band.z;
+    return max(result, vec3(0.0));
+}
+
+// Where the reflected ray from this point leaves the room's box, as seen
+// from the capture point (Lagarde & Zanuttini 2012, "local cube maps").
+vec3 boxProjected(vec3 position, vec3 direction)
+{
+    vec3 safe = direction + vec3(equal(direction, vec3(0.0))) * 1.0e-5;
+    vec3 far = max((uRoomMax - position) / safe, (uRoomMin - position) / safe);
+    float t = min(min(far.x, far.y), far.z);
+    return position + direction * t - uReflectionCentre;
+}
+
+vec3 roomReflection(vec3 direction, float roughness)
+{
+    vec3 position = clamp(vWorldPosition, uRoomMin + 0.01, uRoomMax - 0.01);
+    // Rough lobes are wide: blend back towards the plain direction, which
+    // hides the box's corners in blurry reflections.
+    vec3 lookup = mix(boxProjected(position, direction), direction, roughness * roughness);
+    return textureLod(uReflection, lookup, roughness * uReflectionMaxLod).rgb;
+}
+
+// Tangent-space normal mapping without stored tangents: the frame comes
+// from screen-space derivatives of position and UV (Schueler 2006).
+vec3 perturbNormal(vec3 n, vec3 mapped)
+{
+    vec3 dp1 = dFdx(vWorldPosition);
+    vec3 dp2 = dFdy(vWorldPosition);
+    vec2 duv1 = dFdx(vTexCoord);
+    vec2 duv2 = dFdy(vTexCoord);
+    vec3 dp2perp = cross(dp2, n);
+    vec3 dp1perp = cross(n, dp1);
+    vec3 t = dp2perp * duv1.x + dp1perp * duv2.x;
+    vec3 b = dp2perp * duv1.y + dp1perp * duv2.y;
+    float scale = inversesqrt(max(max(dot(t, t), dot(b, b)), 1.0e-20));
+    return normalize(mat3(t * scale, b * scale, n) * mapped);
+}
+
 struct Surface
 {
     vec3 baseColor;
@@ -308,6 +426,12 @@ vec3 shadeLight(Surface surface, vec3 radiance, vec3 lightDirection, float light
         diffuse = surface.baseColor / PI;
     }
 
+    if (uCapture == 1)
+    {
+        // Probes integrate light over all directions: view-dependent
+        // highlights would only add noise.
+        specular = vec3(0.0);
+    }
     vec3 color = diffuse + specular;
 
     if (surface.clearcoat > 0.0)
@@ -326,8 +450,23 @@ vec3 shadeLight(Surface surface, vec3 radiance, vec3 lightDirection, float light
 void main()
 {
     vec3 normal = normalize(vWorldNormal);
+    if (!gl_FrontFacing)
+    {
+        normal = -normal;   // the back of a double-sided surface
+    }
     vec3 viewDirection = normalize(uViewPosition - vWorldPosition);
     float nDotV = max(dot(normal, viewDirection), 1.0e-4);
+
+    // Light fittings (lamp panels, globes, shades, window panes) show only
+    // their glow. The lamps that stand in for them sit centimetres away, and
+    // lighting the fitting with its own lamp would make it a second, far
+    // brighter emitter (and flood the light probes).
+    if (uMaterialSurfaceType == SURFACE_LAMP)
+    {
+        float glow = (uCapture == 1) ? 0.0 : uEmissionScale;
+        FragColor = vec4(uEmissionColor * glow, uAlpha);
+        return;
+    }
 
     // Material colours are authored in sRGB; light them in linear space.
     vec3 baseColor = pow(max(uMaterialAlbedo, vec3(0.0)), vec3(2.2));
@@ -359,6 +498,41 @@ void main()
         surface.clearcoat = 0.0;
     }
 
+    float occlusion = 1.0;
+    if (uTextured == 1)
+    {
+        vec4 base = uBaseColorFactor;
+        if (uHasBaseColorMap == 1)
+        {
+            base *= texture(uBaseColorMap, vTexCoord);   // sRGB texture: already linear
+        }
+        if ((uAlphaMask == 1) && (base.a < 0.5))
+        {
+            discard;
+        }
+        float roughness = uRoughnessFactor;
+        float metallic = uMetallicFactor;
+        if (uHasOrmMap == 1)
+        {
+            vec3 orm = texture(uOrmMap, vTexCoord).rgb;
+            roughness *= orm.g;
+            metallic *= orm.b;
+            occlusion = (uOcclusionInOrm == 1) ? orm.r : 1.0;
+        }
+        if (uHasNormalMap == 1)
+        {
+            normal = perturbNormal(normal, texture(uNormalMap, vTexCoord).xyz * 2.0 - 1.0);
+            nDotV = max(dot(normal, viewDirection), 1.0e-4);
+        }
+        // Metals have no diffuse and tinted reflectance; dielectrics 4%.
+        surface.baseColor = base.rgb * (1.0 - metallic);
+        surface.f0 = mix(vec3(0.04), base.rgb, metallic);
+        surface.roughness = clamp(roughness, 0.04, 1.0);
+        surface.clearcoat = 0.0;
+        surface.cloth = false;
+        baseColor = surface.baseColor;
+    }
+
     vec3 lighting = vec3(0.0);
     for (int i = 0; i < 3; ++i)
     {
@@ -376,24 +550,79 @@ void main()
         lighting += shadeLight(surface, radiance, lightDirection, distanceToLight, normal, viewDirection);
     }
 
-    // The dim room: a warm floor bounce and a little sky from the ceiling.
-    vec3 ambient = mix(vec3(0.030, 0.022, 0.016), vec3(0.075, 0.064, 0.055), saturate(normal.y * 0.5 + 0.5));
-    ambient *= baseColor * uAmbientScale;
+    for (int i = 0; i < LIGHTS_PER_DRAW; ++i)
+    {
+        if (i >= uLocalCount)
+        {
+            break;
+        }
+        int light = uLocalIndices[i];
+        vec3 lightVector = uLocalPositionRange[light].xyz - vWorldPosition;
+        float distanceToLight = length(lightVector);
+        vec3 lightDirection = lightVector / max(distanceToLight, 1.0e-4);
+
+        // Inverse square, windowed to reach zero at the range (Karis 2013).
+        float ratio = distanceToLight / uLocalPositionRange[light].w;
+        float window = saturate(1.0 - ratio * ratio * ratio * ratio);
+        float falloff = window * window / (distanceToLight * distanceToLight + 0.02);
+
+        vec4 spot = uLocalSpot[light];
+        if (spot.w > -1.0)
+        {
+            falloff *= smoothstep(spot.w, uLocalColor[light].w, dot(-lightDirection, spot.xyz));
+        }
+        if (falloff > 0.0)
+        {
+            lighting += shadeLight(surface, uLocalColor[light].rgb * falloff, lightDirection, distanceToLight, normal, viewDirection);
+        }
+    }
 
     vec3 reflectionDirection = reflect(-viewDirection, normal);
-    vec3 environment = sampleAnalyticEnvironment(reflectionDirection);
-    environment = mix(environment, vec3(0.06, 0.045, 0.035), surface.roughness * 0.8);
+    vec3 ambient;
+    vec3 environment;
+    if (uProbesEnabled == 1)
+    {
+        // Indirect light from the probes: irradiance for diffuse, and the
+        // (blurry) radiance in the mirror direction for reflections. A short
+        // step along the normal keeps surfaces from sampling behind themselves.
+        vec3 c[9];
+        probeCoefficients(vWorldPosition + normal * 0.08, c);
+        vec3 irradiance = evaluateSh(c, normal, vec3(PI, 2.0 * PI / 3.0, PI / 4.0));
+        ambient = baseColor / PI * irradiance * uAmbientScale;
+        environment = (uReflectionEnabled == 1)
+            ? roomReflection(reflectionDirection, surface.roughness)
+            : evaluateSh(c, reflectionDirection, vec3(1.0)) * uAmbientScale;
+    }
+    else
+    {
+        // No probes yet: a warm floor bounce and a little sky from the ceiling.
+        ambient = mix(vec3(0.030, 0.022, 0.016), vec3(0.075, 0.064, 0.055), saturate(normal.y * 0.5 + 0.5));
+        ambient *= baseColor * uAmbientScale;
+        environment = sampleAnalyticEnvironment(reflectionDirection);
+        environment = mix(environment, vec3(0.06, 0.045, 0.035), surface.roughness * 0.8);
+    }
     vec3 reflections = environment * environmentBrdf(surface.f0, surface.roughness, nDotV);
     if (surface.clearcoat > 0.0)
     {
-        reflections += 0.5 * sampleAnalyticEnvironment(reflectionDirection) * fresnelSchlick(nDotV, vec3(0.04)) * surface.clearcoat;
+        vec3 coatEnvironment = (uReflectionEnabled == 1) ? roomReflection(reflectionDirection, 0.05) : environment;
+        reflections += 0.5 * coatEnvironment * fresnelSchlick(nDotV, vec3(0.04)) * surface.clearcoat;
     }
     if (surface.cloth)
     {
         reflections *= 0.25;
     }
 
-    vec3 color = ambient + lighting + reflections * uReflectionScale + uEmissionColor * uEmissionScale;
+    // Light fittings glow, but their light already reaches the room through
+    // the lamps and practical lights: probes leave the glow out so it is
+    // not counted twice.
+    float emission = (uCapture == 1) ? 0.0 : uEmissionScale;
+    ambient *= occlusion;
+    reflections *= occlusion;
+    if (uCapture == 1)
+    {
+        reflections = vec3(0.0);
+    }
+    vec3 color = ambient + lighting + reflections * uReflectionScale + uEmissionColor * emission;
 
     // Linear HDR out; the post pass tone maps and encodes for the display.
     FragColor = vec4(color, uAlpha);

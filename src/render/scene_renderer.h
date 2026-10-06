@@ -2,16 +2,20 @@
 
 #include "ecs/entity.h"
 #include "ecs/registry.h"
+#include "render/light_probes.h"
 #include "render/light_rig.h"
+#include "render/reflection_probe.h"
 #include "render/mesh.h"
 #include "render/number_atlas.h"
 #include "render/render_targets.h"
 #include "render/shader.h"
 #include "scene/components.h"
+#include "scene/visibility.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+#include <array>
 #include <memory>
 #include <unordered_map>
 #include <vector>
@@ -70,6 +74,23 @@ namespace BilliardsSaloon
         float ambient {1.0f};
     };
 
+    // What the last frame cost: for profiling and the --profile report.
+    struct RenderStats
+    {
+        int drawCalls {0};            // all passes
+        int triangles {0};
+        int objectsDrawn {0};         // scene pass
+        int objectsCulled {0};        // scene pass, outside the view
+        int shadowCasters {0};        // summed over the lamps
+        int shadowCulled {0};
+        int lodReduced {0};           // scene pass objects drawn at a coarser level of detail
+        int localLights {0};          // practical lights in the hall
+        int lightsPerDrawMax {0};     // the most any one draw shaded
+        float gpuMilliseconds {0.0f}; // the frame before last (queries are read without waiting)
+        float probeCaptureMilliseconds {0.0f};   // the last light probe capture (CPU, both bounces)
+        int probes {0};
+    };
+
     // Optional emphasis on one ball (the cue ball while aiming).
     struct BallHighlight
     {
@@ -119,6 +140,8 @@ namespace BilliardsSaloon
         // `size` (for lines such as the head string).
         void drawMarker(const glm::vec3& position, const glm::vec3& size, const glm::vec3& color, bool box = false);
 
+        [[nodiscard]] const RenderStats& stats() const { return m_stats; }
+
         [[nodiscard]] Shader& shader() { return *m_shader; }
         [[nodiscard]] Mesh& cubeMesh() { return *m_cubeMesh; }
 
@@ -127,6 +150,39 @@ namespace BilliardsSaloon
         void renderShadows(Registry& registry, float alpha);
         void bindSceneShader();
         [[nodiscard]] Mesh* meshFor(const StaticMeshComponent& component);
+        [[nodiscard]] Mesh* meshForData(const std::shared_ptr<const MeshData>& data);
+        // The GL texture for a model image, uploaded with mipmaps on first use.
+        [[nodiscard]] unsigned int textureFor(const std::shared_ptr<const ModelTexture>& texture, bool srgb);
+        void countDraw(const Mesh& mesh);
+        void gatherLocalLights(Registry& registry);
+        // Draws every visible entity with a mesh; `highlight` may be null.
+        void drawObjects(Registry& registry, float alpha, const Frustum& frustum, const BallHighlight* highlight, bool count);
+        // Recaptures the hall's light probes when its ProbeVolumeComponent changed.
+        void updateProbes(Registry& registry, float alpha);
+        void setCamera(const glm::mat4& view, const glm::mat4& projection, const glm::vec3& position);
+        // The practical lights that reach `world`, brightest first.
+        struct LightChoice
+        {
+            std::array<int, 8> indices {};
+            int count {0};
+        };
+        [[nodiscard]] LightChoice chooseLocalLights(const Bounds& world) const;
+        void uploadLocalLights(const LightChoice& choice);
+        // Chooses and uploads the lights for the next draw.
+        void bindLocalLights(const Bounds& world) { uploadLocalLights(chooseLocalLights(world)); }
+        // Renders the probe grid's cube faces from a list built once.
+        struct CaptureItem
+        {
+            Mesh* mesh {nullptr};
+            glm::mat4 model {1.0f};
+            Bounds world;
+            const MaterialComponent* material {nullptr};
+            LightChoice lights;
+            int ballVisual {0};
+            int ballNumber {0};
+        };
+        [[nodiscard]] std::vector<CaptureItem> captureItems(Registry& registry, float alpha);
+        void drawCaptureItems(const std::vector<CaptureItem>& items, const Frustum& frustum);
 
         std::unique_ptr<Shader> m_shader;
         std::unique_ptr<Shader> m_shadowShader;
@@ -147,6 +203,42 @@ namespace BilliardsSaloon
         bool m_shadowsEnabled {true};
         int m_shadowKernel {3};
         std::vector<glm::mat4> m_lightMatrices;
+        Frustum m_viewFrustum;
+        glm::mat4 m_cameraView {1.0f};
+        glm::mat4 m_cameraProjection {1.0f};
+        glm::vec3 m_cameraPosition {0.0f};
+        // The eye and lens of whatever is being drawn now (camera or capture),
+        // for choosing levels of detail.
+        glm::vec3 m_eye {0.0f};
+        float m_tanHalfFov {1.0f};
+
+        LightProbes m_probes;
+        ReflectionProbe m_reflection;
+        std::unique_ptr<Shader> m_prefilterShader;
+        int m_probeRevision {-1};
+        glm::vec3 m_probeMin {0.0f};
+        glm::vec3 m_probeMax {1.0f};
+        glm::ivec3 m_probeCounts {1};
+        float m_ambientScale {1.0f};
+
+        // Must match MAX_LOCAL_LIGHTS and LIGHTS_PER_DRAW in basic.frag.
+        static constexpr int MAX_LOCAL_LIGHTS = 32;
+        static constexpr int LIGHTS_PER_DRAW = 8;
+        struct LocalLight
+        {
+            glm::vec3 position {0.0f};
+            float range {1.0f};
+            float intensity {0.0f};   // brightest channel x intensity, for ranking
+        };
+        std::vector<LocalLight> m_localLights;
+        RenderStats m_stats;
+
+        // GPU time per frame: a ring of timer queries, read a few frames late
+        // so the CPU never waits for the GPU.
+        static constexpr int TIMER_QUERIES = 4;
+        std::array<unsigned int, TIMER_QUERIES> m_timerQueries {};
+        std::array<bool, TIMER_QUERIES> m_timerPending {};
+        int m_timerIndex {0};
         std::unique_ptr<Mesh> m_cubeMesh;
         std::unique_ptr<Mesh> m_planeMesh;
         std::unique_ptr<Mesh> m_sphereMesh;
@@ -168,6 +260,13 @@ namespace BilliardsSaloon
             std::unique_ptr<Mesh> mesh;
         };
         std::unordered_map<const MeshData*, CachedMesh> m_customMeshes;
+
+        struct CachedTexture
+        {
+            std::weak_ptr<const ModelTexture> data;
+            unsigned int texture {0};
+        };
+        std::unordered_map<const ModelTexture*, CachedTexture> m_textures;
 
         void beginTranslucent();
         void endTranslucent();

@@ -339,7 +339,8 @@
         0.016
       ],
       "layout": "arena",
-      "ambient": 0.8
+      "ambient": 0.8,
+      "practical": 3.0
     },
     {
       "id": "saloon",
@@ -357,7 +358,8 @@
         0.02
       ],
       "layout": "saloon",
-      "ambient": 1.0
+      "ambient": 1.0,
+      "practical": 3.0
     },
     {
       "id": "night_final",
@@ -375,7 +377,8 @@
         0.006
       ],
       "layout": "arena",
-      "ambient": 0.35
+      "ambient": 0.35,
+      "practical": 1.5
     }
   ]
 }

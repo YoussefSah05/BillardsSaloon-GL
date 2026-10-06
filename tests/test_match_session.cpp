@@ -281,13 +281,13 @@ TEST_CASE("cue elevation moves at a fixed rate, stays in range, and makes an off
     MatchSession session(nineBallVariant(), ShotInputTuning{}, settings);
     session.setLayout(glm::vec2(-0.9f, 0.0f), {{1, glm::vec2(1.1f, 0.5f)}});
 
-    ShotControls raise;
-    raise.elevationAxis = 1.0f;
-    session.applyShotControls(raise, 0.5f);
+    ShotControls lift;
+    lift.elevationAxis = 1.0f;
+    session.applyShotControls(lift, 0.5f);
     CHECK(session.shotState().elevationDegrees == doctest::Approx(15.0f));
     for (int i = 0; i < 10; ++i)
     {
-        session.applyShotControls(raise, 0.5f);
+        session.applyShotControls(lift, 0.5f);
     }
     CHECK(session.shotState().elevationDegrees == doctest::Approx(60.0f));
 

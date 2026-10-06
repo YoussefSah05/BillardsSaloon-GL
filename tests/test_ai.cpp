@@ -8,6 +8,7 @@
 #include <doctest/doctest.h>
 
 #include <cmath>
+#include <initializer_list>
 #include <random>
 
 using namespace BilliardsSaloon;

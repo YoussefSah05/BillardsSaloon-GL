@@ -74,6 +74,14 @@ namespace BilliardsSaloon
             {
                 options.opponent = std::string(nextValue());
             }
+            else if (argument == "--hall")
+            {
+                options.hall = std::string(nextValue());
+            }
+            else if (argument == "--profile")
+            {
+                options.profile = true;
+            }
             else if (argument == "--mute")
             {
                 options.mute = true;
@@ -108,6 +116,8 @@ namespace BilliardsSaloon
             "  --fullscreen            start in fullscreen\n"
             "  --mute                  no sound\n"
             "  --opponent ID           play against an AI player (assets/data/ai/players.json)\n"
+            "  --hall ID               start in this hall (assets/data/equipment/catalog.json)\n"
+            "  --profile               print frame time, draw calls and culling once a second\n"
             "  --screen title|main|setup|locker|game|pause|settings  start on this screen\n"
             "  --scenario foul|choice|call|replay  (development) script a state: ball in hand, a referee choice, a called shot, a winning replay\n"
             "  --camera broadcast|aim|overview|follow|free  start with this camera view\n"

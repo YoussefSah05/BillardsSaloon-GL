@@ -5,9 +5,11 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include "scene/mesh_data.h"
+#include "scene/model_loader.h"
 
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace BilliardsSaloon
 {
@@ -54,6 +56,36 @@ namespace BilliardsSaloon
         int layout {0};
     };
 
+    // A practical light in the hall (sconce, ceiling fixture, bar light),
+    // at the entity's position. No shadow map: it is range-limited so each
+    // object shades only the few lights that reach it. A spot has
+    // spotOuterCos > -1 and shines along `direction`.
+    struct LocalLightComponent
+    {
+        glm::vec3 color {1.0f};         // linear
+        float intensity {1.0f};         // radiance scale at 1 m
+        float designIntensity {1.0f};   // as designed; intensity = this x the hall's brightness
+        float range {4.0f};             // metres; the light fades to zero there
+        glm::vec3 direction {0.0f, -1.0f, 0.0f};
+        float spotOuterCos {-2.0f};
+        float spotInnerCos {-2.0f};
+    };
+
+    // The hall's light probe grid. The renderer recaptures the probes when
+    // `revision` changes (a new hall, other lamps or materials).
+    struct ProbeVolumeComponent
+    {
+        glm::vec3 min {0.0f};
+        glm::vec3 max {0.0f};
+        glm::ivec3 counts {1};
+        int revision {0};
+        std::string lighting;   // the hall option whose lights were captured
+        glm::vec3 roomMin {0.0f};          // reflections: the room's box...
+        glm::vec3 roomMax {0.0f};
+        glm::vec3 reflectionCentre {0.0f}; // ...and the capture point
+        int pendingModels {0};             // models still loading: capture after them
+    };
+
     struct StaticMeshComponent
     {
         MeshPrimitive primitive {MeshPrimitive::Cube};
@@ -81,6 +113,16 @@ namespace BilliardsSaloon
         float clearcoatStrength {0.0f};
         glm::vec3 emissionColor {0.0f, 0.0f, 0.0f};
         float emissionIntensity {0.0f};
+        // A loaded model's glTF material (textures, metallic-roughness);
+        // when set it replaces the colour and finish above.
+        std::shared_ptr<const ModelMaterial> textured {};
+    };
+
+    // Levels of detail for a model part: the renderer draws lods[i] by how
+    // large the part's bounding sphere is on screen.
+    struct LodComponent
+    {
+        std::vector<std::shared_ptr<const MeshData>> lods;
     };
 
     enum class BallRuleTag

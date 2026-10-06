@@ -4,6 +4,7 @@
 #include "app/hud_screen.h"
 #include "app/locker_screen.h"
 #include "app/match_setup_screen.h"
+#include "app/prop_loader.h"
 #include "app/settings_screen.h"
 #include "core/gamepad_math.h"
 #include "core/settings.h"
@@ -99,6 +100,7 @@ namespace BilliardsSaloon
 
         // Development capture (--capture): saves the frame, then closes.
         void captureIfDue();
+        void reportProfile(double frameTime);
 
         static constexpr double FIXED_TIME_STEP = 1.0 / 120.0;
         static constexpr double MAX_FRAME_TIME = 0.25;
@@ -106,6 +108,10 @@ namespace BilliardsSaloon
         // Declaration order is construction order: the window (and its GL
         // context) first; the menus last, because they hold UI documents.
         LaunchOptions m_options;
+        PropLoader m_props;
+        double m_profileSeconds {0.0};
+        double m_profileGpuMilliseconds {0.0};
+        int m_profileFrames {0};
         std::uint64_t m_frameCount {0};
 
         // Loaded before the window so it opens with the saved size mode and vsync.

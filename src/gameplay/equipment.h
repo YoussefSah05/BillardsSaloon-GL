@@ -50,6 +50,7 @@ namespace BilliardsSaloon
         glm::vec3 clear {0.03f};
         std::string layout {"arena"};   // "arena" or "saloon" (scene/hall_geometry)
         float ambient {1.0f};           // scale on the room's fill light
+        float practical {1.0f};         // scale on the room's practical lights (sconces, ceiling, bar)
     };
 
     struct EquipmentCatalog

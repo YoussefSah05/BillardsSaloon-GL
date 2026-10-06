@@ -12,6 +12,11 @@ namespace BilliardsSaloon
     Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<std::uint32_t>& indices)
         : m_indexCount(static_cast<std::int32_t>(indices.size()))
     {
+        for (const Vertex& vertex : vertices)
+        {
+            m_bounds.add(glm::vec3(vertex.position[0], vertex.position[1], vertex.position[2]));
+        }
+
         glGenVertexArrays(1, &m_vao);
         glGenBuffers(1, &m_vbo);
         glGenBuffers(1, &m_ebo);

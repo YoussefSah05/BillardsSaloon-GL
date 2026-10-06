@@ -7,6 +7,7 @@
 #include <RmlUi/Core/ElementDocument.h>
 
 #include <algorithm>
+#include <initializer_list>
 #include <stdexcept>
 #include <utility>
 

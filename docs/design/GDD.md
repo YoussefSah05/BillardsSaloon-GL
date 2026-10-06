@@ -65,8 +65,10 @@ in [`UX.md`](UX.md).
 ## AI
 
 Candidate shots (direct, bank, kick, safety) are generated geometrically and
-evaluated by running the headless simulator. Score = pot probability under
-execution noise + value of resulting cue-ball position. Named pros have
+evaluated by running the headless simulator under the player's execution
+noise. The chosen shot maximises expected utility,
+$\arg\max_a \mathbb E_\varepsilon[U(s, f(s, a + \varepsilon))]$, where $U$
+rewards pots, keeping the turn and the position left (theory in `AI.md`). Named pros have
 profiles: accuracy, power preference, safety tendency, break style. 4–5 tiers.
 
 The first shipping AI (M8) uses a hand-tuned position evaluator. M9 replaces it

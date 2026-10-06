@@ -3,13 +3,13 @@
 Billiards Saloon referees by the WPA World Standardized Rules for 8-ball,
 9-ball and 10-ball. This page lists what the referee enforces, where the game
 simplifies a rule, and where each piece lives in the code. Last revised
-2026-10-05.
+2026-10-06.
 
 ## Where it lives
 
 | Piece | Code | Tests |
 |-------|------|-------|
-| Referee: frame state, verdicts, choices | `src/rules/referee.*` (pure functions, no ECS or GL) | `tests/test_rules_eight_ball.cpp`, `tests/test_rules_rotation.cpp` |
+| Referee: frame state, verdicts, choices | `src/rules/referee.*` (deterministic functions, no ECS or GL) | `tests/test_rules_eight_ball.cpp`, `tests/test_rules_rotation.cpp` |
 | What happened on a shot, from the simulator's events | `src/rules/shot_record.*` | `tests/test_shot_record.cpp` |
 | WPA racking | `src/rules/racking.*` | `tests/test_racking.cpp` |
 | Race to N | `src/rules/match_score.h` | `tests/test_rules_rotation.cpp` |
@@ -21,6 +21,57 @@ is released; `recordShot` reads first contact, cushion contacts and pockets
 a `Verdict` (foul, turn, spotted balls, frame end, choice) and updates the
 `FrameState`; the session applies it (spots balls, gives ball in hand) and the
 HUD announces it.
+
+## Design: the referee as a transition function
+
+A frame of pool is a state machine. Its state is small: the phase (break,
+open table, groups assigned), who shoots, each player's group, consecutive
+fouls, ball in hand and where, a pending choice (push-out, re-rack, pass back),
+and the result. That is `FrameState`. A shot moves it forward through one
+deterministic function (in the code it updates the state in place and
+returns the verdict):
+
+$$
+\texttt{judgeShot} : (F,\ B,\ S) \longmapsto (F',\ \text{Verdict}),
+$$
+
+where $F$ is the frame state before the shot, $B$ the object balls on the
+table, and $S$ the **shot record**: what physically happened. The record holds
+the first ball contacted, whether any ball reached a cushion after contact,
+the balls pocketed and their pockets in order, and the player's call or
+push-out. The function reads nothing else: no globals, no clock, no
+randomness.
+
+**Why no hidden inputs.** The same referee serves the game, the tests, the AI
+and self-play training:
+
+- **Testability.** Each WPA clause becomes a table-driven test: a frame state,
+  a scripted shot record, and the expected verdict. No rendering or physics
+  needed.
+- **Planning.** The AI judges hundreds of simulated outcomes per decision
+  ([AI.md](AI.md)). The referee must be cheap and side-effect free, so it can
+  be applied to hypothetical shots.
+- **Replays and determinism.** Given the start state and the shot, the verdict
+  is reproducible, like the trajectory.
+
+**Why read the simulator's events.** Fouls are defined by the order of
+physical events ("the first ball contacted", "a ball reaching a cushion
+after contact"). An event-based simulator ([PHYSICS.md](PHYSICS.md)) produces
+exactly that ordered list with exact times, so the record is extracted, not
+estimated from frames of animation. A thin hit that a frame-stepped engine
+could miss is still a contact here, and two contacts microseconds apart are
+still ordered.
+
+**Choices are states, not dialogs.** A push-out, an illegal 8-ball break or an
+uncalled pot in 10-ball gives the *other* player a decision. The verdict sets
+a pending choice and its chooser in $F'$, and a second function
+(`applyChoice`) resolves it. The HUD, the AI's `planChoice` and the tests all
+drive the same transition.
+
+**Three fouls** need memory, which is why $F$ counts consecutive fouls per
+player. A legal shot resets the shooter's count, and a third foul in a row
+ends the frame in rotation games. The shot clock fits the same model: running
+out of time is a foul with an empty shot record (`judgeTimeFoul`).
 
 ## Common to every game
 

@@ -12,6 +12,7 @@
 #include <cctype>
 #include <cmath>
 #include <cstdio>
+#include <initializer_list>
 #include <stdexcept>
 #include <utility>
 
