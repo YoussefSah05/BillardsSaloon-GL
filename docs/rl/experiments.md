@@ -92,3 +92,105 @@ Scratch rates without noise: random 19–23%; geometry 2.5% (easy), 3.2%
 **Next.** Experiment 1: SAC on `SingleShotEnv`, absolute versus
 ghost-relative action frames, 5 seeds each, evaluated on these suites
 against these baselines.
+
+---
+
+## Experiment 1 — SAC: absolute versus ghost-relative action frame
+
+**Hypothesis.** With an absolute aim angle, potting windows are about $10^{-3}$
+of the action range, so SAC with default settings will rarely find them and
+will learn little. Expressing the aim as a correction of up to ±4° around the
+ghost-ball line to the easiest pocket puts the window in the middle of the
+action box. SAC should then learn quickly, and may beat the geometry baseline
+by learning what geometry ignores (throw, jaws, speed).
+
+**Setup.** `SingleShotEnv` (`single_shot-v1`), `band=any` for training,
+`obs_mode=positions` (4 numbers), `reward=sparse`, no noise during training.
+Evaluation on the fixed suites with the best checkpoint by success on 300
+*medium* layouts, measured every 10k steps. Seeds 1–5 for each frame.
+
+**Algorithm and hyperparameters.** Stable-Baselines3 SAC with its defaults
+(`configs/sac_single_ball.yaml`): learning rate $3\cdot10^{-4}$, buffer $10^6$,
+batch 256, $\tau = 0.005$, automatic entropy, 1,000 random warm-up steps, one
+gradient step per environment step, MLP [256, 256]. 100k steps per run, CPU,
+one thread per run, about 380 s per run.
+
+**Command.** `bash scripts/experiment1_sac_frames.sh`, then
+`uv run python -m scripts.summarise_runs runs/experiment1`.
+
+**Results** (mean ± sd over 5 seeds; success = potted without a scratch):
+
+| Policy | easy | medium | hard | easy, σ=0.25° | medium, σ=0.25° | hard, σ=0.25° |
+|---|---|---|---|---|---|---|
+| SAC, absolute | 1.7% ± 0.8 | 1.4% ± 0.4 | 1.0% ± 0.6 | 1.7% ± 0.8 | 1.4% ± 0.3 | 0.9% ± 0.4 |
+| SAC, ghost-relative | 86.9% ± 0.8 | 83.6% ± 0.9 | 81.7% ± 0.6 | 82.8% ± 0.8 | 58.7% ± 1.0 | 41.3% ± 0.6 |
+| geometry (Exp. 0) | 82.6% | 86.1% | 85.4% | 80.9% | 65.1% | 47.3% |
+| random (Exp. 0) | 3.1% | 1.9% | 2.0% | — | — | — |
+| sim_search (Exp. 0) | 100.0% | 99.8% | 99.5% | 95.7% | 75.4% | 54.5% |
+
+Learning curves (mean of 5 seeds, 300 *medium* layouts):
+
+- **absolute:** 2% at 10k steps, 0–1% thereafter.
+- **ghost-relative:** 60% at 10k, 78% at 20k, 81% at 30k, then flat at 81–82%
+  up to 100k.
+
+**What the ghost-relative policy learned** (seed 1, paired with the geometry
+policy on the same layouts, both in the ghost-relative frame):
+
+| Suite | Pots only SAC | Pots only geometry | McNemar $\chi^2$ | SAC aim − geometry aim | SAC speed / geometry speed (median) |
+|---|---|---|---|---|---|
+| easy | 56 | 13 | 25.6 ($p < 0.001$) | $-0.01° \pm 0.14°$ | 2.4× |
+| medium | 65 | 76 | 0.7 (n.s.) | $-0.01° \pm 0.55°$ | 2.0× |
+| hard | 54 | 90 | 8.5 ($p \approx 0.004$) | $+0.01° \pm 0.18°$ | 1.6× |
+
+**Interpretation.**
+
+1. **The action parameterisation decides whether SAC learns at all.** In the
+   absolute frame, SAC ends slightly *below* a random policy. Entropy-driven
+   exploration around a Gaussian mean never sees enough successes for the
+   critic to form a gradient towards windows that occupy a thousandth of the
+   action range. This confirms the audit's prediction, and it is the
+   motivation for HER, curricula and elite-sample methods.
+2. **In the ghost-relative frame, SAC learns fast and stably but plateaus
+   at the geometry baseline.** All 5 seeds reach 81–82% (during-training
+   subset) within 30k steps, with about 1 point of variation across seeds. On
+   the full suites it is better than geometry on *easy* (significantly),
+   equal on *medium*, and worse on *hard* (significantly).
+3. **It learned speed, not aim.** Its aim stays on the ghost-ball line
+   (mean offset 0.01°); its speed is about 2× the friction model's. That is
+   physically sensible: collision-induced throw shrinks as the impact gets
+   faster, so firmer shots go where geometry says. It pays on short, straight
+   shots (*easy*) and costs on long, thin cuts (*hard*), where more pace
+   means more cue-ball travel and more scratches, and where the aim needs
+   corrections the policy never learned.
+4. **Under noise the learned policy is less robust than geometry** (*hard*,
+   σ = 0.25°: 41.3% against 47.3%). It was trained without noise and has no
+   reason to prefer wide windows.
+5. **The residual between geometry and search (14–17 points) is mostly
+   unclaimed.** The policy sees only positions, so per-layout aim corrections
+   (throw depends on cut angle and speed) must be inferred from 4 numbers
+   through the critic's narrow peaks. This is the gap the next experiments
+   target.
+
+**Failure modes.**
+
+- The best checkpoint is chosen on 300 *medium* layouts. Those layouts are
+  also in the final *medium* suite, so the medium number may be slightly
+  optimistic. Selection should move to a separate validation suite.
+- Comparing geometry run in the ghost-relative frame (85.3% medium, 85.3%
+  hard) with Experiment 0's absolute frame (86.1%, 85.4%) shows a small
+  difference: the geometry solver's pocket can differ from the layout's
+  designated pocket, and corrections beyond ±4° are clipped.
+- Default hyperparameters were not tuned. This is deliberate (equal budget
+  for all algorithms), but SAC's speed preference might change with a
+  different entropy target.
+
+**Next.**
+
+- **Experiment 2:** TD3 and PPO under the same protocol, as the brief's
+  milestone 6.
+- **Then:**
+  - `obs_mode=positions+geometry`, which hands the policy the cut angle and
+    distances that throw corrections depend on;
+  - training under execution noise, to learn robust shots;
+  - a separate validation suite for checkpoint selection.
