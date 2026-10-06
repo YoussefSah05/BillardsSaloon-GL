@@ -272,6 +272,56 @@ namespace BilliardsSaloon
         return true;
     }
 
+    void SceneRenderer::gatherLocalLights(Registry& registry)
+    {
+        m_localLights.clear();
+        registry.view<TransformComponent, LocalLightComponent>().each(
+            [&](Entity, TransformComponent& transform, LocalLightComponent& light)
+            {
+                if (static_cast<int>(m_localLights.size()) >= MAX_LOCAL_LIGHTS)
+                {
+                    return;
+                }
+                const std::string index = "[" + std::to_string(m_localLights.size()) + "]";
+                const glm::vec3 radiance = light.color * light.intensity;
+                m_shader->setVec4("uLocalPositionRange" + index, glm::vec4(transform.position, light.range));
+                m_shader->setVec4("uLocalColor" + index, glm::vec4(radiance, light.spotInnerCos));
+                m_shader->setVec4("uLocalSpot" + index, glm::vec4(glm::normalize(light.direction), light.spotOuterCos));
+                m_localLights.push_back(LocalLight{transform.position, light.range,
+                                                   std::max({radiance.r, radiance.g, radiance.b})});
+            });
+        m_stats.localLights = static_cast<int>(m_localLights.size());
+        m_shader->setInt("uLocalCount", 0);
+    }
+
+    void SceneRenderer::bindLocalLights(const Bounds& world)
+    {
+        // Lights whose sphere of influence touches the box, brightest at the
+        // box first (by intensity over squared distance to it).
+        std::array<std::pair<float, int>, MAX_LOCAL_LIGHTS> reaching {};
+        int count = 0;
+        for (std::size_t i = 0; i < m_localLights.size(); ++i)
+        {
+            const LocalLight& light = m_localLights[i];
+            const glm::vec3 nearest = glm::clamp(light.position, world.min, world.max);
+            const glm::vec3 offset = light.position - nearest;
+            const float distanceSquared = glm::dot(offset, offset);
+            if (distanceSquared < light.range * light.range)
+            {
+                reaching[static_cast<std::size_t>(count++)] = {light.intensity / (distanceSquared + 0.25f), static_cast<int>(i)};
+            }
+        }
+        const int used = std::min(count, LIGHTS_PER_DRAW);
+        std::partial_sort(reaching.begin(), reaching.begin() + used, reaching.begin() + count,
+                          [](const auto& a, const auto& b) { return a.first > b.first; });
+        for (int i = 0; i < used; ++i)
+        {
+            m_shader->setInt("uLocalIndices[" + std::to_string(i) + "]", reaching[static_cast<std::size_t>(i)].second);
+        }
+        m_shader->setInt("uLocalCount", used);
+        m_stats.lightsPerDrawMax = std::max(m_stats.lightsPerDrawMax, used);
+    }
+
     void SceneRenderer::countDraw(const Mesh& mesh)
     {
         ++m_stats.drawCalls;
@@ -468,6 +518,7 @@ namespace BilliardsSaloon
     void SceneRenderer::drawWorld(Registry& registry, float alpha, const BallHighlight& highlight)
     {
         renderShadows(registry, alpha);
+        gatherLocalLights(registry);
 
         registry.view<TransformComponent, StaticMeshComponent, MaterialComponent>().each(
             [&](Entity entity, TransformComponent& transform, StaticMeshComponent& meshComponent, MaterialComponent& material)
@@ -486,12 +537,14 @@ namespace BilliardsSaloon
                 }
 
                 const glm::mat4 model = composeInterpolatedMatrix(transform, alpha);
-                if (!m_viewFrustum.intersects(transformBounds(mesh->bounds(), model)))
+                const Bounds world = transformBounds(mesh->bounds(), model);
+                if (!m_viewFrustum.intersects(world))
                 {
                     ++m_stats.objectsCulled;
                     return;
                 }
                 ++m_stats.objectsDrawn;
+                bindLocalLights(world);
 
                 const glm::vec3 dynamicEmission =
                     (entity == highlight.ball) ? highlight.emission : glm::vec3(0.0f);
@@ -536,6 +589,11 @@ namespace BilliardsSaloon
     {
         const glm::vec3 axis = glm::normalize(buttDirection);
         const glm::quat rotation(glm::vec3(0.0f, 1.0f, 0.0f), axis);   // shortest arc from +y
+
+        Bounds reach;
+        reach.add(tipPosition);
+        reach.add(tipPosition + axis * 1.5f);
+        bindLocalLights(reach);
 
         glDisable(GL_CULL_FACE);
         for (const CueSegment& segment : m_cue)

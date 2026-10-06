@@ -55,6 +55,11 @@ namespace BilliardsSaloon
     {
         glUniform3fv(uniformLocation(name), 1, &value[0]);
     }
+
+    void Shader::setVec4(const std::string& name, const glm::vec4& value) const
+    {
+        glUniform4fv(uniformLocation(name), 1, &value[0]);
+    }
     
     void Shader::setFloat(const std::string& name, float value) const
     {

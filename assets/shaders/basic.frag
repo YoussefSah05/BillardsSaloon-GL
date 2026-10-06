@@ -41,6 +41,16 @@ uniform int uShadowsEnabled;
 uniform int uShadowKernel;          // PCF taps per side: 1, 3 or 5
 uniform float uShadowTexel;
 
+// Practical lights (sconces, ceiling and bar lights): all of the hall's are
+// uploaded once a frame; each draw names the few that reach it.
+const int MAX_LOCAL_LIGHTS = 32;
+const int LIGHTS_PER_DRAW = 8;
+uniform vec4 uLocalPositionRange[MAX_LOCAL_LIGHTS];   // xyz position, w range
+uniform vec4 uLocalColor[MAX_LOCAL_LIGHTS];           // rgb colour x intensity, w spot inner cosine
+uniform vec4 uLocalSpot[MAX_LOCAL_LIGHTS];            // xyz direction, w spot outer cosine (< -1: point light)
+uniform int uLocalIndices[LIGHTS_PER_DRAW];
+uniform int uLocalCount;
+
 // Ball numbers: a 4 x 4 atlas, cell n holds number n.
 uniform sampler2D uNumberAtlas;
 uniform int uBallNumber;
@@ -374,6 +384,33 @@ void main()
         radiance *= shadowVisibility(i, normal);
 
         lighting += shadeLight(surface, radiance, lightDirection, distanceToLight, normal, viewDirection);
+    }
+
+    for (int i = 0; i < LIGHTS_PER_DRAW; ++i)
+    {
+        if (i >= uLocalCount)
+        {
+            break;
+        }
+        int light = uLocalIndices[i];
+        vec3 lightVector = uLocalPositionRange[light].xyz - vWorldPosition;
+        float distanceToLight = length(lightVector);
+        vec3 lightDirection = lightVector / max(distanceToLight, 1.0e-4);
+
+        // Inverse square, windowed to reach zero at the range (Karis 2013).
+        float ratio = distanceToLight / uLocalPositionRange[light].w;
+        float window = saturate(1.0 - ratio * ratio * ratio * ratio);
+        float falloff = window * window / (distanceToLight * distanceToLight + 0.02);
+
+        vec4 spot = uLocalSpot[light];
+        if (spot.w > -1.0)
+        {
+            falloff *= smoothstep(spot.w, uLocalColor[light].w, dot(-lightDirection, spot.xyz));
+        }
+        if (falloff > 0.0)
+        {
+            lighting += shadeLight(surface, uLocalColor[light].rgb * falloff, lightDirection, distanceToLight, normal, viewDirection);
+        }
     }
 
     // The dim room: a warm floor bounce and a little sky from the ceiling.

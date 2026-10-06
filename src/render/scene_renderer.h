@@ -81,6 +81,8 @@ namespace BilliardsSaloon
         int objectsCulled {0};        // scene pass, outside the view
         int shadowCasters {0};        // summed over the lamps
         int shadowCulled {0};
+        int localLights {0};          // practical lights in the hall
+        int lightsPerDrawMax {0};     // the most any one draw shaded
         float gpuMilliseconds {0.0f}; // the frame before last (queries are read without waiting)
     };
 
@@ -144,6 +146,9 @@ namespace BilliardsSaloon
         void bindSceneShader();
         [[nodiscard]] Mesh* meshFor(const StaticMeshComponent& component);
         void countDraw(const Mesh& mesh);
+        void gatherLocalLights(Registry& registry);
+        // Chooses the practical lights that reach `world` for the next draw.
+        void bindLocalLights(const Bounds& world);
 
         std::unique_ptr<Shader> m_shader;
         std::unique_ptr<Shader> m_shadowShader;
@@ -165,6 +170,17 @@ namespace BilliardsSaloon
         int m_shadowKernel {3};
         std::vector<glm::mat4> m_lightMatrices;
         Frustum m_viewFrustum;
+
+        // Must match MAX_LOCAL_LIGHTS and LIGHTS_PER_DRAW in basic.frag.
+        static constexpr int MAX_LOCAL_LIGHTS = 32;
+        static constexpr int LIGHTS_PER_DRAW = 8;
+        struct LocalLight
+        {
+            glm::vec3 position {0.0f};
+            float range {1.0f};
+            float intensity {0.0f};   // brightest channel x intensity, for ranking
+        };
+        std::vector<LocalLight> m_localLights;
         RenderStats m_stats;
 
         // GPU time per frame: a ring of timer queries, read a few frames late

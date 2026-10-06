@@ -54,6 +54,21 @@ namespace BilliardsSaloon
         int layout {0};
     };
 
+    // A practical light in the hall (sconce, ceiling fixture, bar light),
+    // at the entity's position. No shadow map: it is range-limited so each
+    // object shades only the few lights that reach it. A spot has
+    // spotOuterCos > -1 and shines along `direction`.
+    struct LocalLightComponent
+    {
+        glm::vec3 color {1.0f};         // linear
+        float intensity {1.0f};         // radiance scale at 1 m
+        float designIntensity {1.0f};   // as designed; intensity = this x the hall's brightness
+        float range {4.0f};             // metres; the light fades to zero there
+        glm::vec3 direction {0.0f, -1.0f, 0.0f};
+        float spotOuterCos {-2.0f};
+        float spotInnerCos {-2.0f};
+    };
+
     struct StaticMeshComponent
     {
         MeshPrimitive primitive {MeshPrimitive::Cube};
