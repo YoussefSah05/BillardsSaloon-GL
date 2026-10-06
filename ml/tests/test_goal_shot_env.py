@@ -20,6 +20,13 @@ def test_passes_gymnasium_checks(frame):
     check_env(GoalShotEnv(action_frame=frame), skip_render_check=True)
 
 
+def test_every_pockets_goal_lies_in_the_goal_space():
+    env = GoalShotEnv(require_contact=True)
+    env.reset(seed=0)
+    for pocket in range(6):
+        assert env.observation_space["desired_goal"].contains(env._goal_for_pocket(pocket))
+
+
 def test_desired_goal_is_the_target_pockets_mouth():
     env = GoalShotEnv(band="medium")
     obs, _ = env.reset(seed=0)

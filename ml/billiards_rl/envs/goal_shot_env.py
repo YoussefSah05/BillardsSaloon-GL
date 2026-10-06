@@ -50,7 +50,9 @@ class GoalShotEnv(SingleShotEnv):
         self.require_contact = bool(require_contact)
         self.goal_size = GOAL_SIZE + (1 if self.require_contact else 0)
         base = self.observation_space
-        goal = spaces.Box(-1.0, 1.0, shape=(self.goal_size,), dtype=np.float32)
+        # Side-pocket mouths sit just outside the cushion line (x' = -1.013),
+        # so goal coordinates get a small margin beyond the table's [-1, 1].
+        goal = spaces.Box(-1.1, 1.1, shape=(self.goal_size,), dtype=np.float32)
         self.observation_space = spaces.Dict({"observation": base, "achieved_goal": goal, "desired_goal": goal})
         self._achieved = np.zeros(self.goal_size, dtype=np.float32)
         self._desired = np.zeros(self.goal_size, dtype=np.float32)
