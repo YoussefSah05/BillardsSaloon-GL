@@ -49,7 +49,9 @@ All notable changes to Billiards Saloon. The format follows
 - A success-gated curriculum with plateau advance and review of earlier
   stages (experiments 4-5).
 - `GoalShotEnv`, a goal-conditioned environment compatible with HER
-  (experiments 6 and 6b).
+  (experiments 6 and 6b), and `DirectionGoalEnv` with departure-direction
+  goals (experiment 6c); the simulator reports the contacted ball's velocity.
+- Elite-regression and AWR agents for one-shot episodes (experiments 7 and 7b).
 
 ### Documentation
 - Theory documents with equations in LaTeX: the physics (motion on cloth,
