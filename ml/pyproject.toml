@@ -9,6 +9,10 @@ dependencies = [
     "onnx>=1.16",
     "onnxruntime>=1.19",
     "tqdm>=4.66",
+    "gymnasium>=1.0",
+    "stable-baselines3>=2.4",
+    "pyyaml>=6.0",
+    "tensorboard>=2.17",
 ]
 
 [tool.uv]

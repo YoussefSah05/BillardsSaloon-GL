@@ -1,7 +1,7 @@
 # RL Environment Reference
 
-Status: Milestone 2 (headless shot API) done; `SingleShotEnv` (Milestone 3)
-next. Last revised 2026-10-06. Design and rationale:
+Status: Milestones 2 (headless shot API) and 3 (`SingleShotEnv`) done;
+baselines and evaluation suites (Milestone 4) next. Last revised 2026-10-06. Design and rationale:
 [rl-system-design.md](rl-system-design.md).
 
 ## Shot API (`billiards_sim.rl`, C++ in `src/rl/`)
@@ -91,6 +91,48 @@ Two findings shape the next milestones:
 These numbers are from the baseline test's own layouts; the fixed evaluation
 suites of Milestone 4 replace them for reporting.
 
+## `SingleShotEnv` (`ml/billiards_rl/envs/single_shot_env.py`)
+
+One cue ball, one object ball, one shot; `step` always terminates. It passes
+Gymnasium's `check_env`.
+
+| Parameter | Values | Meaning |
+|---|---|---|
+| `band` | `easy`, `medium`, `hard`, `any` | difficulty of generated layouts |
+| `obs_mode` | `positions` (4) | $[x'_c, y'_c, x'_o, y'_o]$, with $x' = 2x/W - 1$ and $y' = 2y/L - 1$ |
+| | `positions+geometry` (28) | plus, per pocket: $\cos\theta_k$, $d_{c,k}/L$, $d_{o,k}/L$, blocked ($\pm1$) |
+| `action_frame` | `absolute` | $\varphi = 180°\,a_0$ |
+| | `ghost_relative` | $\varphi = \varphi_\text{ghost}(k^\star) + \Delta\,a_0$, $\Delta = 4°$ (`max_delta_deg`) |
+| (both) | | $v = v_\min + \tfrac12(a_1 + 1)(v_\max - v_\min)$, 0.5–7 m/s |
+| `reward` | `sparse`, `sparse_target` | see [reward-design.md](reward-design.md) |
+| `noise` | $(\sigma_\varphi, \sigma_v)$ | Gaussian aim error (degrees) and relative speed error on the *executed* shot |
+| `layouts` | list of (2, 2) arrays | a fixed cycle of states instead of generation (evaluation) |
+
+The target pocket $k^\star$ is the layout's easiest clean pocket. If no clean
+line exists, it is the clear pocket of greatest ease; if there is none, the
+reference aim is a full hit on the object ball. `reset(seed=...)` seeds
+Gymnasium's `np_random`, which seeds the C++ generator, so one seed fixes the
+whole layout sequence. `reset(options={"positions": p})` plays a given layout.
+
+`info` carries `success` (potted, no scratch), `potted`, `pocket`, `scratch`,
+`first_contact`, `legal_contact`, `object_to_pocket_after` (m, distance from
+the object ball to the nearest mouth after a miss), `events`, `complete`,
+`difficulty`, `target_pocket`, `phi` and `speed` (the intended shot).
+
+Helpers: `strike_for(action)` → the physical strike;
+`action_for(phi, speed)` → the action that plays it (used by baselines).
+
+**Measured** (one process, random actions, step + reset each episode):
+
+| Configuration | Steps/s | Random success |
+|---|---|---|
+| `positions`, `absolute` | 11,900 | 1.9% |
+| `positions+geometry`, `ghost_relative` | 6,800 | 14.3% |
+
+The ghost-relative frame makes a random policy succeed about 8 times more
+often: the needle is still narrow, but it is in the middle of the action box,
+not one of a thousand places around the circle.
+
 ## Tests
 
 - C++: `tests/test_shot_lab.cpp`: mouths, ghost geometry, the speed model,
@@ -99,3 +141,8 @@ suites of Milestone 4 replace them for reporting.
 - Python: `ml/tests/test_shot_api.py` (`uv run pytest`): shapes, determinism,
   batch equal to single shots, scratch detection, the baseline on easy
   layouts, ghost aims, rejection of bad shapes.
+- Python: `ml/tests/test_single_shot_env.py`: `check_env` for every mode,
+  observation shape, dtype, bounds and finiteness, seeding, action bounds,
+  `action_for` inverting `strike_for`, termination, reward consistency, the
+  geometry shot through both frames, fixed and given layouts, execution noise,
+  and the reward definitions.
