@@ -4,6 +4,36 @@ How work flows through this repository. The short version: small topic
 branches off `main`, Conventional Commits, one merge commit per finished piece
 of work, a tag per milestone.
 
+## Building and testing
+
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+cmake --build build -j8
+./build/BilliardsSaloon          # assets are copied next to the executable
+ctest --test-dir build --output-on-failure
+```
+
+Warnings are strict (`-Wall -Wextra -Wpedantic -Wconversion -Wshadow`); keep
+builds warning-free. Check visual changes with
+`./build/BilliardsSaloon --screen main|game|pause --capture /tmp/x.png`.
+
+## Code conventions
+
+- Namespace `BilliardsSaloon`; subsystems use nested namespaces (`Sim`, `Rules`, `Ai`, `Audio`).
+- `m_` member prefix, `camelCase` functions, `PascalCase` types, `UPPER_SNAKE` constants.
+- Allman braces, 4-space indent, `[[nodiscard]]` on queries.
+- Simulation, rules and AI code stay free of OpenGL/GLFW so they run headless
+  in tests, tools and the Python bindings. `bs_game` holds everything
+  headless; tests in `tests/` (doctest) link only `bs_game`.
+- Load files through `resolveAssetPath("...")` (`src/core/asset_paths.h`),
+  never cwd-relative paths.
+- Game data (variants, tables, equipment, AI players) lives in `assets/data/`
+  as JSON; tunables belong there, not in code.
+- Input rates are per second (scaled by frame time), never per frame.
+- UI is RmlUi: documents in `assets/ui/*.rml`, shared styles in
+  `assets/ui/theme.rcss` (sizes in `dp`); screens bind to data models created
+  before their documents load.
+
 ## Branches
 
 - **`main`** is always buildable, tested and playable. Nobody commits to it

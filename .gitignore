@@ -7,3 +7,8 @@ build/
 *.user
 compile_commands.json
 graphify-out/
+
+# Local assistant notes (not part of the project)
+CLAUDE.md
+AGENTS.md
+.claude/
