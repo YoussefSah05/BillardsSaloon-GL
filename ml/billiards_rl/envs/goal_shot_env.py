@@ -39,15 +39,21 @@ GOAL_SIZE = 4
 
 
 class GoalShotEnv(SingleShotEnv):
-    def __init__(self, success_radius: float = 0.1, **kwargs):
+    def __init__(self, success_radius: float = 0.1, require_contact: bool = False, **kwargs):
         kwargs.setdefault("reward", "sparse_target")
         super().__init__(**kwargs)
         self.success_radius = float(success_radius)
+        # With require_contact, a fifth goal component marks "the cue ball never
+        # touched the object ball", and such a shot achieves no goal. Without
+        # it (Experiment 6), a miss "achieves" the ball's starting spot, and
+        # hindsight relabelling mostly teaches missing (Experiment 6's diagnosis).
+        self.require_contact = bool(require_contact)
+        self.goal_size = GOAL_SIZE + (1 if self.require_contact else 0)
         base = self.observation_space
-        goal = spaces.Box(-1.0, 1.0, shape=(GOAL_SIZE,), dtype=np.float32)
+        goal = spaces.Box(-1.0, 1.0, shape=(self.goal_size,), dtype=np.float32)
         self.observation_space = spaces.Dict({"observation": base, "achieved_goal": goal, "desired_goal": goal})
-        self._achieved = np.zeros(GOAL_SIZE, dtype=np.float32)
-        self._desired = np.zeros(GOAL_SIZE, dtype=np.float32)
+        self._achieved = np.zeros(self.goal_size, dtype=np.float32)
+        self._desired = np.zeros(self.goal_size, dtype=np.float32)
 
     # ---- Goals -----------------------------------------------------------------
 
@@ -61,7 +67,11 @@ class GoalShotEnv(SingleShotEnv):
     def _goal_for_pocket(self, pocket: int) -> np.ndarray:
         if pocket < 0:
             pocket = 0
-        return np.concatenate([self._point(self.mouths[pocket]), [1.0, 0.0]]).astype(np.float32)
+        return self._goal(self._point(self.mouths[pocket]), 1.0, 0.0, 0.0)
+
+    def _goal(self, point, is_pocket: float, scratch: float, no_contact: float) -> np.ndarray:
+        values = [point[0], point[1], is_pocket, scratch] + ([no_contact] if self.require_contact else [])
+        return np.asarray(values, dtype=np.float32)
 
     def compute_reward(self, achieved_goal, desired_goal, info) -> np.ndarray:
         """Vectorised: −1 for a scratch, +1 when the goal is met, −0.1 otherwise."""
@@ -70,14 +80,19 @@ class GoalShotEnv(SingleShotEnv):
         distance = np.linalg.norm(self._metres(achieved[..., :2]) - self._metres(desired[..., :2]), axis=-1)
         scratch = achieved[..., 3] > 0.5
         met = (np.abs(achieved[..., 2] - desired[..., 2]) < 0.5) & (distance < self.success_radius) & ~scratch
+        if self.require_contact:
+            met &= achieved[..., 4] < 0.5
         return np.where(scratch, -1.0, np.where(met, 1.0, -0.1))
 
     # ---- Gymnasium API ---------------------------------------------------------
 
     def reset(self, *, seed: int | None = None, options: dict[str, Any] | None = None):
         observation, info = super().reset(seed=seed, options=options)
-        self._desired = self._goal_for_pocket(self.target_pocket)
-        self._achieved = np.concatenate([self._point(self._positions[1]), [0.0, 0.0]]).astype(np.float32)
+        if options and "desired_goal" in options:
+            self._desired = np.asarray(options["desired_goal"], dtype=np.float32)   # diagnostics: any goal
+        else:
+            self._desired = self._goal_for_pocket(self.target_pocket)
+        self._achieved = self._goal(self._point(self._positions[1]), 0.0, 0.0, 0.0)
         return self._goal_obs(observation), info
 
     def step(self, action):
@@ -88,7 +103,7 @@ class GoalShotEnv(SingleShotEnv):
         else:
             point = np.clip(self._point(result.object_final), -1.0, 1.0)
             flag = 0.0
-        self._achieved = np.concatenate([point, [flag, 1.0 if result.scratch else 0.0]]).astype(np.float32)
+        self._achieved = self._goal(point, flag, 1.0 if result.scratch else 0.0, 0.0 if result.first_contact == 1 else 1.0)
         reward = float(self.compute_reward(self._achieved, self._desired, info))
         info["is_success"] = reward > 0.0
         return self._goal_obs(self._observe()), reward, True, False, info

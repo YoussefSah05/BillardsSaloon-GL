@@ -71,3 +71,22 @@ def test_a_short_her_run_trains_and_evaluates(tmp_path):
     final = json.loads((run / "eval" / "final-easy-noise0.json").read_text())
     assert final["episodes"] == 1000
     assert 0.0 <= final["target_success_rate"] <= final["success_rate"] <= 1.0
+
+
+def test_require_contact_makes_misses_achieve_nothing():
+    env = GoalShotEnv(require_contact=True)
+    obs, _ = env.reset(seed=3)
+    assert obs["achieved_goal"].shape == (5,)
+    check_env(GoalShotEnv(require_contact=True), skip_render_check=True)
+    spot = np.array([0.1, -0.2, 0.0, 0.0, 0.0])
+    touched = spot.copy()
+    untouched = spot.copy(); untouched[4] = 1.0
+    rewards = env.compute_reward(np.stack([touched, untouched]), np.stack([spot, spot]), None)
+    np.testing.assert_allclose(rewards, [1.0, -0.1])
+    # A shot that misses the object ball entirely: no goal is met, not even its own spot.
+    env.reset(seed=4, options={"positions": np.array([[0.4, 0.6], [0.9, 2.0]])})
+    _, _, _, _, info = env.step(env.action_for(270.0, 1.0))     # straight down the table, away from the ball
+    assert info["first_contact"] != 1
+    achieved = env._achieved
+    assert achieved[4] == 1.0
+    assert env.compute_reward(achieved, achieved, None) == pytest.approx(-0.1)

@@ -48,8 +48,12 @@ def apply_overrides(config: dict, overrides: list[str]) -> dict:
 
 
 def make_env(env_config: dict) -> SingleShotEnv:
-    env_class = GoalShotEnv if env_config.get("goal_conditioned", False) else SingleShotEnv
-    return env_class(
+    extra = {}
+    env_class = SingleShotEnv
+    if env_config.get("goal_conditioned", False):
+        env_class = GoalShotEnv
+        extra["require_contact"] = env_config.get("require_contact", False)
+    return env_class(**extra,
         band=env_config.get("band", "any"),
         obs_mode=env_config.get("obs_mode", "positions"),
         action_frame=env_config.get("action_frame", "absolute"),
@@ -87,7 +91,8 @@ class EvaluationCallback(BaseCallback):
             return True
         metrics, _ = evaluate(TrainedPolicy(self.model, self.name), self.suite, self.noise, action_frame=self.env_config["action_frame"],
                               obs_mode=self.env_config["obs_mode"], limit=self.limit,
-                              goal_conditioned=self.env_config.get("goal_conditioned", False))
+                              goal_conditioned=self.env_config.get("goal_conditioned", False),
+                              require_contact=self.env_config.get("require_contact", False))
         self.history.append((self.num_timesteps, metrics.success_rate))
         if self.curriculum is not None:
             self.logger.record("curriculum/stage", self.curriculum.stage)
@@ -156,7 +161,8 @@ def train(config: dict, seed: int, runs_root: Path = Path("runs"), name: str | N
     for suite in evaluation["final_suites"]:
         for sigma in evaluation["final_noise"]:
             metrics, _ = evaluate(policy, suite, (sigma, 0.0), action_frame=env_config["action_frame"],
-                                  obs_mode=env_config["obs_mode"], goal_conditioned=env_config.get("goal_conditioned", False))
+                                  obs_mode=env_config["obs_mode"], goal_conditioned=env_config.get("goal_conditioned", False),
+                                  require_contact=env_config.get("require_contact", False))
             run.log_eval(f"final-{suite}-noise{sigma:g}", metrics)
             final[f"{suite}@{sigma:g}"] = metrics.success_rate
     if curriculum is not None:

@@ -588,3 +588,147 @@ Learning curves on the validation suite: both variants rise steadily from
 **Next.** Experiment 6 tests HER, the brief's other answer to sparse rewards,
 on a goal-conditioned environment whose goals (where the object ball ends
 up) make every shot informative.
+
+---
+
+## Experiment 6 — Goal conditioning and Hindsight Experience Replay (Milestone 8)
+
+**Hypothesis.** The goal is where the object ball ends up: a pocket mouth,
+or the spot where it came to rest. HER relabels each shot as a success for
+reaching wherever the ball actually went. That turns every shot into a
+training signal for "hit the object ball in this direction", the coarse skill
+the absolute frame failed to learn. HER should therefore help the absolute
+frame a lot and the ghost-relative frame little.
+
+**Setup.** `GoalShotEnv`: `SingleShotEnv` with Dict observations
+(`observation`, `achieved_goal`, `desired_goal`). Goals are
+$(x', y', \text{is\_pocket}, \text{scratch})$. A goal is met when the flags
+match and the points are within 10 cm; a scratch scores −1, a met goal +1,
+anything else −0.1. The desired goal is always the layout's target pocket.
+
+- SAC with SB3's `MultiInputPolicy`.
+- HER via SB3's `HerReplayBuffer`: 4 relabelled goals per transition,
+  strategy "future". With one-step episodes it relabels each shot with its
+  own outcome.
+- With and without HER, on the *same* environment and reward, so HER is the
+  only difference.
+- Absolute frame for 200k steps; ghost-relative for 100k; 5 seeds each.
+
+**Command.** `bash scripts/experiment6_her.sh`; `summarise_runs` and
+`compare_to_baseline` on `runs/experiment6`.
+
+**Results** (success = potted in any pocket without a scratch; mean ± sd
+over 5 seeds):
+
+| Policy | easy | medium | hard | easy, σ=0.25° | medium, σ=0.25° | hard, σ=0.25° | Target-pocket success (easy / medium / hard) |
+|---|---|---|---|---|---|---|---|
+| absolute, no HER | 2.1% ± 0.7 | 1.0% ± 0.3 | 0.6% ± 0.4 | 2.4% | 0.9% | 0.7% | 1.5 / 0.5 / 0.3% |
+| absolute, HER | 3.9% ± 1.8 | 1.7% ± 0.7 | 1.0% ± 0.6 | 4.0% | 1.9% | 0.9% | 3.2 / 1.1 / 0.5% |
+| ghost-relative, no HER | 87.2% ± 0.7 | 84.5% ± 0.4 | 84.9% ± 0.4 | 83.0% | 60.4% | 42.5% | 86.2 / 83.5 / 84.4% |
+| ghost-relative, HER | 87.6% ± 0.9 | 85.3% ± 1.4 | 84.8% ± 0.3 | 82.4% | 60.8% | 43.8% | 86.7 / 84.5 / 84.3% |
+| geometry (Exp. 0) | 82.6% | 86.1% | 85.4% | 80.9% | 65.1% | 47.3% | — |
+
+**Paired with geometry** (exact McNemar per seed), ghost-relative:
+
+| Group | easy | medium | hard |
+|---|---|---|---|
+| HER | +5.0, better in 5/5 seeds | −0.8, worse in 1/5 | −0.6, 0/5 either way |
+| no HER | +4.6, better in 5/5 | −1.6, 0/5 either way | −0.5, 0/5 either way |
+
+**Diagnostics** (absolute frame, best checkpoints):
+
+- Legal first contact on *medium*: 19.5% with HER, 13.7% without.
+- On *medium* layouts, the policy was asked to send the object ball within
+  10 cm of a random spot (an `is_pocket = 0` goal, the kind HER relabels
+  with). HER succeeds 1.6% of the time, against 0.9% without.
+
+**Interpretation.**
+
+1. **HER barely helps the absolute frame** (easy 2.1% → 3.9%). The
+   diagnostics show it did not even learn the relabelled task: it reaches a
+   requested spot 1.6% of the time and touches the object ball first only
+   one shot in five.
+2. **The cause is in the goal design, not in HER.**
+   - About 80% of random shots never touch the object ball, so its
+     "achieved" position is just its starting spot.
+   - HER relabels those shots as successes for "leave the object ball where
+     it is". Most of the hindsight signal rewards *missing* the ball, the
+     opposite of the skill it was meant to teach.
+   - This is the failure mode `papers.md` warned about (the achieved goal
+     must be informative), in a form the design did not anticipate. The fix:
+     a shot that never touches the object ball achieves no goal. That is
+     Experiment 6b.
+3. **In the ghost-relative frame, HER makes no measurable difference,** as
+   expected: reward is already dense there (about 60% success from the start).
+4. **The goal-conditioned ghost-relative policies reach geometry's level on
+   medium and hard,** with no seed significantly worse on hard. That is
+   better than `SingleShotEnv`'s SAC (Experiment 2: worse than geometry in 4
+   of 5 seeds on both suites).
+   - Two changes are confounded here: the policy now *sees* the target
+     pocket's mouth (the desired goal is an input), and only the target
+     pocket counts as success (`sparse_target`).
+   - Separating them is a cheap follow-up. That the policy benefits from
+     knowing which pocket its reference aim points at is consistent with
+     Experiment 3: more task-relevant input helps.
+
+**Failure modes.** As noted in point 2: the achieved goal for a missed shot
+was degenerate.
+
+### Experiment 6b — HER with contact-gated goals
+
+**Hypothesis.** If a shot that never touches the object ball achieves no goal
+(`require_contact`: a fifth goal component), HER stops rewarding misses, and
+its relabelled successes teach "send the object ball there", which then
+transfers to pocket goals.
+
+**Setup.** As Experiment 6, absolute frame, HER, 200k steps, 5 seeds, with
+`env.require_contact=true`. Control: Experiment 6's absolute no-HER group.
+Without HER, gating changes nothing: desired goals are always pockets, which a
+miss already fails.
+
+**Command.** `bash scripts/experiment6b_her_contact.sh`.
+
+**Results:**
+
+| Policy | easy | medium | hard | Target-pocket success, easy | First contact, medium | Random-spot goals met |
+|---|---|---|---|---|---|---|
+| absolute, no HER (Exp. 6) | 2.1% ± 0.7 | 1.0% ± 0.3 | 0.6% ± 0.4 | 1.5% | 13.7% | 0.9% |
+| absolute, HER (Exp. 6) | 3.9% ± 1.8 | 1.7% ± 0.7 | 1.0% ± 0.6 | 3.2% | 19.5% | 1.6% |
+| absolute, HER, contact-gated | 2.6% ± 1.2 | 1.2% ± 0.4 | 0.6% ± 0.4 | 2.1% | 16.9% | 0.1% |
+
+The validation curve stays at 1–2% throughout 200k steps.
+
+**Interpretation.**
+
+1. **Removing the degenerate relabels did not help.** The contact-gated
+   policy is no better at pocketing and *worse* at the relabelled task (0.1%
+   of random spots reached). The degenerate goals were not what held HER
+   back.
+2. **The hindsight task is as hard as the real one.** Sending the object ball
+   within 10 cm of a given spot requires the right direction *and* the right
+   distance, through the cushions. In the 2-D action space that is again a
+   needle. HER's success in robotics relies on goal reaching being smooth:
+   nearby actions reach nearby goals, over many steps. In one-shot precision
+   shooting, nearby actions send the ball to very different resting places.
+   Relabelling therefore adds many successes, but for goals as hard as
+   the original, and the policy generalises from none of them.
+3. **What a useful hindsight goal would look like.** It should depend
+   smoothly on the action and determine success. The object ball's
+   **departure direction** fits:
+   - it is one-dimensional;
+   - it is set by the contact alone, independent of speed and cushions;
+   - potting into pocket $k$ is exactly "depart within pocket $k$'s window of
+     directions".
+
+   A direction goal would let HER teach the contact geometry (aim → departure
+   direction) from every shot that touches the object ball.
+
+**Next.**
+
+- **Experiment 6c (proposed):** goals as the object ball's departure
+  direction, with HER.
+- **Experiment 6d (proposed):** separate the two changes behind the
+  goal-conditioned ghost-relative gain (target-pocket input versus
+  `sparse_target` reward).
+- **Then Milestone 9,** elite-sample / advantage-weighted regression, aimed
+  at the precision gap diagnosed in Experiment 3.

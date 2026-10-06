@@ -56,11 +56,15 @@ def wilson_interval(successes: int, n: int, z: float = 1.96) -> tuple[float, flo
 
 def evaluate(policy, suite_name: str, noise: tuple[float, float] = (0.0, 0.0), *,
              action_frame: str = "absolute", obs_mode: str = "positions", noise_seed: int = 12345,
-             limit: int | None = None, goal_conditioned: bool = False) -> tuple[Metrics, list[dict]]:
+             limit: int | None = None, goal_conditioned: bool = False,
+             require_contact: bool = False) -> tuple[Metrics, list[dict]]:
     suite = load_suite(suite_name)
     layouts = suite_positions(suite)[:limit]
-    env_class = GoalShotEnv if goal_conditioned else SingleShotEnv
-    env = env_class(layouts=layouts, noise=noise, action_frame=action_frame, obs_mode=obs_mode)
+    if goal_conditioned:
+        env = GoalShotEnv(layouts=layouts, noise=noise, action_frame=action_frame, obs_mode=obs_mode,
+                          require_contact=require_contact)
+    else:
+        env = SingleShotEnv(layouts=layouts, noise=noise, action_frame=action_frame, obs_mode=obs_mode)
     obs, _ = env.reset(seed=noise_seed)
     episodes, start = [], time.perf_counter()
     for index in range(len(layouts)):
