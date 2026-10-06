@@ -15,4 +15,8 @@ namespace BilliardsSaloon
     //   3. BS_SOURCE_ASSET_DIR               (source tree, development fallback)
     // Throws std::runtime_error listing every searched location if not found.
     [[nodiscard]] std::filesystem::path resolveAssetPath(std::string_view relativePath);
+
+    // As resolveAssetPath, but an empty path instead of an error when the
+    // file is optional and missing.
+    [[nodiscard]] std::filesystem::path resolveAssetPathOrEmpty(std::string_view relativePath);
 }

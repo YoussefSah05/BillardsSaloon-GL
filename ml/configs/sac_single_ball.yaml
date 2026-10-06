@@ -1,0 +1,35 @@
+# SAC on SingleShotEnv (rl-system-design.md, Sections 5 and 8).
+# Hyperparameters are Stable-Baselines3's documented SAC defaults, unchanged:
+# every algorithm starts from its library defaults with the same budget.
+algorithm: sac
+
+env:
+  band: any                 # train on all legal layouts; evaluate on the fixed suites
+  obs_mode: positions
+  action_frame: absolute    # experiment 1 compares with ghost_relative
+  reward: sparse
+  noise: [0.0, 0.0]         # (aim sd in degrees, relative speed sd)
+
+sac:
+  learning_rate: 0.0003
+  buffer_size: 1000000
+  learning_starts: 1000
+  batch_size: 256
+  tau: 0.005
+  gamma: 0.99               # one-step episodes: no bootstrapping, gamma has no effect
+  train_freq: 1
+  gradient_steps: 1
+  ent_coef: auto
+  policy_kwargs:
+    net_arch: [256, 256]
+
+training:
+  total_timesteps: 100000
+  eval_every: 10000         # evaluate on the medium suite (eval.limit layouts)
+  device: cpu               # small MLPs: the CPU beats MPS here
+
+eval:
+  during_training_suite: medium
+  during_training_limit: 300
+  final_suites: [easy, medium, hard]
+  final_noise: [0.0, 0.25]

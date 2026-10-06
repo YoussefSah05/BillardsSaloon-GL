@@ -12,6 +12,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(BS_BUILD_TESTS "Build the unit test executable" ON)
+option(BS_BUILD_PYTHON "Build the billiards_sim Python module (needs Python 3.12 dev)" OFF)
+option(BS_WITH_ONNXRUNTIME "Learned AI evaluation with ONNX Runtime (downloads the prebuilt library)" OFF)
 option(BS_WARNINGS_AS_ERRORS "Treat compiler warnings in project code as errors" OFF)
 
 include(FetchContent)
@@ -166,6 +168,8 @@ add_library(bs_game STATIC
     src/gameplay/game_variant.cpp
     src/gameplay/match_session.cpp
     src/ai/ai_profile.cpp
+    src/ai/environment.cpp
+    src/ai/features.cpp
     src/ai/planner.cpp
     src/audio/shot_sounds.cpp
     src/audio/sound_synth.cpp
@@ -177,6 +181,9 @@ add_library(bs_game STATIC
     src/scene/model_loader.cpp
     src/scene/model_codecs.cpp
     src/scene/prop_layout.cpp
+    src/rl/geometry.cpp
+    src/rl/layouts.cpp
+    src/rl/shot_lab.cpp
     src/rules/referee.cpp
     src/rules/shot_record.cpp
 )
@@ -266,6 +273,74 @@ add_custom_target(bs_assets ALL
 )
 add_dependencies(BilliardsSaloon bs_assets)
 
+# Python bindings for training (ml/): the simulator, referee and classical AI.
+if(BS_BUILD_PYTHON)
+    find_package(Python 3.12 COMPONENTS Interpreter Development.Module REQUIRED)
+    set(PYBIND11_FINDPYTHON ON)   # use the Python found above, not pybind11's own search
+    FetchContent_Declare(
+        pybind11
+        GIT_REPOSITORY https://github.com/pybind/pybind11.git
+        GIT_TAG v2.13.6
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(pybind11)
+    pybind11_add_module(billiards_sim src/python/billiards_sim_module.cpp src/python/rl_bindings.cpp)
+    target_link_libraries(billiards_sim PRIVATE bs_game)
+    set_target_properties(billiards_sim PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/ml)
+endif()
+
+# Learned AI: ONNX Runtime's official prebuilt package for this platform.
+if(BS_WITH_ONNXRUNTIME)
+    set(BS_ORT_VERSION 1.20.1)
+    if(APPLE AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm64")
+        set(BS_ORT_PACKAGE onnxruntime-osx-arm64-${BS_ORT_VERSION}.tgz)
+        set(BS_ORT_LIBRARY libonnxruntime.${BS_ORT_VERSION}.dylib)
+    elseif(APPLE)
+        set(BS_ORT_PACKAGE onnxruntime-osx-x86_64-${BS_ORT_VERSION}.tgz)
+        set(BS_ORT_LIBRARY libonnxruntime.${BS_ORT_VERSION}.dylib)
+    elseif(WIN32)
+        set(BS_ORT_PACKAGE onnxruntime-win-x64-${BS_ORT_VERSION}.zip)
+        set(BS_ORT_LIBRARY onnxruntime.dll)
+    else()
+        set(BS_ORT_PACKAGE onnxruntime-linux-x64-${BS_ORT_VERSION}.tgz)
+        set(BS_ORT_LIBRARY libonnxruntime.so.${BS_ORT_VERSION})
+    endif()
+    FetchContent_Declare(
+        onnxruntime_prebuilt
+        URL https://github.com/microsoft/onnxruntime/releases/download/v${BS_ORT_VERSION}/${BS_ORT_PACKAGE}
+        SOURCE_SUBDIR no-cmake
+    )
+    FetchContent_MakeAvailable(onnxruntime_prebuilt)
+
+    add_library(bs_onnxruntime SHARED IMPORTED)
+    set_target_properties(bs_onnxruntime PROPERTIES
+        IMPORTED_LOCATION ${onnxruntime_prebuilt_SOURCE_DIR}/lib/${BS_ORT_LIBRARY}
+        INTERFACE_INCLUDE_DIRECTORIES ${onnxruntime_prebuilt_SOURCE_DIR}/include)
+    if(WIN32)
+        set_target_properties(bs_onnxruntime PROPERTIES IMPORTED_IMPLIB ${onnxruntime_prebuilt_SOURCE_DIR}/lib/onnxruntime.lib)
+    endif()
+
+    # value_model.cpp is compiled into each user (no extra static library,
+    # so bs_game is linked once).
+    add_executable(bs_ai_arena tools/ai_arena/main.cpp src/ai/value_model.cpp)
+    target_link_libraries(bs_ai_arena PRIVATE bs_game bs_onnxruntime)
+    bs_set_warnings(bs_ai_arena)
+
+    target_sources(BilliardsSaloon PRIVATE src/ai/value_model.cpp)
+    target_link_libraries(BilliardsSaloon PRIVATE bs_onnxruntime)
+    target_compile_definitions(BilliardsSaloon PRIVATE BS_HAS_ONNXRUNTIME)
+    # The runtime library travels next to the executables.
+    foreach(target IN ITEMS BilliardsSaloon bs_ai_arena)
+        add_custom_command(TARGET ${target} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${onnxruntime_prebuilt_SOURCE_DIR}/lib/${BS_ORT_LIBRARY} $<TARGET_FILE_DIR:${target}>)
+        if(APPLE)
+            set_target_properties(${target} PROPERTIES BUILD_RPATH "@executable_path")
+        elseif(UNIX)
+            set_target_properties(${target} PROPERTIES BUILD_RPATH "$ORIGIN")
+        endif()
+    endforeach()
+endif()
+
 # Development tool: writes the synthesised sounds to WAV files.
 add_executable(bs_sound_preview tools/sound_preview/main.cpp)
 target_link_libraries(bs_sound_preview PRIVATE bs_game)
@@ -295,9 +370,11 @@ if(BS_BUILD_TESTS)
         tests/test_visibility.cpp
         tests/test_spherical_harmonics.cpp
         tests/test_model_loader.cpp
+        tests/test_shot_lab.cpp
         tests/test_equipment.cpp
         tests/test_audio.cpp
         tests/test_ai.cpp
+        tests/test_environment.cpp
         tests/test_game_variant.cpp
         tests/test_game_data.cpp
         tests/test_launch_options.cpp

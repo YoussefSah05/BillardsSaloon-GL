@@ -35,6 +35,7 @@ namespace BilliardsSaloon::Ai
                 p.breakPower = item.value("breakPower", p.breakPower);
                 p.thinkSeconds = item.value("thinkSeconds", p.thinkSeconds);
                 p.samples = item.value("samples", p.samples);
+                p.learnedValue = item.value("learnedValue", p.learnedValue);
                 profiles.push_back(p);
             }
             if (profiles.empty())

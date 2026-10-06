@@ -430,12 +430,16 @@ The simulator is not optimised until a profile says it is the bottleneck.
 | `ml/billiards_rl/training/run_logger.py` | `meta.json`, configs, evaluation callbacks |
 | `docs/rl/papers.md` | Notes on SAC, TD3, PPO, HER, AWR, SCOOT, and the billiards literature |
 
-## 16. Decisions to confirm
+## 16. Decisions
 
-1. **Library:** Stable-Baselines3 + Gymnasium (proposed).
-2. **Tracking:** local run folders + TensorBoard first; MLflow later (proposed).
-3. **Branching:** finish integrating `feat/m9-environment` with `main`, then
-   work on `feat/rl-*` branches with one milestone each (proposed).
+Confirmed by the project owner on 2026-10-06:
+
+1. **Library:** Stable-Baselines3 + Gymnasium.
+2. **Tracking:** local run folders + TensorBoard first; MLflow later.
+3. **Branching:** `feat/m9-environment` integrated with `main` on
+   `feat/rl-shot-lab`; one `feat/rl-*` branch per milestone after that.
 4. **First experiment:** SAC with `action_frame=absolute` versus
-   `ghost_relative`, both against the geometry and search baselines
-   (proposed).
+   `ghost_relative`, both against the geometry and search baselines.
+
+Progress: Milestone 2 (the shot API) is done; see
+[environment.md](environment.md) for the reference and measurements.

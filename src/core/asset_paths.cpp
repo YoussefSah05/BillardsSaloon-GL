@@ -117,4 +117,16 @@ namespace BilliardsSaloon
             "Asset not found: " + std::string(relativePath) + "\nSearched:" + searched
         );
     }
+
+    std::filesystem::path resolveAssetPathOrEmpty(std::string_view relativePath)
+    {
+        try
+        {
+            return resolveAssetPath(relativePath);
+        }
+        catch (const std::exception&)
+        {
+            return {};
+        }
+    }
 }

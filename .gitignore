@@ -8,6 +8,12 @@ build/
 compile_commands.json
 graphify-out/
 
-# Python
+# Python (ml/)
+.venv/
 __pycache__/
 *.pyc
+ml/data/
+ml/runs/
+ml/checkpoints/
+build-py/
+ml/*.so
