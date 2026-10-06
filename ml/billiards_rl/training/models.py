@@ -17,6 +17,9 @@ def load_policy_model(algorithm: str, path: str | Path):
     cannot be rebuilt without its training environment, and evaluation never
     needs one.
     """
+    if algorithm in ("elite", "awr"):
+        from billiards_rl.agents.elite import EliteAgent
+        return EliteAgent.load(Path(path).with_suffix(".pt"))
     cls = ALGORITHMS[algorithm]
     if cls is PPO:
         return cls.load(path, device="cpu")

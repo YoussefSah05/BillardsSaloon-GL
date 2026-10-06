@@ -54,7 +54,8 @@ def main() -> None:
 
     baseline_cache: dict[tuple[str, str, str], np.ndarray] = {}
     rows: dict[tuple[str, str], list[tuple[float, float, int, int]]] = defaultdict(list)
-    for run in sorted(p for p in args.root.iterdir() if (p / "checkpoints" / "best.zip").exists()):
+    for run in sorted(p for p in args.root.iterdir()
+                      if (p / "checkpoints" / "best.zip").exists() or (p / "checkpoints" / "best.pt").exists()):
         config = yaml.safe_load((run / "config.yaml").read_text())
         frame, obs = config["env"]["action_frame"], config["env"]["obs_mode"]
         model = load_policy_model(config["algorithm"], run / "checkpoints" / "best")

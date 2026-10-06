@@ -1,6 +1,9 @@
 """The training pipeline runs end to end and records what a result depends on."""
 
 import json
+
+import numpy as np
+import pytest
 from pathlib import Path
 
 import yaml
@@ -94,3 +97,21 @@ def test_curriculum_advances_on_a_plateau_and_reviews_earlier_stages():
     assert env.stage == 2
     assert [h[2] for h in env.history[1:]] == ["plateau", "plateau"]
     assert reviews > 10                             # earlier stages are revisited
+
+
+@pytest.mark.parametrize("method", ["elite", "awr"])
+def test_a_short_elite_run_learns_and_records(tmp_path, method):
+    from billiards_rl.training.models import load_policy_model
+    from billiards_rl.training.train_elite import train_elite
+
+    config = apply_overrides(yaml.safe_load((CONFIG.parent / "elite_single_ball.yaml").read_text()), [
+        f"algorithm={method}", "training.total_timesteps=3000", "training.eval_every=1000",
+        "eval.during_training_limit=50", "eval.final_suites=[easy]", "eval.final_noise=[0.0]",
+    ])
+    run = train_elite(config, seed=2, runs_root=tmp_path, name=f"{method}-run")
+    assert (run / "checkpoints" / "best.pt").exists()
+    meta = json.loads((run / "meta.json").read_text())
+    assert meta["final_success"]["easy@0"] > 0.3        # ghost-relative: learns quickly
+    agent = load_policy_model(method, run / "checkpoints" / "best")
+    action, _ = agent.predict(np.zeros(6, dtype=np.float32))
+    assert action.shape == (2,) and np.all(np.abs(action) <= 1.0)
