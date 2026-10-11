@@ -100,6 +100,7 @@ namespace BilliardsSaloon
         void setCameraViewMode(CameraViewMode mode);
 
         // Development capture (--capture): saves the frame, then closes.
+        // Recording (--record) saves every frame until --capture-frames.
         void captureIfDue();
         void reportProfile(double frameTime);
 
