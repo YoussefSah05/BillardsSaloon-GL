@@ -1,4 +1,4 @@
-# Billiards Saloon — Physics
+# Septhuit — Physics
 
 Status: the event-based simulator is the game's physics (since 0.4.0); it
 matches pooltool's reference results to within half a millimetre. Last revised

@@ -2,7 +2,7 @@
 
 #include <filesystem>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     // Saves the current back buffer (before swapping) as a PNG, or as an
     // uncompressed BMP when the path ends in ".bmp" (fast, for recording).

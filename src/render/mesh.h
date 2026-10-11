@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     struct Vertex
     {

@@ -8,7 +8,7 @@
 // Apache-2.0) and Leckie & Greenspan. The simulator uses pooltool's frame:
 // z is up, the cloth is z = 0, ball centres rest at z = R. See
 // docs/design/PHYSICS.md for the equations.
-namespace BilliardsSaloon::Sim
+namespace Septhuit::Sim
 {
     enum class MotionState : std::uint8_t
     {

@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     // One choice in a finish category (cloth, rail wood, trim, pocket leather).
     struct FinishOption

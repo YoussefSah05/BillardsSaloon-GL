@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     // A loaded model placed in a hall (assets/data/halls/props.json).
     struct PropPlacement

@@ -3,7 +3,7 @@
 #include "sim/motion.h"
 #include "sim/table.h"
 
-namespace BilliardsSaloon::Sim
+namespace Septhuit::Sim
 {
     struct CueSpecs
     {

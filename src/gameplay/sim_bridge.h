@@ -4,7 +4,7 @@
 
 #include <glm/glm.hpp>
 
-namespace BilliardsSaloon::SimBridge
+namespace Septhuit::SimBridge
 {
     // Game frame: y up, origin at the table centre, x along the length.
     // Simulator frame (pooltool's): z up, origin at a corner of the playing

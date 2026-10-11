@@ -12,7 +12,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     // Interface sounds: menu items tick on focus and confirm on click.
     class MenuSoundListener final : public Rml::EventListener

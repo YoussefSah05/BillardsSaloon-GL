@@ -5,7 +5,7 @@
 
 #include <vector>
 
-namespace BilliardsSaloon::Rules
+namespace Septhuit::Rules
 {
     // Reads what the referee needs from a simulated shot. ballNumbers maps the
     // simulator's ball index to the ball's number (0 for the cue ball).

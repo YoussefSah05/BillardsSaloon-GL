@@ -7,7 +7,7 @@
 #include <cmath>
 #include <fstream>
 
-namespace BilliardsSaloon::Ai
+namespace Septhuit::Ai
 {
     namespace
     {

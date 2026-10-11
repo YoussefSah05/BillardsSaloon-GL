@@ -9,17 +9,17 @@ of work, a tag per milestone.
 ```bash
 cmake -B build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 cmake --build build -j8
-./build/BilliardsSaloon          # assets are copied next to the executable
+./build/Septhuit          # assets are copied next to the executable
 ctest --test-dir build --output-on-failure
 ```
 
 Warnings are strict (`-Wall -Wextra -Wpedantic -Wconversion -Wshadow`); keep
 builds warning-free. Check visual changes with
-`./build/BilliardsSaloon --screen main|game|pause --capture /tmp/x.png`.
+`./build/Septhuit --screen main|game|pause --capture /tmp/x.png`.
 
 ## Code conventions
 
-- Namespace `BilliardsSaloon`; subsystems use nested namespaces (`Sim`, `Rules`, `Ai`, `Audio`).
+- Namespace `Septhuit`; subsystems use nested namespaces (`Sim`, `Rules`, `Ai`, `Audio`).
 - `m_` member prefix, `camelCase` functions, `PascalCase` types, `UPPER_SNAKE` constants.
 - Allman braces, 4-space indent, `[[nodiscard]]` on queries.
 - Simulation, rules and AI code stay free of OpenGL/GLFW so they run headless

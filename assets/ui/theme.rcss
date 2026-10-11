@@ -1,5 +1,5 @@
 /*
- * Billiards Saloon — broadcast design language (see docs/design/UX.md).
+ * Septhuit — broadcast design language (see docs/design/UX.md).
  * Shared by every screen. RmlUi has no default HTML stylesheet, so the basics
  * are defined here too. Sizes use dp so they scale with the display.
  *
@@ -10,6 +10,10 @@
  */
 
 body, div, h1, h2, h3, p, section, nav, header, footer {
+    display: block;
+}
+
+img {
     display: block;
 }
 

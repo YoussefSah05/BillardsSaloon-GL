@@ -7,7 +7,7 @@
 
 #include <glm/glm.hpp>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     class MatchSession;
 

@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     template <typename Component>
     class SparseSet

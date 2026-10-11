@@ -2,8 +2,8 @@
 
 #include <doctest/doctest.h>
 
-using namespace BilliardsSaloon;
-using namespace BilliardsSaloon::Sim;
+using namespace Septhuit;
+using namespace Septhuit::Sim;
 
 namespace
 {

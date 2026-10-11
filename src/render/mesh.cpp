@@ -7,7 +7,7 @@
 #include <memory>
 #include <stdexcept>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     Mesh::Mesh(const std::vector<Vertex>& vertices, const std::vector<std::uint32_t>& indices)
         : m_indexCount(static_cast<std::int32_t>(indices.size()))

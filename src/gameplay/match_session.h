@@ -19,7 +19,7 @@
 #include <random>
 #include <vector>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     // One frame of player intent, already mapped from devices.
     // *Axis fields are rates (-1..1, scaled by frame time); *Delta fields are

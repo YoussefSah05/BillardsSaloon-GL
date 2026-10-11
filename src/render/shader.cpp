@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <vector>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     Shader::Shader(const std::string& vertexPath, const std::string& fragmentPath)
     {

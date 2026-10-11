@@ -2,7 +2,7 @@
 
 #include <doctest/doctest.h>
 
-using namespace BilliardsSaloon;
+using namespace Septhuit;
 
 TEST_CASE("scene resolution presets bound HiDPI pixel cost and preserve aspect ratio")
 {

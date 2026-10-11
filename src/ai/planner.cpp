@@ -8,7 +8,7 @@
 #include <initializer_list>
 #include <limits>
 
-namespace BilliardsSaloon::Ai
+namespace Septhuit::Ai
 {
     // ---- AiTable ------------------------------------------------------------------
 

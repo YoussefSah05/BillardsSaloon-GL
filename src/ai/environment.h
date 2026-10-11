@@ -12,12 +12,12 @@
 #include <cstdint>
 #include <memory>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     class MatchSession;
 }
 
-namespace BilliardsSaloon::Ai
+namespace Septhuit::Ai
 {
     // What the player to act must decide next.
     enum class Decision

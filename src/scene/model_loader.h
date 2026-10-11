@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     // An 8-bit RGBA image, decoded on the CPU, uploaded by the renderer.
     struct ModelTexture

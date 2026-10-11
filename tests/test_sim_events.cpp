@@ -4,7 +4,7 @@
 
 #include <cmath>
 
-using namespace BilliardsSaloon::Sim;
+using namespace Septhuit::Sim;
 
 namespace
 {

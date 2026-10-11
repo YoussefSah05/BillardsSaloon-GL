@@ -11,7 +11,7 @@
 #include <initializer_list>
 #include <random>
 
-using namespace BilliardsSaloon;
+using namespace Septhuit;
 
 namespace
 {

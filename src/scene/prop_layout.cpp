@@ -5,7 +5,7 @@
 #include <fstream>
 #include <stdexcept>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     std::vector<PropPlacement> loadPropLayout(const std::filesystem::path& file, const std::string& layout)
     {

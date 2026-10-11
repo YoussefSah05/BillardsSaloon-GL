@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     namespace
     {

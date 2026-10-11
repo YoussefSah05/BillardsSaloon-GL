@@ -5,7 +5,7 @@
 
 #include <glm/glm.hpp>
 
-using namespace BilliardsSaloon;
+using namespace Septhuit;
 
 namespace
 {
@@ -267,7 +267,7 @@ TEST_CASE("an event-simulated break plays back, syncs pots and records first con
         std::size_t count = 0;
         for (const auto& event : session.activeTrajectory()->events)
         {
-            count += (event.type == BilliardsSaloon::Sim::EventType::Pocket) ? 1U : 0U;
+            count += (event.type == Septhuit::Sim::EventType::Pocket) ? 1U : 0U;
         }
         return count;
     }();

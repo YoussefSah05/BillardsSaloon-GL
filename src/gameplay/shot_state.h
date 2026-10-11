@@ -1,6 +1,6 @@
 #pragma once
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     enum class ShotPhase
     {

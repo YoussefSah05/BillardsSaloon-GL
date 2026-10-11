@@ -10,11 +10,11 @@
 // Entry point: parse the command line, then run the game.
 int main(int argc, char** argv)
 {
-    BilliardsSaloon::LaunchOptions options;
+    Septhuit::LaunchOptions options;
     try
     {
         const std::vector<std::string_view> arguments(argv + 1, argv + argc);
-        options = BilliardsSaloon::parseLaunchOptions(arguments);
+        options = Septhuit::parseLaunchOptions(arguments);
     }
     catch (const std::invalid_argument& e)
     {
@@ -24,7 +24,7 @@ int main(int argc, char** argv)
 
     try
     {
-        BilliardsSaloon::Application app(options);
+        Septhuit::Application app(options);
         return app.run();
     }
     catch (const std::exception& e)

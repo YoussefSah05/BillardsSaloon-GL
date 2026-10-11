@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <thread>
 
-namespace BilliardsSaloon::Rl
+namespace Septhuit::Rl
 {
     ShotOutcome outcomeOf(const Sim::ShotTrajectory& trajectory)
     {

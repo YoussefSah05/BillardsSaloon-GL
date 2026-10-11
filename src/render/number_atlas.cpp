@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     NumberAtlas::NumberAtlas(const std::filesystem::path& fontFile)
     {

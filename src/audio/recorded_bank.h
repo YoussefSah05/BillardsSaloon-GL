@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-namespace BilliardsSaloon::Audio
+namespace Septhuit::Audio
 {
     inline constexpr int SAMPLE_RATE = 48000;
 

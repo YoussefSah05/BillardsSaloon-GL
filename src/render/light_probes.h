@@ -7,7 +7,7 @@
 #include <array>
 #include <vector>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     // Indirect light from a grid of probes. Each probe sees the lit room as
     // a small cube map; its radiance is projected onto nine SH coefficients

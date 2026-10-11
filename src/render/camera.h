@@ -2,7 +2,7 @@
 
 #include <glm/glm.hpp>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     struct CameraComponent
     {

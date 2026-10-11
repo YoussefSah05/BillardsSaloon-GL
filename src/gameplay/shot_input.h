@@ -9,7 +9,7 @@
 #include <cmath>
 #include <optional>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     // Shot input rates are per second so aiming and charging feel identical at
     // any frame rate. Values match the prototype's feel at 60 fps.

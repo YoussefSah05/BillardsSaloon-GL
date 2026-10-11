@@ -5,7 +5,7 @@
 #include <string>
 #include <string_view>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     enum class StartScreen
     {

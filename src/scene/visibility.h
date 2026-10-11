@@ -7,7 +7,7 @@
 #include <array>
 #include <limits>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     // An axis-aligned bounding box. Empty (min > max) until a point is added.
     struct Bounds

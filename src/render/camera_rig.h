@@ -3,7 +3,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     enum class CameraViewMode
     {

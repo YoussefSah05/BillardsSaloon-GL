@@ -28,6 +28,11 @@
         .wordmark .rule {
             margin: 0 auto;
         }
+        .wordmark .logo {
+            width: 640dp;
+            height: 129dp;
+            margin: 6dp auto 10dp;
+        }
         .press {
             margin-top: 34dp;
             font-family: "Barlow Condensed";
@@ -54,7 +59,7 @@
     <div class="center">
         <div class="wordmark">
             <div class="tag">THE TOURNAMENT HALL</div>
-            <h1>BILLIARDS SALOON</h1>
+            <img class="logo" src="../brand/wordmark.tga"/>
             <div class="rule"></div>
         </div>
         <div class="press" data-visible="!gamepad">PRESS ANY KEY</div>

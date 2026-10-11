@@ -4,7 +4,7 @@
 
 // Geometry ported from pooltool's objects/table/layout.py (Apache-2.0):
 // create_pocket_table_cushion_segments and create_pocket_table_pockets.
-namespace BilliardsSaloon::Sim
+namespace Septhuit::Sim
 {
     namespace
     {

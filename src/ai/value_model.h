@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <memory>
 
-namespace BilliardsSaloon::Ai
+namespace Septhuit::Ai
 {
     struct ValueEstimate
     {

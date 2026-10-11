@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     bool saveBackBufferImage(const std::filesystem::path& path, int width, int height)
     {

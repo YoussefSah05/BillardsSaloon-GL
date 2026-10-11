@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     Bounds boundsOf(const MeshData& mesh)
     {

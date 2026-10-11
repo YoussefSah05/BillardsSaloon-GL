@@ -15,7 +15,7 @@
 #include <string>
 
 namespace py = pybind11;
-using namespace BilliardsSaloon;
+using namespace Septhuit;
 
 namespace
 {

@@ -6,7 +6,7 @@ struct GLFWwindow;
 
 #include <string>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     // Receives raw window events in the order they happen (used by the UI,
     // which needs text input and precise click timing that polling loses).
@@ -29,7 +29,7 @@ namespace BilliardsSaloon
     {
         int width {1600};
         int height {900};
-        std::string title {"Billiards Saloon"};
+        std::string title {"Septhuit"};
         bool fullscreen {false};
         bool vsync {true};
     };

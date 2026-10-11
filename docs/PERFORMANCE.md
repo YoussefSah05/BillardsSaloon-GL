@@ -8,7 +8,7 @@ and computer planning much slower.
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j8
 ctest --test-dir build --output-on-failure
-./build/BilliardsSaloon --screen game --camera overview --profile --mute
+./build/Septhuit --screen game --camera overview --profile --mute
 ```
 
 ## Bottlenecks and fixes
@@ -77,9 +77,9 @@ therefore report zero shadow casters for that frame.
 To check actual playback and cache invalidation visually:
 
 ```bash
-./build/BilliardsSaloon --screen game --camera overview --profile --mute --capture /tmp/game.png --capture-frames 360
-./build/BilliardsSaloon --scenario replay --profile --mute --capture /tmp/replay.png --capture-frames 120
-./build/BilliardsSaloon --screen pause --mute --capture /tmp/pause.png
+./build/Septhuit --screen game --camera overview --profile --mute --capture /tmp/game.png --capture-frames 360
+./build/Septhuit --scenario replay --profile --mute --capture /tmp/replay.png --capture-frames 120
+./build/Septhuit --screen pause --mute --capture /tmp/pause.png
 ```
 
 The hall's two-bounce probe/reflection capture still runs once after furniture

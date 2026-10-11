@@ -1,1 +1,1 @@
-"""Self-play learning for Billiards Saloon."""
+"""Self-play learning for Septhuit."""

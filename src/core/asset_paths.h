@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <string_view>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     // Directory containing the running executable.
     [[nodiscard]] std::filesystem::path executableDirectory();

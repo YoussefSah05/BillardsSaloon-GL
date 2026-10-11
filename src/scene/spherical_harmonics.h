@@ -6,7 +6,7 @@
 #include <cstddef>
 #include <vector>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     // Radiance around a point, projected onto the first nine real spherical
     // harmonics (bands 0-2), one coefficient vector per RGB channel.

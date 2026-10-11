@@ -9,7 +9,7 @@
 #include <set>
 #include <stdexcept>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     namespace
     {

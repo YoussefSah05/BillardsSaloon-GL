@@ -8,7 +8,7 @@
 #include <cmath>
 #include <cstddef>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     static_assert(GLFW_KEY_LAST + 1 == 349, "Update Input::KEY_COUNT for this GLFW version.");
     static_assert(GLFW_GAMEPAD_BUTTON_LAST + 1 == 15, "Update Input::GAMEPAD_BUTTON_COUNT.");

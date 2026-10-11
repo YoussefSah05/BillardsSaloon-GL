@@ -10,7 +10,7 @@
 
 #include <vector>
 
-namespace BilliardsSaloon::Ai
+namespace Septhuit::Ai
 {
     // A copy of everything the AI needs to plan a shot, so planning can run on
     // a worker thread while the game carries on. Positions are game x, z.

@@ -21,7 +21,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     [[nodiscard]] const char* renderQualityLabel(RenderQualityPreset quality);
     [[nodiscard]] RenderQualityPreset nextRenderQuality(RenderQualityPreset quality);

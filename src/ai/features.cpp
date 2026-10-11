@@ -3,7 +3,7 @@
 
 #include <algorithm>
 
-namespace BilliardsSaloon::Ai
+namespace Septhuit::Ai
 {
     std::vector<float> encodeAdaptiveTable(const AiTable& table, int perspective, const AiProfile& own, const AiProfile& opponent)
     {

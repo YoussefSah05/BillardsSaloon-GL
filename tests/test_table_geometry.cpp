@@ -6,7 +6,7 @@
 #include <cmath>
 #include <initializer_list>
 
-using namespace BilliardsSaloon;
+using namespace Septhuit;
 
 namespace
 {

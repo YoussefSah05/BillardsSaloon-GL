@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <limits>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     struct Entity
     {

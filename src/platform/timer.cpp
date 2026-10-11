@@ -1,9 +1,9 @@
 #include "platform/timer.h"
 
-// This file is part of BilliardsSaloon, licensed under the MIT License (MIT).
+// This file is part of Septhuit, licensed under the MIT License (MIT).
 // We base our timing on std::chrono::steady_clock, which is guaranteed to be monotonic and not affected by system clock changes.
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     Timer::Timer()
     {

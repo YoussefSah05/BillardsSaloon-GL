@@ -1,4 +1,4 @@
-# Billiards Saloon — Intelligence
+# Septhuit — Intelligence
 
 Status: hybrid opponent AI implemented; coach/challenges remain design.
 Last revised 2026-10-09. See [ADAPTIVE_AI.md](ADAPTIVE_AI.md) for the actual
@@ -8,7 +8,7 @@ the classical planner it builds on is described in [AI.md](AI.md).
 
 ## Goal
 
-Make Billiards Saloon feel like a premium, intelligent game: opponents that play
+Make Septhuit feel like a premium, intelligent game: opponents that play
 like distinct people, a coach that teaches, difficulty that fits the player, and
 an endless supply of good challenges. One family of self-play-trained models
 powers all four. Product quality comes first; the training pipeline is also the

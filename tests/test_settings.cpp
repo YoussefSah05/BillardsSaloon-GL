@@ -6,7 +6,7 @@
 #include <fstream>
 #include <string>
 
-using namespace BilliardsSaloon;
+using namespace Septhuit;
 
 namespace
 {
@@ -80,4 +80,31 @@ TEST_CASE("the user data directory is a real folder")
     const std::filesystem::path directory = userDataDirectory();
     REQUIRE_FALSE(directory.empty());
     CHECK(std::filesystem::is_directory(directory));
+}
+
+TEST_CASE("settings from before the rename are carried over once")
+{
+    const std::filesystem::path root = std::filesystem::path(BS_TEST_SCRATCH_DIR) / "migration";
+    std::filesystem::remove_all(root);
+    const std::filesystem::path legacy = root / "Billiards Saloon";
+    const std::filesystem::path directory = root / "Septhuit";
+    std::filesystem::create_directories(legacy);
+    GameSettings old;
+    old.raceTo = 7;
+    REQUIRE(saveSettings(legacy / "settings.json", old));
+
+    CHECK(migrateUserDataDirectory(legacy, directory));
+    CHECK(loadSettings(directory / "settings.json").raceTo == 7);
+    CHECK(std::filesystem::exists(legacy / "settings.json"));   // the old folder is left alone
+
+    // Once the new folder exists, it is never overwritten.
+    GameSettings changed;
+    changed.raceTo = 3;
+    REQUIRE(saveSettings(directory / "settings.json", changed));
+    CHECK_FALSE(migrateUserDataDirectory(legacy, directory));
+    CHECK(loadSettings(directory / "settings.json").raceTo == 3);
+
+    // Nothing to migrate from.
+    CHECK_FALSE(migrateUserDataDirectory(root / "missing", root / "fresh"));
+    CHECK_FALSE(std::filesystem::exists(root / "fresh"));
 }

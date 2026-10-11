@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace BilliardsSaloon::Audio
+namespace Septhuit::Audio
 {
     namespace
     {

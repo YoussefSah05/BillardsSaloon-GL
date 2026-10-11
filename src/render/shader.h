@@ -5,7 +5,7 @@
 #include <string>
 #include <unordered_map>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     class Shader
     {

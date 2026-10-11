@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <string>
 
-namespace BilliardsSaloon::Rl
+namespace Septhuit::Rl
 {
     namespace
     {

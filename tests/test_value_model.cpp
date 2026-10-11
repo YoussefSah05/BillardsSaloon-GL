@@ -5,7 +5,7 @@
 #include <cmath>
 #include <fstream>
 
-using namespace BilliardsSaloon;
+using namespace Septhuit;
 
 TEST_CASE("bundled adaptive model loads and responds to opponent skill in native ONNX")
 {

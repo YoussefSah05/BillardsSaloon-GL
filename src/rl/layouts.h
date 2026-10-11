@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-namespace BilliardsSaloon::Rl
+namespace Septhuit::Rl
 {
     // How hard a single-ball layout is, from its easiest clean pot line
     // (docs/rl/rl-system-design.md, Section 6). Bands are exclusive: a layout

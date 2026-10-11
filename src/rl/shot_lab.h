@@ -9,7 +9,7 @@
 // Shot-level access to the simulator for reinforcement learning and
 // baselines: any layout in, what happened out. No game session, no rules
 // state, no rendering. Simulator frame and units (see rl/geometry.h).
-namespace BilliardsSaloon::Rl
+namespace Septhuit::Rl
 {
     // What one shot did. Ball indices follow the layout (0 = cue ball).
     struct ShotOutcome

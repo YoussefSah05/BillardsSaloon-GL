@@ -5,7 +5,7 @@
 
 #include <chrono>
 
-using namespace BilliardsSaloon;
+using namespace Septhuit;
 
 TEST_CASE("environment: frames play out instantly between classical players")
 {

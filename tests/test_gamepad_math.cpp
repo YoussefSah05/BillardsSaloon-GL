@@ -2,7 +2,7 @@
 
 #include <doctest/doctest.h>
 
-using namespace BilliardsSaloon;
+using namespace Septhuit;
 
 TEST_CASE("the dead zone hides stick drift and still reaches full deflection")
 {

@@ -24,7 +24,7 @@
 #include <random>
 #include <string>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     namespace
     {
@@ -471,7 +471,7 @@ namespace BilliardsSaloon
 
     void Application::applyEquipment()
     {
-        BilliardsSaloon::applyEquipment(*m_session, m_settings.equipment);
+        Septhuit::applyEquipment(*m_session, m_settings.equipment);
         if (m_renderer)
         {
             const EquipmentCatalog& catalog = equipmentCatalog();
@@ -2079,7 +2079,7 @@ namespace BilliardsSaloon
             return;
         }
 
-        std::string title = "Billiards Saloon";
+        std::string title = "Septhuit";
         title += " | ";
         title += shellStateLabel(m_shellState);
         title += " | Q:";

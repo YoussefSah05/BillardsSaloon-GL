@@ -2,7 +2,7 @@
 
 #include <array>
 
-namespace BilliardsSaloon::Rules
+namespace Septhuit::Rules
 {
     enum class BreakOrder
     {

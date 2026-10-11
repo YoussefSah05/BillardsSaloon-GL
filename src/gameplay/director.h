@@ -6,7 +6,7 @@
 
 #include <vector>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     enum class DirectorShot
     {

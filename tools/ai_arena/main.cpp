@@ -14,7 +14,7 @@
 #include <thread>
 #include <vector>
 
-using namespace BilliardsSaloon;
+using namespace Septhuit;
 
 int main(int argc, char** argv)
 {

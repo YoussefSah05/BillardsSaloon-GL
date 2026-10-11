@@ -7,7 +7,7 @@
 #include <fstream>
 #include <stdexcept>
 
-namespace BilliardsSaloon::Audio
+namespace Septhuit::Audio
 {
     std::vector<RecordedSample> loadRecordedBank(const std::filesystem::path& manifest)
     {

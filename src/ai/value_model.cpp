@@ -10,7 +10,7 @@
 #include <cmath>
 #include <stdexcept>
 
-namespace BilliardsSaloon::Ai
+namespace Septhuit::Ai
 {
     struct ValueModel::Impl
     {

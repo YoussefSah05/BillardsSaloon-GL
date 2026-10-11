@@ -8,7 +8,7 @@
 #include <cstddef>
 #include <vector>
 
-namespace BilliardsSaloon::Sim
+namespace Septhuit::Sim
 {
     enum class EventType : std::uint8_t
     {

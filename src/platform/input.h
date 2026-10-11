@@ -4,7 +4,7 @@
 
 #include <array>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     class Window;
 

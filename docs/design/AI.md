@@ -1,4 +1,4 @@
-# Billiards Saloon — Computer Opponents
+# Septhuit — Computer Opponents
 
 Status: classical planner, milestone M8 (0.8.0). Last revised 2026-10-06.
 Code: `src/ai/planner.*`, `src/ai/ai_profile.*`; profiles in

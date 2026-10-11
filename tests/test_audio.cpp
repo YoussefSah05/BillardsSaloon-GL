@@ -8,11 +8,11 @@
 #include <algorithm>
 #include <initializer_list>
 
-using namespace BilliardsSaloon::Audio;
+using namespace Septhuit::Audio;
 
 TEST_CASE("a break sounds like a break: a hard strike, a loud first contact, then softer clicks and cushions")
 {
-    using namespace BilliardsSaloon;
+    using namespace Septhuit;
     const GameVariantDefinition& variant = eightBallVariant();
     const Sim::Table table = Sim::buildPocketTable(variant.table.pocketGeometry);
 
@@ -54,7 +54,7 @@ TEST_CASE("a break sounds like a break: a hard strike, a loud first contact, the
 
 TEST_CASE("glancing cushion contacts follow normal impact speed")
 {
-    using namespace BilliardsSaloon;
+    using namespace Septhuit;
     Sim::Table table;
     table.length = 2.54;
     table.width = 1.27;
@@ -77,7 +77,7 @@ TEST_CASE("glancing cushion contacts follow normal impact speed")
 
 TEST_CASE("different simultaneous rack contacts survive while repeated pair chatter merges")
 {
-    using namespace BilliardsSaloon;
+    using namespace Septhuit;
     const auto table = Sim::buildPocketTable(Sim::PocketTableSpec{});
     Sim::ShotTrajectory shot;
     std::vector<Sim::BallState> balls(4);

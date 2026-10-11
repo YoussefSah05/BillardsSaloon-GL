@@ -11,7 +11,7 @@
 #include <cstdio>
 #include <stdexcept>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     namespace
     {

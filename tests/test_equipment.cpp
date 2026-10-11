@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <fstream>
 
-using namespace BilliardsSaloon;
+using namespace Septhuit;
 
 TEST_CASE("the shipped equipment catalogue loads with every category filled")
 {

@@ -8,7 +8,7 @@
 
 namespace RulesTest
 {
-    using namespace BilliardsSaloon::Rules;
+    using namespace Septhuit::Rules;
 
     // Builds a ShotRecord fluently: hit(1).pot(3, 2).rail()...
     struct Shot

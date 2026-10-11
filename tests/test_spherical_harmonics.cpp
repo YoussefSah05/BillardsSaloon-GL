@@ -4,7 +4,7 @@
 
 #include <functional>
 
-using namespace BilliardsSaloon;
+using namespace Septhuit;
 
 namespace
 {

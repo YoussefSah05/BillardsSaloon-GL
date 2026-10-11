@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     enum class RenderQualityPreset
     {
