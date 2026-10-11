@@ -34,6 +34,9 @@ All notable changes to Billiards Saloon. The format follows
   contacts when resuming.
 
 ### Added
+- `--record DIR` saves every frame as BMP at a fixed game-time step
+  (`--record-fps`, default 60), ignoring input, for demo clips; and
+  `--scenario break`, a full-power 9-ball break played live.
 - A separately trained gated graph Transformer ensemble experiment, with
   independent frame bootstraps, probability calibration, fresh prediction
   benchmarks and installation gates. Preserve the existing trained model
@@ -115,6 +118,10 @@ All notable changes to Billiards Saloon. The format follows
   (experiment 13).
 
 ### Documentation
+- A rewritten README: gallery of fresh in-game captures, 120 fps demo clips,
+  quick start, build options, architecture diagram and roadmap. The docs map
+  and architecture describe the learned AI, recorded audio, render presets and
+  every build target.
 - Theory documents with equations in LaTeX: the physics (motion on cloth,
   event detection, ball, cushion and cue models, validation), rendering
   (microfacet shading, sheen, shadows, bloom, tone mapping), audio (modal

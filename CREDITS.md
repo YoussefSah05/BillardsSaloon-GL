@@ -19,6 +19,13 @@ Third-party software and assets used by Billiards Saloon, with their licences.
 | [miniaudio](https://miniaud.io/) 0.11.22 | Audio playback | Public domain / MIT-0 |
 | [doctest](https://github.com/doctest/doctest) 2.4.12 | Unit tests (not shipped) | MIT |
 
+## Sound
+
+The 48 bundled sound samples are edited from downloaded pool recordings, material
+foley, crowd recordings and interface sounds. Every source, author, licence,
+edit recipe and file hash is listed in [assets/audio/CREDITS.md](assets/audio/CREDITS.md),
+with licence texts in `assets/audio/licenses/`.
+
 ## Models
 
 Furniture and decor in the saloon, from [Poly Haven](https://polyhaven.com/models), all
