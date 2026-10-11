@@ -33,6 +33,18 @@ TEST_CASE("capture options are read in any order")
     CHECK(options.captureAfterFrames == 30);
 }
 
+TEST_CASE("recording saves frames to a directory")
+{
+    CHECK(parse({"--record", "frames"}).recordFramesPerSecond == 60);
+    const LaunchOptions options = parse({"--record", "frames", "--record-fps", "120", "--capture-frames", "240"});
+    CHECK(options.recordDirectory == "frames");
+    CHECK(options.recordFramesPerSecond == 120);
+    CHECK(options.captureAfterFrames == 240);
+    CHECK(options.capturePath.empty());
+    CHECK_THROWS_AS(static_cast<void>(parse({"--record"})), std::invalid_argument);
+    CHECK_THROWS_AS(static_cast<void>(parse({"--record-fps", "0"})), std::invalid_argument);
+}
+
 TEST_CASE("bad arguments are rejected with a reason")
 {
     CHECK_THROWS_AS(static_cast<void>(parse({"--screen", "lobby"})), std::invalid_argument);
@@ -48,6 +60,7 @@ TEST_CASE("development scenarios start in the game")
 {
     const LaunchOptions options = parse({"--scenario", "call"});
     CHECK(options.scenario == DevScenario::Call);
+    CHECK(parse({"--scenario", "break"}).scenario == DevScenario::Break);
     CHECK(options.startScreen == StartScreen::Gameplay);
     CHECK(parse({"--screen", "setup"}).startScreen == StartScreen::MatchSetup);
     CHECK_THROWS_AS(static_cast<void>(parse({"--scenario", "trickshot"})), std::invalid_argument);

@@ -26,7 +26,8 @@ namespace BilliardsSaloon
         Foul,     // 9-ball: a soft break the wrong way; the next player has ball in hand
         Choice,   // 8-ball: an illegal break; the referee asks the other player
         Call,     // 10-ball: a layout after the break, aiming at a called ball
-        Replay    // 9-ball: a slow frame-winning pot, then its slow-motion replay
+        Replay,   // 9-ball: a slow frame-winning pot, then its slow-motion replay
+        Break     // 9-ball: a full-power break, played live rather than skipped
     };
 
     // Command-line options. Capture options exist for development and
@@ -37,6 +38,8 @@ namespace BilliardsSaloon
         StartScreen startScreen {StartScreen::Title};
         std::filesystem::path capturePath;   // empty = no capture
         int captureAfterFrames {90};
+        std::filesystem::path recordDirectory; // --record: save every frame at a fixed time step, ignoring input; empty = off
+        int recordFramesPerSecond {60};        // --record-fps: game time per recorded frame is 1/N s
         DevScenario scenario {DevScenario::None};
         int startCamera {-1};                 // --camera: 0 aim, 1 overview, 2 follow, 3 free, 4 broadcast; -1 = default
         bool mute {false};                    // --mute; captures are always silent

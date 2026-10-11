@@ -67,7 +67,8 @@ namespace BilliardsSaloon
                 else if (value == "choice") options.scenario = DevScenario::Choice;
                 else if (value == "call") options.scenario = DevScenario::Call;
                 else if (value == "replay") options.scenario = DevScenario::Replay;
-                else throw std::invalid_argument("--scenario needs 'foul', 'choice', 'call' or 'replay'.");
+                else if (value == "break") options.scenario = DevScenario::Break;
+                else throw std::invalid_argument("--scenario needs 'foul', 'choice', 'call', 'replay' or 'break'.");
                 options.startScreen = StartScreen::Gameplay;
             }
             else if (argument == "--opponent")
@@ -96,6 +97,14 @@ namespace BilliardsSaloon
                 else if (value == "broadcast") options.startCamera = 4;
                 else throw std::invalid_argument("--camera needs broadcast, aim, overview, follow or free.");
             }
+            else if (argument == "--record")
+            {
+                options.recordDirectory = std::filesystem::path(std::string(nextValue()));
+            }
+            else if (argument == "--record-fps")
+            {
+                options.recordFramesPerSecond = parsePositiveInt(argument, nextValue());
+            }
             else if (argument == "--capture-frames")
             {
                 options.captureAfterFrames = parsePositiveInt(argument, nextValue());
@@ -119,9 +128,11 @@ namespace BilliardsSaloon
             "  --hall ID               start in this hall (assets/data/equipment/catalog.json)\n"
             "  --profile               print frame time, draw calls and culling once a second\n"
             "  --screen title|main|setup|locker|game|pause|settings  start on this screen\n"
-            "  --scenario foul|choice|call|replay  (development) script a state: ball in hand, a referee choice, a called shot, a winning replay\n"
+            "  --scenario foul|choice|call|replay|break  (development) script a state: ball in hand, a referee choice, a called shot, a winning replay, a live break\n"
             "  --camera broadcast|aim|overview|follow|free  start with this camera view\n"
             "  --capture FILE.png      save a screenshot after a few frames, then quit\n"
-            "  --capture-frames N      frames to render before capturing (default 90)\n";
+            "  --capture-frames N      frames to render before capturing (default 90)\n"
+            "  --record DIR            save every frame to DIR at a fixed time step, quit after --capture-frames\n"
+            "  --record-fps N          recorded frames per second of game time (default 60)\n";
     }
 }

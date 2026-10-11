@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <cstdio>
 #include <exception>
 #include <iomanip>
 #include <iostream>
@@ -202,7 +203,7 @@ namespace BilliardsSaloon
             m_valueModel = model;
         }
 #endif
-        m_audio = std::make_unique<AudioEngine>(!options.mute && options.capturePath.empty());
+        m_audio = std::make_unique<AudioEngine>(!options.mute && options.capturePath.empty() && options.recordDirectory.empty());
         m_audio->setVolumes(m_settings.masterVolume, m_settings.effectsVolume, m_settings.crowdVolume);
         m_ui = std::make_unique<UiSystem>(m_window);
         m_ui->setSoundHook([this](bool confirm) { m_audio->playUi(confirm ? UiSound::Confirm : UiSound::Move); });
@@ -337,8 +338,11 @@ namespace BilliardsSaloon
         {
             // Development: play a soft break the wrong way, so captures can show
             // ball in hand (9-ball foul) or the referee's question (8-ball).
+            // The break scenario instead fires a full-power break and leaves it
+            // to play out live, for demo recordings.
+            const bool liveBreak = options.scenario == DevScenario::Break;
             MatchSetup setup = savedMatchSetup();
-            setup.game = ((options.scenario == DevScenario::Foul) || (options.scenario == DevScenario::Replay)) ? GameDiscipline::NineBall
+            setup.game = ((options.scenario == DevScenario::Foul) || (options.scenario == DevScenario::Replay) || liveBreak) ? GameDiscipline::NineBall
                 : (options.scenario == DevScenario::Call) ? GameDiscipline::TenBall
                 : GameDiscipline::EightBall;
             if (options.scenario == DevScenario::Call)
@@ -370,17 +374,18 @@ namespace BilliardsSaloon
                 ? angleTo({0.9165f, 0.2815f}, {1.1286f, 0.4936f}) - m_session->shotState().aimAngleRadians
                 : (options.scenario == DevScenario::Replay)
                 ? angleTo(replayCue, replayObject) - m_session->shotState().aimAngleRadians
+                : liveBreak ? 0.0f
                 : -3.14159265f;
             m_session->applyShotControls(aim, 0.0f);
             ShotControls hold;
             hold.shootHeld = true;
-            const int holdFrames = (options.scenario == DevScenario::Replay) ? 11 : 20;
+            const int holdFrames = (options.scenario == DevScenario::Replay) ? 11 : liveBreak ? 240 : 20;   // charge saturates at full power
             for (int i = 0; i < holdFrames; ++i)
             {
                 m_session->applyShotControls(hold, 1.0f / 120.0f);
             }
             m_session->applyShotControls(ShotControls{}, 1.0f / 120.0f);
-            for (int i = 0; (i < 120 * 60) && (m_session->shotState().phase == ShotPhase::BallsInMotion); ++i)
+            for (int i = 0; !liveBreak && (i < 120 * 60) && (m_session->shotState().phase == ShotPhase::BallsInMotion); ++i)
             {
                 m_session->step(FIXED_TIME_STEP);
             }
@@ -571,13 +576,29 @@ namespace BilliardsSaloon
 
     void Application::captureIfDue()
     {
+        if (!m_options.recordDirectory.empty())
+        {
+            char name[32];
+            std::snprintf(name, sizeof(name), "frame_%05llu.bmp", static_cast<unsigned long long>(m_frameCount));
+            if (!saveBackBufferImage(m_options.recordDirectory / name, m_window.width(), m_window.height()))
+            {
+                std::cerr << "Could not save " << (m_options.recordDirectory / name).string() << '\n';
+                m_window.requestClose();
+            }
+            if (m_frameCount >= static_cast<std::uint64_t>(m_options.captureAfterFrames))
+            {
+                std::cout << "Recorded " << m_frameCount << " frames to " << m_options.recordDirectory.string() << '\n';
+                m_window.requestClose();
+            }
+            return;
+        }
         if (m_options.capturePath.empty() ||
             (m_frameCount != static_cast<std::uint64_t>(m_options.captureAfterFrames)))
         {
             return;
         }
 
-        if (saveBackBufferPng(m_options.capturePath, m_window.width(), m_window.height()))
+        if (saveBackBufferImage(m_options.capturePath, m_window.width(), m_window.height()))
         {
             std::cout << "Saved " << m_options.capturePath.string() << '\n';
         }
@@ -625,8 +646,16 @@ namespace BilliardsSaloon
             m_window.pollEvents();
 
             const double elapsedFrameTime = m_timer.tick();
-            const double frameTime = std::min(elapsedFrameTime, MAX_FRAME_TIME);
-            processInput(static_cast<float>(frameTime));
+            // Recording advances the game by exactly one --record-fps frame
+            // per rendered frame, however long saving the image takes.
+            const double frameTime = m_options.recordDirectory.empty()
+                ? std::min(elapsedFrameTime, MAX_FRAME_TIME) : 1.0 / static_cast<double>(m_options.recordFramesPerSecond);
+            // A recording plays the scripted scenario untouched: stray keys or
+            // focus changes while frames are saved must not alter the clip.
+            if (m_options.recordDirectory.empty())
+            {
+                processInput(static_cast<float>(frameTime));
+            }
             updateHud(static_cast<float>(frameTime));
 
             m_accumulator += frameTime;
