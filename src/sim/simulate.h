@@ -5,6 +5,7 @@
 #include "sim/table.h"
 
 #include <cstdint>
+#include <cstddef>
 #include <vector>
 
 namespace BilliardsSaloon::Sim
@@ -41,6 +42,8 @@ namespace BilliardsSaloon::Sim
 
         [[nodiscard]] double duration() const;
         [[nodiscard]] std::vector<BallState> stateAt(double t) const;
+        // Samples one ball without allocating or evolving the rest of the table.
+        [[nodiscard]] BallState ballStateAt(std::size_t ball, double t) const;
         [[nodiscard]] const std::vector<BallState>& finalState() const { return states.back(); }
     };
 

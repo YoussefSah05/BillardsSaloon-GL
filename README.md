@@ -26,6 +26,9 @@ materials are scheduled for the hall-visuals milestone.
 
 - Computer opponents, club to champion, that plan shots on the simulator
   (pots, safeties, kicks, position) and play with human-like error.
+- A bundled opponent-conditioned neural evaluator and an **Adaptive opponent**
+  that adjusts gradually from your attempted pots and fouls. Named opponents
+  retain their chosen difficulty. See [architecture and training](docs/design/ADAPTIVE_AI.md).
 - 8-ball, 9-ball and 10-ball for two local players or against the computer, refereed by WPA rules:
   legal-break checks, ball in hand with placement, push-outs, called shots,
   spotted balls, three-foul rule, and the referee's choices (re-rack, hand the
@@ -45,20 +48,32 @@ materials are scheduled for the hall-visuals milestone.
   ball trays, power meter, spin widget, referee banners that name each foul,
   and a frame-over card.
 - Low/Balanced/High render quality.
-- Sound synthesised in code and driven by the simulator: every click,
-  cushion and pocket at its moment and loudness, a hall crowd and applause.
+- Downloaded pool recordings driven by the simulator: every click,
+  cushion and pocket at its moment and loudness, with impact-strength variants,
+  cloth rolling, pocket jaws, racking, placement, cue movement, clock ticks and
+  foul cues, plus a hall crowd and applause. See [audio design](docs/design/AUDIO.md)
+  and [recording credits](assets/audio/CREDITS.md).
 
 ## Build
 
 Requires CMake ≥ 3.28, a C++20 compiler and OpenGL 4.1. GLFW, GLM and doctest are
-fetched automatically; GLAD is bundled in `external/`.
+fetched automatically; GLAD is bundled in `external/`. Learned AI also fetches
+the prebuilt ONNX Runtime library; disable it with `-DBS_WITH_ONNXRUNTIME=OFF`
+to build with classical evaluation only.
 
 ```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Debug
+cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j8
 ./build/BilliardsSaloon
 ctest --test-dir build --output-on-failure   # unit tests
 ```
+
+Use `Release` for playing and measuring performance; `Debug` is intended for
+debugging and makes simulation-heavy aiming and AI substantially slower.
+Low caps the 3D scene at 1280 × 720, Balanced at 1920 × 1080 (preserving aspect
+ratio), and High uses the native framebuffer resolution. The HUD and menus
+always render at native resolution. See [performance notes](docs/PERFORMANCE.md)
+for the bottlenecks, measurements and validation commands.
 
 ## Controls
 
@@ -126,12 +141,11 @@ The full design lives in [`docs/`](docs/README.md). In short:
   exactly at the strike, with real cushion geometry, pocket jaws, squirt,
   swerve and massé.
 - **AI and machine learning** ([INTELLIGENCE.md](docs/design/INTELLIGENCE.md)) —
-  a search over candidate shots under execution noise, guided by value and
-  policy networks trained by self-play (expert iteration, AlphaZero-style) on
-  the game's own simulator. Trained in Python/PyTorch, shipped through ONNX
-  Runtime. The same models power AI pros with personalities, an AI coach
-  (best shot, where the cue ball should have finished, shot difficulty),
-  adaptive difficulty and generated challenges.
+  candidate-shot search under execution noise, guided by an opponent-conditioned
+  relational value network trained on mixed-skill league play and expert
+  iteration using the game's simulator. PyTorch training and bundled ONNX
+  inference power the opponents; Adaptive difficulty follows observed play.
+  The AI coach and generated challenges remain planned.
 - **Experience** ([UX.md](docs/design/UX.md), [GDD.md](docs/design/GDD.md)) —
   a televised-final presentation: broadcast scorebug, referee calls that name
   every foul, replays and a director camera over a live 3D tournament hall;

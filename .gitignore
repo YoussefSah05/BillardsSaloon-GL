@@ -1,4 +1,5 @@
 build/
+build-*/
 .DS_Store
 *.o
 *.a
@@ -15,5 +16,6 @@ __pycache__/
 ml/data/
 ml/runs/
 ml/checkpoints/
+ml/:memory:.ses
 build-py/
 ml/*.so

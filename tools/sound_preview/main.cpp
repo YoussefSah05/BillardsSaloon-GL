@@ -1,9 +1,11 @@
-// Writes the game's synthesised sounds, and a full break mixed from the
+// Writes the game's recorded sounds, and a full break mixed from the
 // simulator's sound cues, to WAV files for listening and sound design:
 //   ./build/bs_sound_preview OUTPUT_DIR
 
 #include "audio/shot_sounds.h"
-#include "audio/sound_synth.h"
+#include "app/audio_engine.h"
+#include "audio/recorded_bank.h"
+#include "core/asset_paths.h"
 #include "gameplay/game_variant.h"
 #include "gameplay/sim_bridge.h"
 
@@ -46,14 +48,10 @@ int main(int argc, char** argv)
     const std::filesystem::path dir = (argc > 1) ? argv[1] : "sound_preview";
     std::filesystem::create_directories(dir);
 
-    writeWav(dir / "ball_click.wav", Audio::ballClick(1).samples, 1);
-    writeWav(dir / "cushion_thud.wav", Audio::cushionThud(101).samples, 1);
-    writeWav(dir / "pocket_drop.wav", Audio::pocketDrop(201).samples, 1);
-    writeWav(dir / "cue_strike.wav", Audio::cueStrike(301).samples, 1);
-    writeWav(dir / "ui_tick.wav", Audio::uiTick().samples, 1);
-    writeWav(dir / "ui_confirm.wav", Audio::uiConfirm().samples, 1);
-    writeWav(dir / "crowd_murmur.wav", Audio::crowdMurmur(8.0, 43).samples, 1);
-    writeWav(dir / "applause.wav", Audio::applause(5.0, 41).samples, 1);
+    for (const auto& sample : Audio::loadRecordedBank(resolveAssetPath("audio/bank.json")))
+    {
+        writeWav(dir / sample.file, sample.pcm.samples, 1);
+    }
 
     // A break from the head spot, mixed as the game would: each cue's sound at
     // its time, its loudness, panned by where on the table it happened.
@@ -72,30 +70,38 @@ int main(int argc, char** argv)
     strike.speed = 7.0;
     strike.phiDegrees = 90.0;
     const Sim::ShotTrajectory shot = Sim::simulateShot(table, balls, 0, strike, variant.table.simBall);
-    const std::vector<Audio::SoundCue> cues = Audio::planShotSounds(shot, variant.table.clothWidth, variant.table.clothDepth);
+    const std::vector<Audio::SoundCue> cues = Audio::planShotSounds(shot, table);
 
     std::vector<float> mix(static_cast<std::size_t>((shot.duration() + 1.0) * Audio::SAMPLE_RATE) * 2, 0.0f);
-    std::uint32_t seed = 1;
-    for (const Audio::SoundCue& cue : cues)
+    AudioEngine engine(true, true);
+    engine.setListener({-1.8f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f});
+    if (!engine.available())
     {
-        Audio::SoundBuffer sound;
-        switch (cue.kind)
+        std::cerr << "Could not initialize offline audio mixer.\n";
+        return 1;
+    }
+    std::size_t next = 0;
+    for (std::size_t frame = 0; frame < mix.size() / 2; frame += 256)
+    {
+        const double now = static_cast<double>(frame) / Audio::SAMPLE_RATE;
+        while (next < cues.size() && cues[next].time <= now + 0.05)
         {
-            case Audio::SoundKind::BallBall: sound = Audio::ballClick(seed++); break;
-            case Audio::SoundKind::Cushion: sound = Audio::cushionThud(seed++); break;
-            case Audio::SoundKind::Pocket: sound = Audio::pocketDrop(seed++); break;
-            case Audio::SoundKind::CueStrike: sound = Audio::cueStrike(seed++); break;
+            engine.playShotCue(cues[next], cues[next].time - now);
+            ++next;
         }
-        // Listener at the head end, looking down the table: +z is to the right.
-        const float pan = std::clamp(cue.position.z / 0.8f, -1.0f, 1.0f);
-        const float left = cue.intensity * std::sqrt(0.5f * (1.0f - pan));
-        const float right = cue.intensity * std::sqrt(0.5f * (1.0f + pan));
-        const auto start = static_cast<std::size_t>(cue.time * Audio::SAMPLE_RATE);
-        for (std::size_t i = 0; i < sound.samples.size() && 2 * (start + i) + 1 < mix.size(); ++i)
+        const auto states = shot.stateAt(now);
+        float energy = 0.0f;
+        glm::vec3 position(0.0f);
+        for (const auto& ball : states)
         {
-            mix[2 * (start + i)] += 0.5f * left * sound.samples[i];
-            mix[2 * (start + i) + 1] += 0.5f * right * sound.samples[i];
+            const float speedSquared = static_cast<float>(glm::dot(ball.v, ball.v));
+            energy += speedSquared;
+            position += speedSquared * SimBridge::toGamePosition(ball.r, table.length, table.width);
         }
+        engine.setRolling(std::sqrt(energy), energy > 0.0f ? position / energy : glm::vec3(0.0f));
+        const std::size_t count = std::min<std::size_t>(512, mix.size() - 2 * frame);
+        if (!engine.renderOffline(std::span<float>(mix).subspan(2 * frame, count))) return 1;
+        engine.update();
     }
     writeWav(dir / "break_mix.wav", mix, 2);
     std::cout << cues.size() << " sound cues over " << shot.duration() << " s\n";

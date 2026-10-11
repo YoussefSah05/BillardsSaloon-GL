@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ai/ai_table.h"
+#include "ai/ai_profile.h"
 
 #include <array>
 #include <cstddef>
@@ -25,4 +26,9 @@ namespace BilliardsSaloon::Ai
     inline constexpr std::size_t FEATURE_COUNT = BALL_SLOTS * BALL_FEATURES + CONTEXT_FEATURES;
 
     [[nodiscard]] std::vector<float> encodeTable(const AiTable& table, int perspective);
+    inline constexpr std::size_t ADAPTIVE_BALL_FEATURES = 14;
+    inline constexpr std::size_t PROFILE_FEATURES = 8;
+    inline constexpr std::size_t ADAPTIVE_FEATURE_COUNT = BALL_SLOTS * ADAPTIVE_BALL_FEATURES + CONTEXT_FEATURES + 2 * PROFILE_FEATURES;
+    [[nodiscard]] std::vector<float> encodeAdaptiveTable(const AiTable& table, int perspective,
+                                                        const AiProfile& own, const AiProfile& opponent);
 }

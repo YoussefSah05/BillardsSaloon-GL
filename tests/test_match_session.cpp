@@ -54,6 +54,21 @@ TEST_CASE("a new session racks the balls and waits for the break")
     CHECK(cueBall.z == doctest::Approx(session.cueBallStartPosition().z));
 }
 
+TEST_CASE("changing object ball positions invalidates an unchanged aim preview")
+{
+    MatchSession session(eightBallVariant());
+    session.setLayout({-0.8f, 0.0f}, {{1, {0.0f, 0.0f}}});
+    const ShotPreview first = session.shotPreview();
+    REQUIRE(first.valid);
+    REQUIRE(first.contact);
+    CHECK(first.objectBall == 1);
+    session.setLayout({-0.8f, 0.0f}, {{2, {0.0f, 0.0f}}});
+    const ShotPreview& second = session.shotPreview();
+    REQUIRE(second.valid);
+    REQUIRE(second.contact);
+    CHECK(second.objectBall == 2);
+}
+
 TEST_CASE("charging power does not depend on the frame rate")
 {
     MatchSession slow(eightBallVariant());

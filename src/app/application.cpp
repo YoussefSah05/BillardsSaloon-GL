@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cmath>
+#include <exception>
 #include <iomanip>
 #include <iostream>
 #include <optional>
@@ -190,9 +191,14 @@ namespace BilliardsSaloon
 
 #if defined(BS_HAS_ONNXRUNTIME)
         // The learned value network, if shipped; without it the AI is classical.
-        if (std::shared_ptr<Ai::ValueModel> model = Ai::ValueModel::load(resolveAssetPathOrEmpty("models/value.onnx")))
+        const auto adaptiveModel = resolveAssetPathOrEmpty("models/adaptive_value.onnx");
+        const auto modelPath = std::filesystem::exists(adaptiveModel) ? adaptiveModel : resolveAssetPathOrEmpty("models/value.onnx");
+        if (std::shared_ptr<Ai::ValueModel> model = Ai::ValueModel::load(modelPath))
         {
-            m_aiValue = model->function();
+            m_aiValue = [model](const Ai::AiProfile& own, const Ai::AiProfile& opponent, int seat)
+            {
+                return model->function(own, opponent, seat);
+            };
             m_valueModel = model;
         }
 #endif
@@ -213,6 +219,11 @@ namespace BilliardsSaloon
                 {
                     resetAi();
                     m_session->restartFrame();
+                    m_pendingHumanShot = false;
+                    m_audio->stopEffects();
+                    m_soundCues.clear();
+                    m_nextSoundCue = 0;
+                    m_audio->playGameplay(GameplaySound::Rack);
                     m_cardAfterReplay = false;
                     m_replayBeforeCard = false;
                     m_hud->clearAnnouncements();
@@ -243,18 +254,24 @@ namespace BilliardsSaloon
             .frameContinue = [this]()
             {
                 resetAi();
+                m_audio->stopEffects();
+                m_soundCues.clear();
+                m_nextSoundCue = 0;
                 if (m_session->matchOver())
                 {
                     m_session->startMatch();   // rematch: same discipline and race
+                    m_opponentModel.reset();
                 }
                 else
                 {
                     m_session->startNextFrame();
                 }
                 m_cardAfterReplay = false;
+                m_pendingHumanShot = false;
                 m_replayBeforeCard = false;
                 m_hud->clearAnnouncements();
                 setShellState(ApplicationShellState::Gameplay);
+                m_audio->playGameplay(GameplaySound::Rack);
             }
         });
         m_settingsScreen = std::make_unique<SettingsScreen>(*m_ui, m_settings, SettingsScreenActions{
@@ -420,6 +437,8 @@ namespace BilliardsSaloon
             m_hud->clearAnnouncements();
         }
         resetAi();
+        m_opponentModel.reset();
+        m_pendingHumanShot = false;
         m_aiSeat = setup.opponent.empty() ? -1 : 1;
         if (m_aiSeat >= 0)
         {
@@ -434,6 +453,15 @@ namespace BilliardsSaloon
         m_frameOverDelay = -1.0f;
         m_cameraBeforePlacing.reset();
         updateCameraRig(FIXED_TIME_STEP);
+        m_soundPlayback = 0;
+        m_soundCues.clear();
+        m_nextSoundCue = 0;
+        m_lastClockTick = -1;
+        if (m_audio)
+        {
+            m_audio->stopEffects();
+            m_audio->playGameplay(GameplaySound::Rack);
+        }
     }
 
     void Application::applyEquipment()
@@ -562,7 +590,7 @@ namespace BilliardsSaloon
 
     void Application::reportProfile(double frameTime)
     {
-        // Averages over about a second: CPU frame time, GPU time and the
+        // Averages over about a second: elapsed frame time, GPU time and the
         // renderer's counts for the latest frame.
         m_profileSeconds += frameTime;
         m_profileGpuMilliseconds += static_cast<double>(m_renderer->stats().gpuMilliseconds);
@@ -576,6 +604,7 @@ namespace BilliardsSaloon
         std::cout << std::fixed << std::setprecision(2)
                   << "frame " << 1000.0 * m_profileSeconds / frames << " ms"
                   << "  gpu " << m_profileGpuMilliseconds / frames << " ms"
+                  << "  scene " << stats.sceneWidth << 'x' << stats.sceneHeight
                   << "  draws " << stats.drawCalls
                   << "  triangles " << stats.triangles
                   << "  objects " << stats.objectsDrawn << " drawn / " << stats.objectsCulled << " culled"
@@ -595,7 +624,8 @@ namespace BilliardsSaloon
         {
             m_window.pollEvents();
 
-            const double frameTime = std::min(m_timer.tick(), MAX_FRAME_TIME);
+            const double elapsedFrameTime = m_timer.tick();
+            const double frameTime = std::min(elapsedFrameTime, MAX_FRAME_TIME);
             processInput(static_cast<float>(frameTime));
             updateHud(static_cast<float>(frameTime));
 
@@ -610,10 +640,10 @@ namespace BilliardsSaloon
             }
 
             render(m_accumulator / FIXED_TIME_STEP);
-            updateWindowTitle(frameTime, fixedStepsThisFrame);
+            updateWindowTitle(elapsedFrameTime, fixedStepsThisFrame);
             if (m_options.profile)
             {
-                reportProfile(frameTime);
+                reportProfile(elapsedFrameTime);
             }
 
             ++m_frameCount;
@@ -880,6 +910,8 @@ namespace BilliardsSaloon
             if (skip)
             {
                 m_session->stopReplay();
+                m_audio->stopEffects();
+                m_nextSoundCue = m_soundCues.size();
                 m_waitForShotRelease = true;
             }
             return;
@@ -1005,7 +1037,20 @@ namespace BilliardsSaloon
             controls.shootHeld = controls.shootHeld || m_input.gamepadDown(GLFW_GAMEPAD_BUTTON_A);
         }
 
+        const ShotPhase beforePhase = m_session->shotState().phase;
         m_session->applyShotControls(controls, frameTimeSeconds);
+        if (m_aiSeat >= 0 && beforePhase != ShotPhase::BallsInMotion && m_session->ballsInMotion())
+        {
+            // fireShot has installed the trajectory, but playback has not
+            // advanced yet: these are still the starting ball positions.
+            m_humanPotEase = Ai::aimedPotEase(m_session->aiView(), m_session->shotState().aimAngleRadians);
+            m_pendingHumanShot = true;
+        }
+        if (beforePhase != ShotPhase::Charging && m_session->shotState().phase == ShotPhase::Charging)
+        {
+            m_audio->playGameplay(GameplaySound::CueSlide,
+                m_session->registry().get<TransformComponent>(m_session->cueBallEntity()).position);
+        }
     }
 
     void Application::processPlacementInput(float frameTimeSeconds, const glm::vec2& mouse, bool fine)
@@ -1050,6 +1095,8 @@ namespace BilliardsSaloon
             m_input.wasPressed(GLFW_KEY_ENTER) || m_input.gamepadPressed(GLFW_GAMEPAD_BUTTON_A);
         if (confirm && m_session->confirmCueBallPlacement())
         {
+            m_audio->playGameplay(GameplaySound::BallPlace,
+                m_session->registry().get<TransformComponent>(m_session->cueBallEntity()).position);
             // The button that placed the ball must come up before it can shoot.
             m_waitForShotRelease = true;
             setCameraViewMode(*m_cameraBeforePlacing);
@@ -1385,6 +1432,7 @@ namespace BilliardsSaloon
         if (playing && aiToAct() && (m_aiStage == AiStage::Thinking))
         {
             snapshot.aiThinking = m_aiProfile.name;
+            if (m_aiProfile.adaptive) snapshot.aiThinking += " · MATCHING YOUR LEVEL";
         }
         snapshot.placementValid = m_session->cueBallPlacementValid();
         snapshot.canPlace = playing && m_session->canPlaceCueBall() && !aiToAct();
@@ -1468,7 +1516,17 @@ namespace BilliardsSaloon
         {
             m_announcedShots = m_session->resolvedShotCount();
             const ShotOutcome& outcome = m_session->lastOutcome();
+            if (m_pendingHumanShot)
+            {
+                m_opponentModel.observe(m_humanPotEase, !outcome.verdict.objectPots.empty(),
+                    outcome.verdict.foul != Rules::Foul::None, outcome.verdict.breakShot, m_session->variant().discipline);
+                m_pendingHumanShot = false;
+            }
             m_hud->announce(outcome, snapshot);
+            if (outcome.verdict.foul != Rules::Foul::None)
+            {
+                m_audio->playGameplay(GameplaySound::Foul);
+            }
 
             if (outcome.verdict.frameOver && (outcome.verdict.winner >= 0))
             {
@@ -1567,32 +1625,47 @@ namespace BilliardsSaloon
             {
                 // Plan on a worker thread, from a copy of the table.
                 const Ai::AiTable table = m_session->aiView();
-                const Ai::AiProfile profile = m_aiProfile;
-                const Ai::ValueFunction value = profile.learnedValue ? m_aiValue : Ai::ValueFunction{};
+                m_aiEffectiveProfile = m_opponentModel.adapt(m_aiProfile);
+                const Ai::AiProfile profile = m_aiEffectiveProfile;
+                const Ai::ValueFunction value = profile.learnedValue && m_aiValue
+                    ? m_aiValue(profile, m_opponentModel.estimatedProfile(), m_aiSeat) : Ai::ValueFunction{};
                 const auto seed = static_cast<std::uint32_t>(m_aiRandom());
                 const bool choosing = m_session->pendingChoice() != Rules::Choice::None;
                 const bool placing = m_session->placingCueBall() ||
                     (m_session->canPlaceCueBall() && (table.frame.phase != Rules::Phase::Break));
                 m_aiFuture = std::async(std::launch::async, [table, profile, value, seed, choosing, placing]()
                 {
-                    AiPlan plan;
-                    if (choosing)
+                    const auto makePlan = [&](const Ai::ValueFunction& evaluation)
                     {
-                        plan.choice = true;
-                        plan.option = Ai::planChoice(table, profile, seed, value);
+                        AiPlan plan;
+                        if (choosing)
+                        {
+                            plan.choice = true;
+                            plan.option = Ai::planChoice(table, profile, seed, evaluation);
+                            return plan;
+                        }
+                        Ai::AiTable view = table;
+                        if (placing)
+                        {
+                            plan.place = true;
+                            plan.spot = Ai::planCueBallPlacement(table, profile, seed, evaluation);
+                            view.positions.front() = plan.spot;
+                            view.pocketed.front() = false;
+                            view.frame.ballInHand = Rules::BallInHand::None;
+                        }
+                        plan.shot = (view.frame.phase == Rules::Phase::Break) ? Ai::planBreak(view, profile) : Ai::planShot(view, profile, seed, evaluation);
                         return plan;
-                    }
-                    Ai::AiTable view = table;
-                    if (placing)
+                    };
+                    try
                     {
-                        plan.place = true;
-                        plan.spot = Ai::planCueBallPlacement(table, profile, seed, value);
-                        view.positions.front() = plan.spot;
-                        view.pocketed.front() = false;
-                        view.frame.ballInHand = Rules::BallInHand::None;
+                        return makePlan(value);
                     }
-                    plan.shot = (view.frame.phase == Rules::Phase::Break) ? Ai::planBreak(view, profile) : Ai::planShot(view, profile, seed, value);
-                    return plan;
+                    catch (const std::exception& error)
+                    {
+                        if (!value) throw;
+                        std::cerr << "Learned AI planning failed; retrying with physics search: " << error.what() << '\n';
+                        return makePlan({});
+                    }
                 });
                 m_aiStage = AiStage::Thinking;
                 m_aiElapsed = 0.0f;
@@ -1614,10 +1687,14 @@ namespace BilliardsSaloon
                     m_aiStage = AiStage::Idle;
                     break;
                 }
-                if (m_aiPlan.place && !m_session->placeCueBallAt(m_aiPlan.spot))
+                if (m_aiPlan.place)
                 {
-                    // The spot was refused (it should not be): place where the ball is.
-                    (void)m_session->confirmCueBallPlacement();
+                    const bool placed = m_session->placeCueBallAt(m_aiPlan.spot) || m_session->confirmCueBallPlacement();
+                    if (placed)
+                    {
+                        m_audio->playGameplay(GameplaySound::BallPlace,
+                            m_session->registry().get<TransformComponent>(m_session->cueBallEntity()).position);
+                    }
                 }
                 const ShotState& shot = m_session->shotState();
                 m_aiFrom.aimRadians = shot.aimAngleRadians;
@@ -1636,7 +1713,13 @@ namespace BilliardsSaloon
                 constexpr float TURN = 0.9f;
                 constexpr float SETTLE = 0.35f;
                 constexpr float STROKE = 0.55f;
+                const float before = m_aiElapsed;
                 m_aiElapsed += frameTimeSeconds;
+                if (before < TURN + SETTLE && m_aiElapsed >= TURN + SETTLE)
+                {
+                    m_audio->playGameplay(GameplaySound::CueSlide,
+                        m_session->registry().get<TransformComponent>(m_session->cueBallEntity()).position);
+                }
                 const ShotInput& target = m_aiPlan.shot.input;
                 const float t = glm::smoothstep(0.0f, 1.0f, std::min(m_aiElapsed / TURN, 1.0f));
                 float turn = target.aimRadians - m_aiFrom.aimRadians;
@@ -1652,7 +1735,7 @@ namespace BilliardsSaloon
 
                 if (m_aiElapsed >= TURN + SETTLE + STROKE)
                 {
-                    (void)m_session->playShot(Ai::withExecutionError(target, m_aiProfile, m_aiRandom));
+                    (void)m_session->playShot(Ai::withExecutionError(target, m_aiEffectiveProfile, m_aiRandom));
                     m_aiStage = AiStage::Idle;
                 }
                 break;
@@ -1662,16 +1745,61 @@ namespace BilliardsSaloon
 
     void Application::updateAudio()
     {
+        if (!m_audio->available())
+        {
+            return;
+        }
+
         // The listener rides with the camera.
         if (const TransformComponent* camera = m_session->registry().tryGet<TransformComponent>(m_cameraEntity))
         {
             m_audio->setListener(camera->position, camera->rotation * glm::vec3(1.0f, 0.0f, 0.0f));
         }
 
-        // A murmuring crowd in the arena, a quiet room in the saloon; silent while paused in menus.
+        // A murmuring crowd in the arena, a quiet room in the saloon; quieter in menus.
         const HallOption& hall = findOption(equipmentCatalog().halls, m_settings.equipment.hall);
         const float crowd = (hall.layout == "arena") ? ((hall.id == "night_final") ? 0.7f : 1.0f) : 0.25f;
-        m_audio->setCrowdLevel(isInMatch() ? crowd : 0.4f * crowd);
+        const bool paused = m_shellState != ApplicationShellState::Gameplay;
+        m_audio->setCrowdLevel(paused ? 0.4f * crowd : crowd);
+
+        if (paused)
+        {
+            if (!m_audioWasPaused) m_audio->stopEffects();
+            m_audioWasPaused = true;
+            m_audio->setRolling(0.0f, glm::vec3(0.0f));
+            m_audio->update();
+            return;
+        }
+        if (m_audioWasPaused)
+        {
+            // Upcoming cues stopped on pause must be scheduled again against
+            // the audio clock, which kept running while gameplay was frozen.
+            const double now = m_session->playbackSeconds();
+            m_nextSoundCue = static_cast<std::size_t>(std::lower_bound(m_soundCues.begin(), m_soundCues.end(), now,
+                [](const Audio::SoundCue& cue, double time) { return cue.time < time; }) - m_soundCues.begin());
+            m_audioWasPaused = false;
+        }
+
+        const auto& clock = m_session->shotClock();
+        const int second = static_cast<int>(std::ceil(clock.remaining));
+        if (clock.running && second > 0 && second <= 5 && second != m_lastClockTick)
+        {
+            m_audio->playGameplay(GameplaySound::ClockTick);
+        }
+        m_lastClockTick = clock.running ? second : -1;
+
+        float rollingEnergy = 0.0f;
+        glm::vec3 rollingPosition(0.0f);
+        m_session->registry().view<TransformComponent, BallComponent>().each(
+            [&](Entity, TransformComponent& transform, BallComponent& ball)
+            {
+                if (ball.pocketed) return;
+                const float speed = glm::length(ball.linearVelocity);
+                rollingEnergy += speed * speed;
+                rollingPosition += transform.position * (speed * speed);
+            });
+        if (rollingEnergy > 0.0f) rollingPosition /= rollingEnergy;
+        m_audio->setRolling(std::sqrt(rollingEnergy), rollingPosition);
 
         // New playback (a shot or a replay): plan its sounds.
         if (m_session->playbackId() != m_soundPlayback)
@@ -1681,8 +1809,8 @@ namespace BilliardsSaloon
             m_nextSoundCue = 0;
             if (const Sim::ShotTrajectory* trajectory = m_session->playbackTrajectory())
             {
-                m_soundCues = Audio::planShotSounds(*trajectory, m_session->variant().table.clothWidth,
-                                                    m_session->variant().table.clothDepth);
+                m_soundCues = Audio::planShotSounds(*trajectory,
+                    Sim::buildPocketTable(m_session->variant().table.pocketGeometry));
             }
         }
 
@@ -1691,11 +1819,14 @@ namespace BilliardsSaloon
             const double now = m_session->playbackSeconds();
             m_lastPlaybackSeconds = now;
             const float replayScale = m_session->replaying() ? 0.8f : 1.0f;
-            while ((m_nextSoundCue < m_soundCues.size()) && (m_soundCues[m_nextSoundCue].time <= now))
+            const float playbackRate = static_cast<float>(m_session->replaySpeed());
+            // A short look-ahead keeps separate contacts at their sample times,
+            // even when several land between two rendered frames.
+            while ((m_nextSoundCue < m_soundCues.size()) && (m_soundCues[m_nextSoundCue].time <= now + 0.05 * playbackRate))
             {
                 Audio::SoundCue cue = m_soundCues[m_nextSoundCue++];
                 cue.intensity *= replayScale;
-                m_audio->playShotCue(cue);
+                m_audio->playShotCue(cue, (cue.time - now) / playbackRate, playbackRate);
             }
         }
         else

@@ -8,6 +8,8 @@
 #include <glm/glm.hpp>
 
 #include <cstdint>
+#include <array>
+#include <vector>
 #include <functional>
 #include <random>
 #include <string>
@@ -53,4 +55,11 @@ namespace BilliardsSaloon::Ai
     // How good the position is for frame.shooter: 0 (nothing on) to 1 (an easy
     // shot, and more after it). Geometry only, no simulation.
     [[nodiscard]] double positionValue(const AiTable& table);
+
+    // Per-ball geometry shared by training and ONNX inference: open-pot ease,
+    // open-pocket fraction, cue distance, nearest-ball distance, cushion
+    // clearance and distance to the nearest pocket. Pocketed slots are zero.
+    [[nodiscard]] std::vector<std::array<float, 6>> ballGeometry(const AiTable& table);
+    // Evidence of an attempted direct pot; safeties and breaks return zero.
+    [[nodiscard]] float aimedPotEase(const AiTable& table, float aimRadians);
 }

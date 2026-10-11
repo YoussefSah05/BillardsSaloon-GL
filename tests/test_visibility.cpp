@@ -1,4 +1,5 @@
 #include "scene/visibility.h"
+#include "scene/components.h"
 
 #include <doctest/doctest.h>
 
@@ -7,6 +8,23 @@
 #include <cmath>
 
 using namespace BilliardsSaloon;
+
+TEST_CASE("stationary transforms stay identical as the render interpolation fraction changes")
+{
+    TransformComponent transform;
+    transform.position = {0.635f, -0.82f, 3.71f};
+    transform.scale = {0.12f, 1.45f, 0.37f};
+    transform.rotation = glm::angleAxis(0.37f, glm::vec3(0.0f, 1.0f, 0.0f));
+    transform.syncPrevious();
+    const glm::mat4 reference = composeInterpolatedMatrix(transform, 0.0f);
+    for (int i = 0; i <= 100; ++i)
+    {
+        CHECK(composeInterpolatedMatrix(transform, static_cast<float>(i) / 100.0f) == reference);
+    }
+    transform.position.x += 1.0f;
+    const auto halfway = interpolateTransform(transform, 0.5f);
+    CHECK(halfway.position.x == doctest::Approx(transform.previousPosition.x + 0.5f));
+}
 
 namespace
 {

@@ -57,11 +57,10 @@ namespace BilliardsSaloon::Sim
         }
 
         // The last event at or before t.
-        std::size_t index = 0;
-        while ((index + 1 < events.size()) && (events[index + 1].time <= t))
-        {
-            ++index;
-        }
+        const auto after = std::upper_bound(events.begin(), events.end(), t,
+            [](double time, const ShotEvent& event) { return time < event.time; });
+        const std::size_t index = (after == events.begin()) ? 0 :
+            static_cast<std::size_t>(after - events.begin() - 1);
 
         std::vector<BallState> result = states[index];
         const double dt = t - events[index].time;
@@ -73,6 +72,20 @@ namespace BilliardsSaloon::Sim
             }
         }
         return result;
+    }
+
+    BallState ShotTrajectory::ballStateAt(std::size_t ball, double t) const
+    {
+        if (events.empty())
+        {
+            return {};
+        }
+        const auto after = std::upper_bound(events.begin(), events.end(), t,
+            [](double time, const ShotEvent& event) { return time < event.time; });
+        const std::size_t index = (after == events.begin()) ? 0 :
+            static_cast<std::size_t>(after - events.begin() - 1);
+        const BallState& state = states[index].at(ball);
+        return evolve(state, params, std::max(t - events[index].time, 0.0));
     }
 
     ShotTrajectory simulateShot(
@@ -94,11 +107,11 @@ namespace BilliardsSaloon::Sim
 
         double now = 0.0;
         const std::size_t count = balls.size();
+        std::vector<double> horizons(count);
 
         for (int eventCount = 0; eventCount < limits.maxEvents; ++eventCount)
         {
             // Each ball's polynomial holds until its next transition.
-            std::vector<double> horizons(count);
             ShotEvent next;
             double best = INF;
 

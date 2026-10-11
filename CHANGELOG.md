@@ -6,7 +6,48 @@ All notable changes to Billiards Saloon. The format follows
 
 ## [Unreleased]
 
+### Changed
+- Faster aiming and shot planning: polynomial root searches use stack scratch
+  storage, trajectory sampling uses binary search, and aim guides sample only
+  the cue and contacted object ball.
+- Reuse unchanged shadow maps and resolve shadow caster transforms once for
+  all lamps. Stationary transforms remain stable between render frames.
+- Low and Balanced bound scene resolution on HiDPI displays while the UI
+  stays native; High retains native scene resolution.
+- GPU timing checks availability before reading results, so profiling never
+  waits for the GPU. `--profile` also reports scene resolution.
+- Recommend Release builds for playing and performance measurements.
+- Replace synthesised audio with 48 bundled samples from web-sourced pool
+  recordings, material foley, crowd recordings and interface assets. Include
+  source URLs, licenses, edit recipes and asset hashes. Ball, cue and cushion
+  sounds have soft/medium/hard layers and restrained pitch variation.
+- Audio playback reuses preallocated voices, schedules upcoming contacts on
+  the audio clock, and limits the stereo mix to prevent clipping during breaks.
+
+### Fixed
+- Validate native ONNX model names, types, shapes and output bounds; retry an
+  AI decision with physics search if learned inference fails on the worker.
+- Invalidate cached aim guides when layouts or turns change.
+- Preserve separate contacts in a break; merge only repeated contacts involving
+  the same balls. Cushion loudness now follows normal impact speed.
+- Stop pending shot effects on pause, restart and replay skip; reschedule future
+  contacts when resuming.
+
 ### Added
+- A separately trained gated graph Transformer ensemble experiment, with
+  independent frame bootstraps, probability calibration, fresh prediction
+  benchmarks and installation gates. Preserve the existing trained model
+  because the ensemble's accuracy did not pass those gates.
+- An opponent-conditioned relational neural evaluator trained on mixed-skill
+  league play, exported with ONNX parity checks and evaluated against classical
+  search on held-out racks. Bundle its model card and release checks.
+- An Adaptive opponent with gradual skill estimates from attempted pots and
+  fouls, consistent execution/planning profiles, and match-local memory.
+- Preserve train/validation/test frame membership across expert iterations;
+  retain the previous model when a training round fails to improve validation.
+- Cloth rolling driven by ball motion, pocket jaw knocks, ball placement,
+  racking, cue movement, foul notifications and shot-clock countdown ticks.
+- Offline mixer tests and WAV previews using the game's actual audio engine.
 - A furnished, well-lit saloon: plaster and panelled walls, a beamed ceiling,
   windows with evening light, a bar with back-bar shelves, bottles, a mirror
   and stools, a cue rack and scoreboard, pictures, a dartboard, clocks, a sofa

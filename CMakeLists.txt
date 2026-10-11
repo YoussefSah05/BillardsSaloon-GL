@@ -13,7 +13,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(BS_BUILD_TESTS "Build the unit test executable" ON)
 option(BS_BUILD_PYTHON "Build the billiards_sim Python module (needs Python 3.12 dev)" OFF)
-option(BS_WITH_ONNXRUNTIME "Learned AI evaluation with ONNX Runtime (downloads the prebuilt library)" OFF)
+option(BS_WITH_ONNXRUNTIME "Learned AI evaluation with ONNX Runtime (downloads the prebuilt library)" ON)
 option(BS_WARNINGS_AS_ERRORS "Treat compiler warnings in project code as errors" OFF)
 
 include(FetchContent)
@@ -170,9 +170,9 @@ add_library(bs_game STATIC
     src/ai/ai_profile.cpp
     src/ai/environment.cpp
     src/ai/features.cpp
+    src/ai/opponent_model.cpp
     src/ai/planner.cpp
     src/audio/shot_sounds.cpp
-    src/audio/sound_synth.cpp
     src/rules/racking.cpp
     src/scene/hall_geometry.cpp
     src/scene/table_geometry.cpp
@@ -200,11 +200,20 @@ target_compile_definitions(bs_game PRIVATE
 )
 bs_set_warnings(bs_game)
 
+add_library(bs_audio STATIC src/app/audio_engine.cpp src/app/miniaudio_impl.cpp src/audio/recorded_bank.cpp)
+target_link_libraries(bs_audio PUBLIC bs_game PRIVATE nlohmann_json::nlohmann_json)
+target_include_directories(bs_audio SYSTEM PRIVATE ${miniaudio_SOURCE_DIR})
+bs_set_warnings(bs_audio)
+set_source_files_properties(src/app/miniaudio_impl.cpp PROPERTIES COMPILE_OPTIONS "$<IF:$<CXX_COMPILER_ID:MSVC>,/w,-w>")
+if(APPLE)
+    target_link_libraries(bs_audio PRIVATE "-framework CoreFoundation" "-framework CoreAudio" "-framework AudioToolbox")
+elseif(UNIX)
+    target_link_libraries(bs_audio PRIVATE pthread m dl)
+endif()
+
 add_executable(BilliardsSaloon
     src/app/main.cpp
     src/app/application.cpp
-    src/app/audio_engine.cpp
-    src/app/miniaudio_impl.cpp
     src/app/hud_screen.cpp
     src/app/locker_screen.cpp
     src/app/match_setup_screen.cpp
@@ -236,21 +245,11 @@ target_include_directories(BilliardsSaloon PRIVATE
 target_include_directories(BilliardsSaloon SYSTEM PRIVATE external/stb)
 
 target_link_libraries(BilliardsSaloon PRIVATE
-    bs_game
+    bs_audio
     bs_rmlui_backend
     glfw
     OpenGL::GL
 )
-# Audio: miniaudio's headers, its implementation in one file without our
-# warnings, and the system audio frameworks it talks to.
-target_include_directories(BilliardsSaloon SYSTEM PRIVATE ${miniaudio_SOURCE_DIR})
-set_source_files_properties(src/app/miniaudio_impl.cpp PROPERTIES COMPILE_OPTIONS "$<IF:$<CXX_COMPILER_ID:MSVC>,/w,-w>")
-if(APPLE)
-    target_link_libraries(BilliardsSaloon PRIVATE "-framework CoreFoundation" "-framework CoreAudio" "-framework AudioToolbox")
-elseif(UNIX)
-    target_link_libraries(BilliardsSaloon PRIVATE pthread m dl)
-endif()
-
 # Ball numbers are rasterised with FreeType, which RmlUi already links.
 target_include_directories(BilliardsSaloon SYSTEM PRIVATE $<TARGET_PROPERTY:freetype,INTERFACE_INCLUDE_DIRECTORIES>)
 
@@ -341,9 +340,9 @@ if(BS_WITH_ONNXRUNTIME)
     endforeach()
 endif()
 
-# Development tool: writes the synthesised sounds to WAV files.
+# Development tool: exports the bundled sound bank and a mixed break.
 add_executable(bs_sound_preview tools/sound_preview/main.cpp)
-target_link_libraries(bs_sound_preview PRIVATE bs_game)
+target_link_libraries(bs_sound_preview PRIVATE bs_audio)
 bs_set_warnings(bs_sound_preview)
 
 if(BS_BUILD_TESTS)
@@ -368,12 +367,14 @@ if(BS_BUILD_TESTS)
         tests/test_director.cpp
         tests/test_table_geometry.cpp
         tests/test_visibility.cpp
+        tests/test_render_quality.cpp
         tests/test_spherical_harmonics.cpp
         tests/test_model_loader.cpp
         tests/test_shot_lab.cpp
         tests/test_equipment.cpp
         tests/test_audio.cpp
         tests/test_ai.cpp
+        tests/test_adaptive_ai.cpp
         tests/test_environment.cpp
         tests/test_game_variant.cpp
         tests/test_game_data.cpp
@@ -394,6 +395,23 @@ if(BS_BUILD_TESTS)
         BS_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/tests/data"
     )
     bs_set_warnings(bs_tests)
+    if(BS_WITH_ONNXRUNTIME)
+        target_sources(bs_tests PRIVATE tests/test_value_model.cpp src/ai/value_model.cpp)
+        target_link_libraries(bs_tests PRIVATE bs_onnxruntime)
+        if(APPLE)
+            set_target_properties(bs_tests PROPERTIES BUILD_RPATH "@executable_path")
+        elseif(UNIX)
+            set_target_properties(bs_tests PROPERTIES BUILD_RPATH "$ORIGIN")
+        endif()
+        add_custom_command(TARGET bs_tests POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different ${onnxruntime_prebuilt_SOURCE_DIR}/lib/${BS_ORT_LIBRARY} $<TARGET_FILE_DIR:bs_tests>)
+        add_dependencies(bs_tests bs_assets)
+    endif()
 
     add_test(NAME bs_tests COMMAND bs_tests)
+
+    add_executable(bs_audio_tests tests/test_main.cpp tests/test_audio_engine.cpp)
+    target_link_libraries(bs_audio_tests PRIVATE bs_audio doctest::doctest)
+    bs_set_warnings(bs_audio_tests)
+    add_test(NAME bs_audio_tests COMMAND bs_audio_tests)
 endif()

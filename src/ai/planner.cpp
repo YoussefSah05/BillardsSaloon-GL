@@ -193,7 +193,7 @@ namespace BilliardsSaloon::Ai
         }
 
         // How good a shot's result is for the player who took it.
-        double score(const AiTable& before, const Outcome& outcome, const ValueFunction& value)
+        double score(const AiTable& before, const Outcome& outcome, const ValueFunction& value, float weight)
         {
             const Rules::Verdict& v = outcome.verdict;
             const int me = before.frame.shooter;
@@ -202,7 +202,7 @@ namespace BilliardsSaloon::Ai
             {
                 return (v.winner == me) ? 100.0 : -100.0;
             }
-            if (value)
+            if (value && weight >= 1.0f)
             {
                 // The learned value already knows what a foul, ball in hand or a
                 // lost turn is worth: the expected result of the frame, -100..100.
@@ -211,6 +211,7 @@ namespace BilliardsSaloon::Ai
             if (v.foul != Rules::Foul::None)
             {
                 const bool threeFoulRisk = (before.discipline != GameDiscipline::EightBall) && (v.foulsInRow >= 2);
+                // Keep legal-shot safeguards when using a blended model.
                 return threeFoulRisk ? -70.0 : -40.0;
             }
 
@@ -228,6 +229,11 @@ namespace BilliardsSaloon::Ai
                 AiTable theirs = outcome.after;
                 theirs.frame.shooter = Rules::otherPlayer(me);
                 total -= 18.0 * positionValue(theirs);
+            }
+            if (value)
+            {
+                const double learned = 100.0 * (2.0 * value(outcome.after, me) - 1.0);
+                return (1.0 - weight) * total + weight * learned;
             }
             return total;
         }
@@ -402,7 +408,7 @@ namespace BilliardsSaloon::Ai
                 c.safety = false;
                 c.description += " (pots)";
             }
-            c.quick = score(table, outcome, value) + intent(c, profile);
+            c.quick = score(table, outcome, value, profile.valueWeight) + intent(c, profile);
         }
         std::sort(candidates.begin(), candidates.end(), [](const Candidate& a, const Candidate& b) { return a.quick > b.quick; });
 
@@ -414,7 +420,7 @@ namespace BilliardsSaloon::Ai
             double sum = 0.0;
             for (int s = 0; s < profile.samples; ++s)
             {
-                sum += score(table, play(table, withExecutionError(candidates[i].input, profile, random)), value);
+                sum += score(table, play(table, withExecutionError(candidates[i].input, profile, random)), value, profile.valueWeight);
             }
             candidates[i].expected = sum / std::max(profile.samples, 1) + intent(candidates[i], profile);
         }
@@ -549,6 +555,56 @@ namespace BilliardsSaloon::Ai
             {
                 bestScore = s;
                 best = spots[i].second;
+            }
+        }
+        return best;
+    }
+
+    std::vector<std::array<float, 6>> ballGeometry(const AiTable& table)
+    {
+        std::vector<std::array<float, 6>> geometry(table.numbers.size());
+        for (std::size_t i = 0; i < table.numbers.size(); ++i)
+        {
+            if (table.pocketed[i]) continue;
+            float nearest = table.length;
+            float pocketDistance = table.length;
+            float ease = 0.0f;
+            int open = 0;
+            for (std::size_t j = 0; j < table.numbers.size(); ++j)
+            {
+                if (i != j && !table.pocketed[j]) nearest = std::min(nearest, glm::length(table.positions[i] - table.positions[j]));
+            }
+            for (int pocket = 0; pocket < static_cast<int>(table.pockets.size()); ++pocket)
+            {
+                pocketDistance = std::min(pocketDistance, glm::length(table.positions[i] - table.pockets[static_cast<std::size_t>(pocket)]));
+                if (i > 0)
+                {
+                    const PotLine line = potLine(table, table.cueBall(), static_cast<int>(i), pocket);
+                    ease = std::max(ease, line.ease);
+                    open += line.ease > 0.02f ? 1 : 0;
+                }
+            }
+            const float cushion = std::min(0.5f * table.length - std::abs(table.positions[i].x),
+                                            0.5f * table.width - std::abs(table.positions[i].y));
+            geometry[i] = {ease, static_cast<float>(open) / std::max(1.0f, static_cast<float>(table.pockets.size())),
+                std::clamp(glm::length(table.positions[i] - table.cueBall()) / table.length, 0.0f, 1.0f),
+                std::clamp(nearest / table.length, 0.0f, 1.0f), std::clamp(cushion / (0.5f * table.width), 0.0f, 1.0f),
+                std::clamp(pocketDistance / table.length, 0.0f, 1.0f)};
+        }
+        return geometry;
+    }
+
+    float aimedPotEase(const AiTable& table, float aimRadians)
+    {
+        if (table.frame.phase == Rules::Phase::Break) return 0.0f;
+        float best = 0.0f;
+        for (const int ball : legalTargets(table))
+        {
+            for (int pocket = 0; pocket < static_cast<int>(table.pockets.size()); ++pocket)
+            {
+                const PotLine line = potLine(table, table.cueBall(), ball, pocket);
+                const float difference = std::abs(std::remainder(aimRadians - angleFromDirection(line.ghost - table.cueBall()), 2.0f * PI));
+                if (difference < glm::radians(6.0f)) best = std::max(best, line.ease);
             }
         }
         return best;

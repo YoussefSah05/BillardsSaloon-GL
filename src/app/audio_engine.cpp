@@ -1,284 +1,361 @@
 #include "app/audio_engine.h"
-
+#include "core/asset_paths.h"
 #include <miniaudio.h>
-
 #include <algorithm>
 #include <cmath>
 #include <iostream>
 #include <random>
+#include <stdexcept>
 
 namespace BilliardsSaloon
 {
     namespace
     {
-        constexpr std::size_t VOICES = 48;
-
         enum Bank
         {
-            BANK_BALL = 0,
-            BANK_CUSHION,
-            BANK_POCKET,
-            BANK_CUE,
-            BANK_UI_MOVE,
-            BANK_UI_CONFIRM,
-            BANK_APPLAUSE_SHORT,
-            BANK_APPLAUSE_LONG,
-            BANK_MURMUR,
-            BANK_COUNT
+            BANK_BALL, BANK_CUSHION, BANK_POCKET, BANK_CUE, BANK_JAW,
+            BANK_PLACE, BANK_RACK, BANK_SLIDE, BANK_CLOCK, BANK_FOUL,
+            BANK_UI_MOVE, BANK_UI_CONFIRM, BANK_APPLAUSE_SHORT,
+            BANK_APPLAUSE_LONG, BANK_MURMUR, BANK_ROLL, BANK_COUNT
         };
-
-        enum Bus
-        {
-            BUS_EFFECTS = 0,
-            BUS_CROWD,
-            BUS_INTERFACE,
-            BUS_COUNT
+        enum Bus { BUS_EFFECTS, BUS_CROWD, BUS_INTERFACE, BUS_COUNT };
+        constexpr std::array<const char*, BANK_COUNT> BANK_NAMES {
+            "ball", "cushion", "pocket", "cue", "jaw", "place", "rack", "slide", "clock", "foul",
+            "ui_move", "ui_confirm", "applause_short", "applause_long", "murmur", "roll"
         };
     }
 
     struct AudioEngine::Impl
     {
-        // A playing sound: its own cursor over shared sample data.
         struct Voice
         {
             ma_audio_buffer buffer {};
             ma_sound sound {};
+            Bank bank {BANK_BALL};
+            int strength {0};
+            bool initialized {false};
             bool active {false};
+            ma_uint64 started {0};
+            ma_uint64 ends {0};
+            std::size_t frames {0};
+            float volume {0.0f};
         };
-
         ma_engine engine {};
         bool ready {false};
+        bool offline {false};
+        int initializedBuses {0};
         std::array<ma_sound_group, BUS_COUNT> buses {};
-        std::array<std::vector<Audio::SoundBuffer>, BANK_COUNT> banks;
-        std::array<std::unique_ptr<Voice>, VOICES> voices;
+        std::vector<Audio::RecordedSample> samples;
+        std::vector<std::unique_ptr<Voice>> voices;
         std::unique_ptr<Voice> murmur;
+        std::unique_ptr<Voice> rolling;
         std::mt19937 random {1234};
         glm::vec3 listener {0.0f};
         glm::vec3 right {1.0f, 0.0f, 0.0f};
-        float master {0.8f};
-        float effects {1.0f};
-        float crowd {0.7f};
-        float crowdLevel {0.0f};
+        float limiterGain {1.0f}; // Only the audio callback / offline reader touches this.
 
-        void release(Voice& voice)
+        ~Impl()
         {
-            if (voice.active)
+            if (!ready) return;
+            for (const auto& voice : voices) release(*voice);
+            if (murmur) release(*murmur);
+            if (rolling) release(*rolling);
+            for (int i = 0; i < initializedBuses; ++i)
+            {
+                ma_sound_group_uninit(&buses[static_cast<std::size_t>(i)]);
+            }
+            ma_engine_uninit(&engine);
+        }
+
+        static void release(Voice& voice)
+        {
+            if (voice.initialized)
             {
                 ma_sound_uninit(&voice.sound);
                 ma_audio_buffer_uninit(&voice.buffer);
-                voice.active = false;
+                voice.initialized = false;
             }
         }
 
-        bool start(Voice& voice, const Audio::SoundBuffer& data, Bus bus, float volume, float pitch, float pan, bool loop)
+        // Linked stereo limiting: instant attack, 80 ms release. No locks
+        // or allocations in this real-time callback.
+        static void limit(void* user, float* output, ma_uint64 frameCount)
         {
-            const ma_audio_buffer_config config = ma_audio_buffer_config_init(
-                ma_format_f32, 1, data.samples.size(), data.samples.data(), nullptr);
-            if (ma_audio_buffer_init(&config, &voice.buffer) != MA_SUCCESS)
+            auto& impl = *static_cast<Impl*>(user);
+            constexpr float RELEASE = 1.0f / (0.08f * Audio::SAMPLE_RATE);
+            for (ma_uint64 frame = 0; frame < frameCount; ++frame)
             {
-                return false;
+                const std::size_t i = static_cast<std::size_t>(frame) * 2;
+                const float peak = std::max(std::abs(output[i]), std::abs(output[i + 1]));
+                const float target = peak > 0.92f ? 0.92f / peak : 1.0f;
+                impl.limiterGain = std::min(target, impl.limiterGain + RELEASE * (1.0f - impl.limiterGain));
+                output[i] *= impl.limiterGain;
+                output[i + 1] *= impl.limiterGain;
             }
-            if (ma_sound_init_from_data_source(&engine, &voice.buffer, MA_SOUND_FLAG_NO_SPATIALIZATION,
-                                               &buses[static_cast<std::size_t>(bus)], &voice.sound) != MA_SUCCESS)
-            {
-                ma_audio_buffer_uninit(&voice.buffer);
-                return false;
-            }
-            voice.active = true;
-            ma_sound_set_volume(&voice.sound, volume);
-            ma_sound_set_pitch(&voice.sound, pitch);
-            ma_sound_set_pan(&voice.sound, pan);
-            ma_sound_set_looping(&voice.sound, loop ? MA_TRUE : MA_FALSE);
-            ma_sound_start(&voice.sound);
-            return true;
         }
 
-        void play(Bank bank, Bus bus, float volume, float pitch, float pan)
+        std::unique_ptr<Voice> createVoice(Bank bank, Bus bus, const Audio::SoundBuffer& data, int strength = 0)
         {
-            if (!ready || banks[bank].empty() || (volume <= 0.001f))
+            auto voice = std::make_unique<Voice>();
+            ma_audio_buffer_config config = ma_audio_buffer_config_init(ma_format_f32, 1,
+                data.samples.size(), data.samples.data(), nullptr);
+            config.sampleRate = Audio::SAMPLE_RATE;
+            if (ma_audio_buffer_init(&config, &voice->buffer) != MA_SUCCESS) return nullptr;
+            if (ma_sound_init_from_data_source(&engine, &voice->buffer, MA_SOUND_FLAG_NO_SPATIALIZATION,
+                &buses[static_cast<std::size_t>(bus)], &voice->sound) != MA_SUCCESS)
             {
-                return;
+                ma_audio_buffer_uninit(&voice->buffer);
+                return nullptr;
             }
-            // A free voice, else the oldest-started one is reused.
+            voice->bank = bank;
+            voice->strength = strength;
+            voice->initialized = true;
+            voice->frames = data.samples.size();
+            return voice;
+        }
+
+        float panAt(const glm::vec3& position) const
+        {
+            const glm::vec3 offset = position - listener;
+            const float distance = glm::length(offset);
+            return distance > 0.001f ? 0.8f * glm::dot(offset / distance, right) : 0.0f;
+        }
+        float distanceGain(const glm::vec3& position) const
+        {
+            return 1.0f / (1.0f + 0.18f * glm::length(position - listener));
+        }
+
+        void play(Bank bank, float volume, float pitch, float pan, int strength = 0, double delay = 0.0)
+        {
+            if (!ready || voices.empty() || volume <= 0.001f) return;
             Voice* chosen = nullptr;
-            for (std::unique_ptr<Voice>& voice : voices)
+            const ma_uint64 now = ma_engine_get_time_in_pcm_frames(&engine);
+            const std::size_t offset = std::uniform_int_distribution<std::size_t>(0, voices.size() - 1)(random);
+            for (std::size_t n = 0; n < voices.size(); ++n)
             {
-                if (!voice->active)
+                Voice& voice = *voices[(n + offset) % voices.size()];
+                if (voice.bank != bank || voice.strength != strength) continue;
+                if (!voice.active || (now >= voice.ends && ma_sound_at_end(&voice.sound)))
                 {
-                    chosen = voice.get();
+                    chosen = &voice;
                     break;
                 }
+                if (chosen == nullptr || voice.volume < chosen->volume ||
+                    (voice.volume == chosen->volume && voice.started < chosen->started))
+                {
+                    chosen = &voice;
+                }
             }
-            if (chosen == nullptr)
-            {
-                chosen = voices[std::uniform_int_distribution<std::size_t>(0, VOICES - 1)(random)].get();
-                release(*chosen);
-            }
-            const std::vector<Audio::SoundBuffer>& variants = banks[bank];
-            const auto& data = variants[std::uniform_int_distribution<std::size_t>(0, variants.size() - 1)(random)];
-            (void)start(*chosen, data, bus, volume, pitch, std::clamp(pan, -1.0f, 1.0f), false);
-        }
-
-        void applyVolumes()
-        {
-            if (!ready)
-            {
-                return;
-            }
-            ma_engine_set_volume(&engine, master);
-            ma_sound_group_set_volume(&buses[BUS_EFFECTS], effects);
-            ma_sound_group_set_volume(&buses[BUS_CROWD], crowd);
-            ma_sound_group_set_volume(&buses[BUS_INTERFACE], 0.6f);
-            if (murmur && murmur->active)
-            {
-                ma_sound_set_volume(&murmur->sound, 0.35f * crowdLevel);
-            }
+            if (chosen == nullptr) return;
+            // Only steal within this bank: UI cannot interrupt pockets or applause.
+            ma_sound_stop(&chosen->sound);
+            ma_sound_seek_to_pcm_frame(&chosen->sound, 0);
+            ma_sound_set_volume(&chosen->sound, volume);
+            ma_sound_set_pitch(&chosen->sound, std::clamp(pitch, 0.25f, 2.0f));
+            ma_sound_set_pan(&chosen->sound, std::clamp(pan, -1.0f, 1.0f));
+            const auto wait = static_cast<ma_uint64>(std::max(delay, 0.0) * Audio::SAMPLE_RATE);
+            ma_sound_set_start_time_in_pcm_frames(&chosen->sound, now + wait);
+            chosen->started = now + wait;
+            chosen->ends = chosen->started + static_cast<ma_uint64>(static_cast<double>(chosen->frames) /
+                std::clamp(static_cast<double>(pitch), 0.25, 2.0)) + 256;
+            chosen->volume = volume;
+            chosen->active = ma_sound_start(&chosen->sound) == MA_SUCCESS;
         }
     };
 
-    AudioEngine::AudioEngine(bool enabled)
+    AudioEngine::AudioEngine(bool enabled, bool offline)
         : m_impl(std::make_unique<Impl>())
     {
-        if (!enabled)
-        {
-            return;
-        }
-
+        if (!enabled) return;
+        Impl& impl = *m_impl;
         ma_engine_config config = ma_engine_config_init();
         config.sampleRate = Audio::SAMPLE_RATE;
-        if (ma_engine_init(&config, &m_impl->engine) != MA_SUCCESS)
+        config.channels = 2;
+        config.noDevice = offline ? MA_TRUE : MA_FALSE;
+        config.onProcess = &Impl::limit;
+        config.pProcessUserData = &impl;
+        if (ma_engine_init(&config, &impl.engine) != MA_SUCCESS)
         {
             std::cerr << "No audio device; the game will be silent.\n";
             return;
         }
-        for (ma_sound_group& bus : m_impl->buses)
+        impl.ready = true;
+        impl.offline = offline;
+        for (ma_sound_group& bus : impl.buses)
         {
-            ma_sound_group_init(&m_impl->engine, 0, nullptr, &bus);
+            if (ma_sound_group_init(&impl.engine, MA_SOUND_FLAG_NO_SPATIALIZATION, nullptr, &bus) != MA_SUCCESS)
+            {
+                std::cerr << "Could not initialize audio mixer.\n";
+                m_impl = std::make_unique<Impl>();
+                return;
+            }
+            ++impl.initializedBuses;
         }
-        m_impl->ready = true;
-
-        // Several takes of each impact, so repeated hits do not sound identical.
-        for (std::uint32_t seed = 1; seed <= 6; ++seed)
+        try
         {
-            m_impl->banks[BANK_BALL].push_back(Audio::ballClick(seed));
-            m_impl->banks[BANK_CUSHION].push_back(Audio::cushionThud(seed + 100));
-            m_impl->banks[BANK_POCKET].push_back(Audio::pocketDrop(seed + 200));
-            m_impl->banks[BANK_CUE].push_back(Audio::cueStrike(seed + 300));
+            impl.samples = Audio::loadRecordedBank(resolveAssetPath("audio/bank.json"));
+            for (int b = 0; b < BANK_COUNT; ++b)
+            {
+                const auto bank = static_cast<Bank>(b);
+                const Bus bus = b >= BANK_APPLAUSE_SHORT && bank != BANK_ROLL ? BUS_CROWD :
+                    (b >= BANK_UI_MOVE && b < BANK_APPLAUSE_SHORT ? BUS_INTERFACE : BUS_EFFECTS);
+                bool found = false;
+                std::array<bool, 3> strengths {};
+                for (const auto& sample : impl.samples)
+                {
+                    if (sample.bank != BANK_NAMES[static_cast<std::size_t>(b)]) continue;
+                    if (sample.strength < 0 || sample.strength > 2)
+                    {
+                        throw std::runtime_error("Invalid sound strength: " + sample.file);
+                    }
+                    found = true;
+                    strengths[static_cast<std::size_t>(sample.strength)] = true;
+                    // Enough copies for simultaneous rack contacts and overlapping rails.
+                    const int copies = bank == BANK_BALL ? 4 : (bank == BANK_CUSHION || bank == BANK_JAW ? 3 : 2);
+                    for (int copy = 0; copy < copies; ++copy)
+                    {
+                        auto voice = impl.createVoice(bank, bus, sample.pcm, sample.strength);
+                        if (!voice) throw std::runtime_error("Cannot initialize sound voice: " + sample.file);
+                        if (bank == BANK_MURMUR) impl.murmur = std::move(voice);
+                        else if (bank == BANK_ROLL) impl.rolling = std::move(voice);
+                        else impl.voices.push_back(std::move(voice));
+                        if (bank == BANK_MURMUR || bank == BANK_ROLL) break;
+                    }
+                }
+                if (!found || ((bank == BANK_BALL || bank == BANK_CUSHION || bank == BANK_CUE) &&
+                    (!strengths[0] || !strengths[1] || !strengths[2])))
+                {
+                    throw std::runtime_error("Incomplete sound bank: " + std::string(BANK_NAMES[static_cast<std::size_t>(b)]));
+                }
+            }
         }
-        m_impl->banks[BANK_UI_MOVE].push_back(Audio::uiTick());
-        m_impl->banks[BANK_UI_CONFIRM].push_back(Audio::uiConfirm());
-        m_impl->banks[BANK_APPLAUSE_SHORT].push_back(Audio::applause(3.5, 41));
-        m_impl->banks[BANK_APPLAUSE_LONG].push_back(Audio::applause(7.0, 42));
-        m_impl->banks[BANK_MURMUR].push_back(Audio::crowdMurmur(12.0, 43));
-
-        for (std::unique_ptr<Impl::Voice>& voice : m_impl->voices)
+        catch (const std::exception& error)
         {
-            voice = std::make_unique<Impl::Voice>();
-        }
-        m_impl->murmur = std::make_unique<Impl::Voice>();
-        m_impl->applyVolumes();
-    }
-
-    AudioEngine::~AudioEngine()
-    {
-        if (!m_impl->ready)
-        {
+            std::cerr << "Audio disabled: " << error.what() << '\n';
+            m_impl = std::make_unique<Impl>();
             return;
         }
-        for (std::unique_ptr<Impl::Voice>& voice : m_impl->voices)
-        {
-            m_impl->release(*voice);
-        }
-        m_impl->release(*m_impl->murmur);
-        for (ma_sound_group& bus : m_impl->buses)
-        {
-            ma_sound_group_uninit(&bus);
-        }
-        ma_engine_uninit(&m_impl->engine);
+        setVolumes(0.8f, 1.0f, 0.7f);
     }
 
-    bool AudioEngine::available() const
-    {
-        return m_impl->ready;
-    }
+    AudioEngine::~AudioEngine() = default;
+    bool AudioEngine::available() const { return m_impl->ready; }
 
     void AudioEngine::setVolumes(float master, float effects, float crowd)
     {
-        m_impl->master = std::clamp(master, 0.0f, 1.0f);
-        m_impl->effects = std::clamp(effects, 0.0f, 1.0f);
-        m_impl->crowd = std::clamp(crowd, 0.0f, 1.0f);
-        m_impl->applyVolumes();
+        if (!m_impl->ready) return;
+        ma_engine_set_volume(&m_impl->engine, std::clamp(master, 0.0f, 1.0f));
+        ma_sound_group_set_volume(&m_impl->buses[BUS_EFFECTS], std::clamp(effects, 0.0f, 1.0f));
+        ma_sound_group_set_volume(&m_impl->buses[BUS_CROWD], std::clamp(crowd, 0.0f, 1.0f));
+        ma_sound_group_set_volume(&m_impl->buses[BUS_INTERFACE], 0.45f);
     }
 
     void AudioEngine::setListener(const glm::vec3& position, const glm::vec3& right)
     {
         m_impl->listener = position;
-        m_impl->right = (glm::length(right) > 1.0e-4f) ? glm::normalize(right) : glm::vec3(1.0f, 0.0f, 0.0f);
+        m_impl->right = glm::length(right) > 0.0001f ? glm::normalize(right) : glm::vec3(1.0f, 0.0f, 0.0f);
     }
 
-    void AudioEngine::playShotCue(const Audio::SoundCue& cue)
+    void AudioEngine::playShotCue(const Audio::SoundCue& cue, double delaySeconds, float playbackRate)
     {
-        const glm::vec3 offset = cue.position - m_impl->listener;
-        const float distance = glm::length(offset);
-        const float pan = (distance > 1.0e-3f) ? 0.8f * glm::dot(offset / distance, m_impl->right) : 0.0f;
-        const float gain = cue.intensity / (1.0f + 0.35f * distance);
-        // Harder hits ring a touch higher; each hit varies a little.
-        const float pitch = (0.95f + 0.1f * cue.intensity) * std::uniform_real_distribution<float>(0.97f, 1.03f)(m_impl->random);
-
+        if (!m_impl->ready) return;
+        const float intensity = std::clamp(cue.intensity, 0.0f, 1.0f);
+        const float gain = 0.65f * intensity * m_impl->distanceGain(cue.position);
+        const float pitch = std::uniform_real_distribution<float>(0.985f, 1.015f)(m_impl->random) * playbackRate;
+        const int strength = intensity < 0.38f ? 0 : (intensity < 0.72f ? 1 : 2);
+        const float pan = m_impl->panAt(cue.position);
         switch (cue.kind)
         {
-            case Audio::SoundKind::BallBall:
-                m_impl->play(BANK_BALL, BUS_EFFECTS, gain, pitch, pan);
-                break;
-            case Audio::SoundKind::Cushion:
-                m_impl->play(BANK_CUSHION, BUS_EFFECTS, gain * 0.9f, pitch, pan);
-                break;
-            case Audio::SoundKind::Pocket:
-                m_impl->play(BANK_POCKET, BUS_EFFECTS, gain, pitch, pan);
-                break;
-            case Audio::SoundKind::CueStrike:
-                m_impl->play(BANK_CUE, BUS_EFFECTS, 0.4f + 0.6f * cue.intensity, pitch, pan);
-                break;
+            case Audio::SoundKind::BallBall: m_impl->play(BANK_BALL, gain, pitch, pan, strength, delaySeconds); break;
+            case Audio::SoundKind::Cushion: m_impl->play(BANK_CUSHION, 0.85f * gain, pitch, pan, strength, delaySeconds); break;
+            case Audio::SoundKind::Pocket: m_impl->play(BANK_POCKET, gain, pitch, pan, 0, delaySeconds); break;
+            case Audio::SoundKind::CueStrike: m_impl->play(BANK_CUE, gain, pitch, pan, strength, delaySeconds); break;
+            case Audio::SoundKind::PocketJaw: m_impl->play(BANK_JAW, gain, pitch, pan, 0, delaySeconds); break;
+        }
+    }
+
+    void AudioEngine::playGameplay(GameplaySound sound, const glm::vec3& position)
+    {
+        switch (sound)
+        {
+            case GameplaySound::BallPlace: m_impl->play(BANK_PLACE, 0.4f * m_impl->distanceGain(position), 1.0f, m_impl->panAt(position)); break;
+            case GameplaySound::Rack: m_impl->play(BANK_RACK, 0.55f, 1.0f, 0.0f); break;
+            case GameplaySound::CueSlide: m_impl->play(BANK_SLIDE, 0.16f, 1.0f, m_impl->panAt(position)); break;
+            case GameplaySound::ClockTick: m_impl->play(BANK_CLOCK, 0.35f, 1.0f, 0.0f); break;
+            case GameplaySound::Foul: m_impl->play(BANK_FOUL, 0.55f, 1.0f, 0.0f); break;
+        }
+    }
+
+    void AudioEngine::setRolling(float speed, const glm::vec3& position)
+    {
+        Impl& impl = *m_impl;
+        if (!impl.ready || !impl.rolling) return;
+        Impl::Voice& voice = *impl.rolling;
+        const float gain = 0.18f * std::sqrt(std::clamp(speed / 3.0f, 0.0f, 1.0f)) * impl.distanceGain(position);
+        if (!voice.active && gain > 0.001f)
+        {
+            ma_sound_seek_to_pcm_frame(&voice.sound, 0);
+            ma_sound_set_looping(&voice.sound, MA_TRUE);
+            ma_sound_set_volume(&voice.sound, gain);
+            ma_sound_set_fade_in_milliseconds(&voice.sound, 0.0f, 1.0f, 30);
+            voice.active = ma_sound_start(&voice.sound) == MA_SUCCESS;
+        }
+        ma_sound_set_volume(&voice.sound, gain);
+        ma_sound_set_pan(&voice.sound, impl.panAt(position));
+        ma_sound_set_pitch(&voice.sound, 0.65f + 0.5f * std::clamp(speed / 3.0f, 0.0f, 1.0f));
+    }
+
+    void AudioEngine::stopEffects()
+    {
+        if (!m_impl->ready) return;
+        for (const auto& voice : m_impl->voices)
+        {
+            if (voice->bank < BANK_UI_MOVE)
+            {
+                ma_sound_stop(&voice->sound);
+                voice->active = false;
+            }
+        }
+        if (m_impl->rolling)
+        {
+            ma_sound_stop(&m_impl->rolling->sound);
+            m_impl->rolling->active = false;
         }
     }
 
     void AudioEngine::playUi(UiSound sound)
     {
-        m_impl->play((sound == UiSound::Move) ? BANK_UI_MOVE : BANK_UI_CONFIRM, BUS_INTERFACE, 1.0f, 1.0f, 0.0f);
+        m_impl->play(sound == UiSound::Move ? BANK_UI_MOVE : BANK_UI_CONFIRM, 0.7f, 1.0f, 0.0f);
     }
-
     void AudioEngine::playApplause(bool long_)
     {
-        m_impl->play(long_ ? BANK_APPLAUSE_LONG : BANK_APPLAUSE_SHORT, BUS_CROWD, 0.9f, 1.0f, 0.0f);
+        m_impl->play(long_ ? BANK_APPLAUSE_LONG : BANK_APPLAUSE_SHORT, 0.7f, 1.0f, 0.0f);
     }
-
     void AudioEngine::setCrowdLevel(float level)
     {
         Impl& impl = *m_impl;
-        impl.crowdLevel = std::clamp(level, 0.0f, 1.0f);
-        if (!impl.ready)
+        if (!impl.ready || !impl.murmur) return;
+        const float volume = 0.2f * std::clamp(level, 0.0f, 1.0f);
+        if (!impl.murmur->active && volume > 0.0f)
         {
-            return;
+            ma_sound_set_looping(&impl.murmur->sound, MA_TRUE);
+            ma_sound_set_volume(&impl.murmur->sound, volume);
+            impl.murmur->active = ma_sound_start(&impl.murmur->sound) == MA_SUCCESS;
         }
-        if ((impl.crowdLevel > 0.0f) && !impl.murmur->active)
-        {
-            (void)impl.start(*impl.murmur, impl.banks[BANK_MURMUR].front(), BUS_CROWD, 0.0f, 1.0f, 0.0f, true);
-        }
-        impl.applyVolumes();
+        ma_sound_set_volume(&impl.murmur->sound, volume);
     }
-
     void AudioEngine::update()
     {
-        if (!m_impl->ready)
+        if (!m_impl->ready) return;
+        const ma_uint64 now = ma_engine_get_time_in_pcm_frames(&m_impl->engine);
+        for (const auto& voice : m_impl->voices)
         {
-            return;
+            if (voice->active && now >= voice->ends && ma_sound_at_end(&voice->sound)) voice->active = false;
         }
-        for (std::unique_ptr<Impl::Voice>& voice : m_impl->voices)
-        {
-            if (voice->active && ma_sound_at_end(&voice->sound))
-            {
-                m_impl->release(*voice);
-            }
-        }
+    }
+    bool AudioEngine::renderOffline(std::span<float> stereo)
+    {
+        if (!m_impl->ready || !m_impl->offline || stereo.size() % 2 != 0) return false;
+        return ma_engine_read_pcm_frames(&m_impl->engine, stereo.data(), stereo.size() / 2, nullptr) == MA_SUCCESS;
     }
 }

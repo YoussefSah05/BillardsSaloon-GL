@@ -245,6 +245,7 @@ namespace BilliardsSaloon
 
     void MatchSession::setLayout(const glm::vec2& cueBall, const std::vector<std::pair<int, glm::vec2>>& objectBalls)
     {
+        m_preview = ShotPreview{};
         const float r = m_variant->table.ballRadius;
         m_trajectory.reset();
         for (const Entity entity : m_objectBallEntities)
@@ -284,6 +285,7 @@ namespace BilliardsSaloon
     // and no push-out declared.
     void MatchSession::enterTurn()
     {
+        m_preview = ShotPreview{};
         m_call.reset();
         m_callBallByHand = false;
         m_callPocketByHand = false;
@@ -922,6 +924,12 @@ namespace BilliardsSaloon
         // Sample both paths at a fixed step, plus the exact contact moment.
         constexpr double SAMPLE_SECONDS = 1.0 / 60.0;
         const double end = trajectory.duration();
+        const auto sampleCount = static_cast<std::size_t>(end / SAMPLE_SECONDS) + 3;
+        preview.cuePath.reserve(sampleCount);
+        if (object >= 0)
+        {
+            preview.objectPath.reserve(sampleCount);
+        }
         bool contactAdded = false;
         for (double t = 0.0; t <= end + SAMPLE_SECONDS; t += SAMPLE_SECONDS)
         {
@@ -932,11 +940,11 @@ namespace BilliardsSaloon
                 contactAdded = true;
                 t = contactTime;
             }
-            const std::vector<Sim::BallState> states = trajectory.stateAt(sampleTime);
+            const Sim::BallState cueState = trajectory.ballStateAt(0, sampleTime);
 
-            if (states[0].s != Sim::MotionState::Pocketed)
+            if (cueState.s != Sim::MotionState::Pocketed)
             {
-                preview.cuePath.push_back(toGame(states[0].r));
+                preview.cuePath.push_back(toGame(cueState.r));
                 if (contactAdded && (preview.cueContactIndex == 0))
                 {
                     preview.cueContactIndex = preview.cuePath.size() - 1;
@@ -949,7 +957,7 @@ namespace BilliardsSaloon
 
             if ((object >= 0) && (sampleTime >= contactTime))
             {
-                const Sim::BallState& ball = states[static_cast<std::size_t>(object)];
+                const Sim::BallState ball = trajectory.ballStateAt(static_cast<std::size_t>(object), sampleTime);
                 if (ball.s == Sim::MotionState::Pocketed)
                 {
                     preview.objectPotted = true;

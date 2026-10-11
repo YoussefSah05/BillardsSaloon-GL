@@ -5,6 +5,7 @@
 #include <nlohmann/json.hpp>
 
 #include <fstream>
+#include <algorithm>
 #include <stdexcept>
 
 namespace BilliardsSaloon::Ai
@@ -36,6 +37,8 @@ namespace BilliardsSaloon::Ai
                 p.thinkSeconds = item.value("thinkSeconds", p.thinkSeconds);
                 p.samples = item.value("samples", p.samples);
                 p.learnedValue = item.value("learnedValue", p.learnedValue);
+                p.adaptive = item.value("adaptive", p.adaptive);
+                p.valueWeight = std::clamp(item.value("valueWeight", p.valueWeight), 0.0f, 1.0f);
                 profiles.push_back(p);
             }
             if (profiles.empty())

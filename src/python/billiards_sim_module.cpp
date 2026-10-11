@@ -5,6 +5,7 @@
 #include "ai/environment.h"
 #include "ai/features.h"
 #include "ai/planner.h"
+#include "ai/opponent_model.h"
 
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
@@ -92,6 +93,28 @@ PYBIND11_MODULE(billiards_sim, m)
         });
 
     m.attr("FEATURE_COUNT") = static_cast<int>(Ai::FEATURE_COUNT);
+    m.attr("ADAPTIVE_FEATURE_COUNT") = static_cast<int>(Ai::ADAPTIVE_FEATURE_COUNT);
+    py::class_<Ai::AiProfile>(m, "Profile")
+        .def(py::init<>())
+        .def_readwrite("aim_noise", &Ai::AiProfile::aimNoiseDegrees)
+        .def_readwrite("power_noise", &Ai::AiProfile::powerNoise)
+        .def_readwrite("spin_noise", &Ai::AiProfile::spinNoise)
+        .def_readwrite("safety_bias", &Ai::AiProfile::safetyBias)
+        .def_readwrite("power_style", &Ai::AiProfile::powerStyle)
+        .def_readwrite("break_power", &Ai::AiProfile::breakPower)
+        .def_readwrite("samples", &Ai::AiProfile::samples)
+        .def_readwrite("value_weight", &Ai::AiProfile::valueWeight);
+    m.def("profile", [](const std::string& id) { return Ai::findAiProfile(id); });
+    m.def("profile_at_skill", &Ai::profileAtSkill);
+    py::class_<Ai::OpponentModel>(m, "OpponentModel")
+        .def(py::init<>())
+        .def("reset", &Ai::OpponentModel::reset)
+        .def("observe", &Ai::OpponentModel::observe, py::arg("pot_ease"), py::arg("potted"), py::arg("foul"),
+             py::arg("break_shot"), py::arg("discipline") = GameDiscipline::NineBall)
+        .def("adapt", &Ai::OpponentModel::adapt)
+        .def("estimated_profile", &Ai::OpponentModel::estimatedProfile)
+        .def_property_readonly("skill", &Ai::OpponentModel::skill)
+        .def_property_readonly("observations", &Ai::OpponentModel::observations);
     m.def("profiles", []()
     {
         std::vector<std::string> ids;
@@ -111,6 +134,29 @@ PYBIND11_MODULE(billiards_sim, m)
         .def("winner", [](const Ai::Environment& e) { return e.frame().winner; })
         .def("features", [](const Ai::Environment& e, int player) { return toArray(Ai::encodeTable(e.observe(), player)); },
              py::arg("player"), "Table features from a player's point of view (FEATURE_COUNT floats)")
+        .def("adaptive_features", [](const Ai::Environment& e, int player, const Ai::AiProfile& own, const Ai::AiProfile& opponent)
+        {
+            return toArray(Ai::encodeAdaptiveTable(e.observe(), player, own, opponent));
+        })
+        .def("pot_ease", [](const Ai::Environment& e, float aim) { return Ai::aimedPotEase(e.observe(), aim); })
+        .def("play_profile", [](Ai::Environment& e, const Ai::AiProfile& profile, const Ai::AiProfile& opponent,
+                               std::uint32_t seed, const py::object& value)
+        {
+            if (value.is_none())
+            {
+                Ai::StepResult result;
+                { py::gil_scoped_release release; result = e.playClassical(profile, seed); }
+                return resultDict(result);
+            }
+            const int seat = e.toAct();
+            const Ai::ValueFunction function = [&value, &profile, &opponent, seat](const Ai::AiTable& table, int player)
+            {
+                const bool same = player == seat;
+                return value(toArray(Ai::encodeAdaptiveTable(table, player, same ? profile : opponent,
+                                                            same ? opponent : profile))).cast<double>();
+            };
+            return resultDict(e.playClassical(profile, seed, true, function));
+        }, py::arg("profile"), py::arg("opponent"), py::arg("seed"), py::arg("value") = py::none())
         .def("balls", [](const Ai::Environment& e)
         {
             const Ai::AiTable t = e.observe();
