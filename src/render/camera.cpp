@@ -2,7 +2,7 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     glm::mat4 Camera::viewMatrix(
         const glm::vec3& position,

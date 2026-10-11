@@ -12,7 +12,7 @@
 #include <pybind11/stl.h>
 
 namespace py = pybind11;
-using namespace BilliardsSaloon;
+using namespace Septhuit;
 
 void bindShotLab(py::module_& parent);   // rl_bindings.cpp
 
@@ -41,7 +41,7 @@ namespace
 
 PYBIND11_MODULE(billiards_sim, m)
 {
-    m.doc() = "Billiards Saloon simulator, WPA referee and classical AI";
+    m.doc() = "Septhuit simulator, WPA referee and classical AI";
     bindShotLab(m);
 
     py::enum_<GameDiscipline>(m, "Discipline")

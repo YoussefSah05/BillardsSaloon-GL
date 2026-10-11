@@ -7,7 +7,7 @@
 #include <fstream>
 #include <stdexcept>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     namespace
     {

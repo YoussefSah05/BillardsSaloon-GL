@@ -12,7 +12,7 @@ namespace Rml
     class ElementDocument;
 }
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     class UiSystem;
 

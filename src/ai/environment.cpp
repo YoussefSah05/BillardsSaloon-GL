@@ -3,7 +3,7 @@
 #include "ai/planner.h"
 #include "gameplay/match_session.h"
 
-namespace BilliardsSaloon::Ai
+namespace Septhuit::Ai
 {
     Environment::Environment(GameDiscipline discipline, std::uint32_t seed)
         : m_discipline(discipline)

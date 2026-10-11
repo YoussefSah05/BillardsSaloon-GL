@@ -14,7 +14,7 @@
 #include <random>
 #include <string>
 
-namespace BilliardsSaloon::Ai
+namespace Septhuit::Ai
 {
     // The AI's chosen shot and how good it expects it to be. score is roughly:
     // +100 winning the frame, +20..30 keeping the table with good position,

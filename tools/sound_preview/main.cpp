@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 
-using namespace BilliardsSaloon;
+using namespace Septhuit;
 
 namespace
 {

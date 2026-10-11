@@ -1,4 +1,4 @@
-# Billiards Saloon — Rendering
+# Septhuit — Rendering
 
 Status: physically based renderer with indirect light, reflections and
 streamed models (after 0.8.0). Last revised 2026-10-06. Code: `src/render/`,

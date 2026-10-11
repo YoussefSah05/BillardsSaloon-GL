@@ -7,7 +7,7 @@
 #include <stdexcept>
 #include <string>
 
-using namespace BilliardsSaloon;
+using namespace Septhuit;
 
 namespace
 {

@@ -10,7 +10,7 @@ GLM, no game engine. See `docs/design/GDD.md` for what the game must do.
 | `bs_sim` | static library | The event-based physics simulator. Headless, double precision. |
 | `bs_game` | static library | Everything else that runs headless: rules, match session, director, equipment, AI planner, shot-sound planning. No OpenGL/GLFW. |
 | `bs_audio` | static library | miniaudio playback and the recorded sample bank, on top of `bs_game`. |
-| `BilliardsSaloon` | executable | Window, renderer, RmlUi screens, main loop. |
+| `Septhuit` | executable | Window, renderer, RmlUi screens, main loop. |
 | `bs_tests`, `bs_audio_tests` | executables | doctest suites (`bs_tests` links `bs_game`; with ONNX it also checks the bundled model). |
 | `bs_ai_arena`, `bs_sound_preview` | tools | Headless learned-vs-classical frames; WAV export of the sound bank and a mixed break. |
 | `billiards_sim` | Python module (optional) | pybind11 bindings of the simulator, rules and AI for `ml/`. |
@@ -20,7 +20,7 @@ GLM, no game engine. See `docs/design/GDD.md` for what the game must do.
 flowchart BT
     sim[bs_sim] --> game[bs_game]
     game --> audio[bs_audio]
-    audio --> exe[BilliardsSaloon]
+    audio --> exe[Septhuit]
     game --> tests[bs_tests]
     audio --> atests[bs_audio_tests]
     game --> arena[bs_ai_arena]

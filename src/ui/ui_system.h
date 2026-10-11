@@ -15,7 +15,7 @@ namespace Rml
 class SystemInterface_GLFW;
 class RenderInterface_GL3;
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     // Owns RmlUi for the lifetime of the game: interfaces, fonts and the one
     // UI context. Draws after the 3D scene each frame. Only one may exist.

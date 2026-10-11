@@ -4,7 +4,7 @@
 
 #include <doctest/doctest.h>
 
-using namespace BilliardsSaloon;
+using namespace Septhuit;
 using namespace RulesTest;
 
 namespace

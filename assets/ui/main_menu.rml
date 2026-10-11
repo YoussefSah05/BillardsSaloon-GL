@@ -22,6 +22,11 @@
         .wordmark {
             margin-bottom: 36dp;
         }
+        .wordmark .logo {
+            width: 440dp;
+            height: 89dp;
+            margin: 8dp 0 10dp -8dp;   /* the logo's own padding lines it up with the tag */
+        }
         .hints {
             position: absolute;
             left: 96dp;
@@ -34,7 +39,7 @@
     <div class="hub">
         <div class="wordmark">
             <div class="tag">THE TOURNAMENT HALL</div>
-            <h1>BILLIARDS<br/>SALOON</h1>
+            <img class="logo" src="../brand/wordmark.tga"/>
             <div class="rule"></div>
         </div>
         <div class="menu">

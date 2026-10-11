@@ -4,7 +4,7 @@
 
 #include <array>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     // Must match the uPointLight* array sizes in basic.frag.
     constexpr int POINT_LIGHT_COUNT = 3;

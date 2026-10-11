@@ -12,7 +12,7 @@
 #include <utility>
 #include <vector>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     class Registry
     {

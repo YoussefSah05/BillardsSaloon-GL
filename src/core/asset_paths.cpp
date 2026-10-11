@@ -14,7 +14,7 @@
     #include <mach-o/dyld.h>
 #endif
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     namespace
     {

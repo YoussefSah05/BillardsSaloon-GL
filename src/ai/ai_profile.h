@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-namespace BilliardsSaloon::Ai
+namespace Septhuit::Ai
 {
     // A computer opponent: how accurately they play and how they like to play.
     // Fictional people; any resemblance to real players is not intended.

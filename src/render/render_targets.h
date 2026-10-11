@@ -2,7 +2,7 @@
 
 #include <vector>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     // The HDR scene buffer: drawn multisampled, resolved to a float texture
     // that the post pass reads.

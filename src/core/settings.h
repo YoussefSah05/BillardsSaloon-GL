@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <string>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     enum class QualityLevel
     {
@@ -75,11 +75,17 @@ namespace BilliardsSaloon
     [[nodiscard]] GameSettings sanitized(GameSettings settings);
 
     // Per-user folder for settings and saves, created if missing:
-    //   macOS   ~/Library/Application Support/Billiards Saloon
-    //   Windows %APPDATA%\Billiards Saloon
-    //   Linux   $XDG_CONFIG_HOME/billiards-saloon (or ~/.config/billiards-saloon)
-    // Returns an empty path if no home directory can be found.
+    //   macOS   ~/Library/Application Support/Septhuit
+    //   Windows %APPDATA%\Septhuit
+    //   Linux   $XDG_CONFIG_HOME/septhuit (or ~/.config/septhuit)
+    // The first run after the rename copies the old "Billiards Saloon"
+    // (Linux: billiards-saloon) folder across. Returns an empty path if no
+    // home directory can be found.
     [[nodiscard]] std::filesystem::path userDataDirectory();
+
+    // Copies legacy to directory when directory does not exist yet and legacy
+    // is a folder. Returns true if it copied; the legacy folder is kept.
+    bool migrateUserDataDirectory(const std::filesystem::path& legacy, const std::filesystem::path& directory);
 
     // Missing file: defaults. Unreadable or invalid file: defaults, and
     // outWarning explains why (the game should still start).

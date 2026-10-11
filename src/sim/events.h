@@ -3,7 +3,7 @@
 #include "sim/motion.h"
 #include "sim/table.h"
 
-namespace BilliardsSaloon::Sim
+namespace Septhuit::Sim
 {
     // Each detector returns the time from now until the event, or +infinity
     // if it does not happen before `horizon`. Positions are only polynomial

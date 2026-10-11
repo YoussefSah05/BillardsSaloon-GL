@@ -1,1 +1,1 @@
-"""Reinforcement learning for Billiards Saloon (docs/rl/)."""
+"""Reinforcement learning for Septhuit (docs/rl/)."""

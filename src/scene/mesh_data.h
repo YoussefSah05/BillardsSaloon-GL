@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <vector>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     // CPU-side triangle mesh, built headless (no GL) and uploaded by the renderer.
     struct MeshVertex

@@ -5,7 +5,7 @@
 #include <cmath>
 #include <vector>
 
-using namespace BilliardsSaloon::Sim;
+using namespace Septhuit::Sim;
 
 namespace
 {

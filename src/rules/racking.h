@@ -6,7 +6,7 @@
 #include <random>
 #include <vector>
 
-namespace BilliardsSaloon::Rules
+namespace Septhuit::Rules
 {
     // Rack slot indices follow buildRackPositions: row by row from the apex.
     // A 15-ball triangle has its middle at 4 and back corners at 10 and 14; a

@@ -1,4 +1,4 @@
-# Billiards Saloon — Blueprint
+# Septhuit — Blueprint
 
 The documentation map: what the game is, how it works, and where it is going.
 Start here after time away from the project. The design documents explain
@@ -8,7 +8,7 @@ GitHub renders.
 
 ## The game
 
-**Billiards Saloon — The Tournament Hall** is a realism-first pool game
+**Septhuit — The Tournament Hall** is a realism-first pool game
 presented like a televised tournament. Four pillars:
 
 | Pillar | In one line | Document |
@@ -80,7 +80,7 @@ mouse / keyboard ──► Input ──► ShotControls ──► MatchSession (
 ## Working on the code
 
 - Build, run, test and conventions: [../CONTRIBUTING.md](../CONTRIBUTING.md) and [../README.md](../README.md).
-- Check visual changes: `./build/BilliardsSaloon --screen main|game|pause --capture shot.png`;
+- Check visual changes: `./build/Septhuit --screen main|game|pause --capture shot.png`;
   record a clip with `--record DIR --capture-frames N` (see the README's developer options).
 - Explore relationships in the code: the Graphify knowledge graph in `graphify-out/`
   (`graphify query "…"`, `graphify explain "MatchSession"`).

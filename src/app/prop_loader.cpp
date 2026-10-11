@@ -11,7 +11,7 @@
 #include <chrono>
 #include <iostream>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     PropLoader::~PropLoader() = default;
 

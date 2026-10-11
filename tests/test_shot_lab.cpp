@@ -8,8 +8,8 @@
 #include <cstdio>
 #include <random>
 
-using namespace BilliardsSaloon;
-using namespace BilliardsSaloon::Rl;
+using namespace Septhuit;
+using namespace Septhuit::Rl;
 
 namespace
 {

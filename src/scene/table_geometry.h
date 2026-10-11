@@ -7,7 +7,7 @@
 
 #include <vector>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     // Dimensions of the furniture around the playing surface, in metres. The
     // cushions themselves come from the simulator's table, so what the player

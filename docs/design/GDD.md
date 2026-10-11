@@ -1,10 +1,10 @@
-# Billiards Saloon — Game Design Document
+# Septhuit — Game Design Document
 
 Status: v1.0 target. Last revised 2026-10-04.
 
 ## Identity: "The Tournament Hall"
 
-Billiards Saloon is a realism-first pool game presented like a televised
+Septhuit is a realism-first pool game presented like a televised
 tournament. Four pillars drive every decision:
 
 1. **Authentic physics** — an event-based simulator (Leckie–Greenspan / pooltool

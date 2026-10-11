@@ -3,7 +3,7 @@
 #include <chrono>
 
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     class Timer
     {

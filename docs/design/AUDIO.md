@@ -1,4 +1,4 @@
-# Billiards Saloon — Audio
+# Septhuit — Audio
 
 Last revised 2026-10-09. Implementation: `src/audio/recorded_bank.*`
 (asset decoding), `src/audio/shot_sounds.*` (event planning), and

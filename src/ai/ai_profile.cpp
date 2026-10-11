@@ -8,7 +8,7 @@
 #include <algorithm>
 #include <stdexcept>
 
-namespace BilliardsSaloon::Ai
+namespace Septhuit::Ai
 {
     std::vector<AiProfile> loadAiProfiles(const std::filesystem::path& file)
     {

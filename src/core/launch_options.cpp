@@ -3,7 +3,7 @@
 #include <charconv>
 #include <stdexcept>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     namespace
     {
@@ -121,7 +121,7 @@ namespace BilliardsSaloon
     std::string launchOptionsUsage()
     {
         return
-            "Usage: BilliardsSaloon [options]\n"
+            "Usage: Septhuit [options]\n"
             "  --fullscreen            start in fullscreen\n"
             "  --mute                  no sound\n"
             "  --opponent ID           play against an AI player (assets/data/ai/players.json)\n"

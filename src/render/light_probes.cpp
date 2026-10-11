@@ -6,7 +6,7 @@
 
 #include <stdexcept>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     LightProbes::~LightProbes()
     {

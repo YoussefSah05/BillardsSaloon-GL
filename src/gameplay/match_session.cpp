@@ -10,7 +10,7 @@
 #include <limits>
 #include <utility>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     namespace
     {

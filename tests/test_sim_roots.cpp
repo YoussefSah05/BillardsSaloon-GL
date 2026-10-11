@@ -7,7 +7,7 @@
 #include <limits>
 #include <random>
 
-using namespace BilliardsSaloon::Sim;
+using namespace Septhuit::Sim;
 
 namespace
 {

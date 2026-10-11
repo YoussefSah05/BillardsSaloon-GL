@@ -7,7 +7,7 @@
 #include <fstream>
 #include <system_error>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     namespace
     {
@@ -55,37 +55,53 @@ namespace BilliardsSaloon
         return settings;
     }
 
+    bool migrateUserDataDirectory(const std::filesystem::path& legacy, const std::filesystem::path& directory)
+    {
+        std::error_code error;
+        if (std::filesystem::exists(directory, error) || !std::filesystem::is_directory(legacy, error))
+        {
+            return false;
+        }
+        std::filesystem::create_directories(directory.parent_path(), error);
+        std::filesystem::copy(legacy, directory, std::filesystem::copy_options::recursive, error);
+        return !error;
+    }
+
     std::filesystem::path userDataDirectory()
     {
+        std::filesystem::path base;
         std::filesystem::path directory;
+        std::filesystem::path legacy;   // the folder used before the rename to Septhuit
 
 #if defined(_WIN32)
-        const std::filesystem::path appData = environmentPath("APPDATA");
-        if (!appData.empty())
+        base = environmentPath("APPDATA");
+        if (!base.empty())
         {
-            directory = appData / "Billiards Saloon";
+            directory = base / "Septhuit";
+            legacy = base / "Billiards Saloon";
         }
 #elif defined(__APPLE__)
         const std::filesystem::path home = environmentPath("HOME");
         if (!home.empty())
         {
-            directory = home / "Library" / "Application Support" / "Billiards Saloon";
+            base = home / "Library" / "Application Support";
+            directory = base / "Septhuit";
+            legacy = base / "Billiards Saloon";
         }
 #else
         const std::filesystem::path xdg = environmentPath("XDG_CONFIG_HOME");
         const std::filesystem::path home = environmentPath("HOME");
-        if (!xdg.empty())
+        base = !xdg.empty() ? xdg : (!home.empty() ? home / ".config" : std::filesystem::path());
+        if (!base.empty())
         {
-            directory = xdg / "billiards-saloon";
-        }
-        else if (!home.empty())
-        {
-            directory = home / ".config" / "billiards-saloon";
+            directory = base / "septhuit";
+            legacy = base / "billiards-saloon";
         }
 #endif
 
         if (!directory.empty())
         {
+            static_cast<void>(migrateUserDataDirectory(legacy, directory));
             std::error_code error;
             std::filesystem::create_directories(directory, error);
         }

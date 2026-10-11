@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     namespace
     {

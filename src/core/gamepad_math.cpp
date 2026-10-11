@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     float applyDeadZone(float value, float deadZone)
     {

@@ -1,12 +1,16 @@
 #include "platform/window.h"
 
+#include "core/asset_paths.h"
+
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
+#include <stb_image.h>
 
 #include <algorithm>
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace
 {
@@ -49,9 +53,41 @@ namespace
 
         return glfwGetPrimaryMonitor();
     }
+
+    // The Septhuit icon in the title bar and task bar on Windows and Linux.
+    // macOS takes the icon from the app bundle and does not support this.
+    void applyWindowIcon(GLFWwindow* window)
+    {
+        if (glfwGetPlatform() == GLFW_PLATFORM_COCOA)
+        {
+            return;
+        }
+
+        std::vector<GLFWimage> images;
+        for (const char* name : {"brand/icon_256.png", "brand/icon_48.png", "brand/icon_32.png", "brand/icon_16.png"})
+        {
+            const std::filesystem::path path = Septhuit::resolveAssetPathOrEmpty(name);
+            GLFWimage image {};
+            int channels = 0;
+            image.pixels = path.empty() ? nullptr : stbi_load(path.string().c_str(), &image.width, &image.height, &channels, 4);
+            if (image.pixels != nullptr)
+            {
+                images.push_back(image);
+            }
+        }
+
+        if (!images.empty())
+        {
+            glfwSetWindowIcon(window, static_cast<int>(images.size()), images.data());
+        }
+        for (const GLFWimage& image : images)
+        {
+            stbi_image_free(image.pixels);
+        }
+    }
 }
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     Window::Window(const WindowDesc& desc)
     {
@@ -98,6 +134,7 @@ namespace BilliardsSaloon
         }
 
         glfwMakeContextCurrent(m_handle);
+        applyWindowIcon(m_handle);
 
         // VSync on by default: an uncapped frame rate only burns GPU time, and
         // physics already runs at its own fixed rate.

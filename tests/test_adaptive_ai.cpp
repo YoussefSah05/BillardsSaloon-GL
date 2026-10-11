@@ -6,7 +6,7 @@
 #include <algorithm>
 #include <cmath>
 
-using namespace BilliardsSaloon;
+using namespace Septhuit;
 
 TEST_CASE("adaptive skill ignores breaks and safeties, changes gradually on evidence")
 {

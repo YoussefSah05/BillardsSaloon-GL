@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <stdexcept>
 
-using namespace BilliardsSaloon;
+using namespace Septhuit;
 
 TEST_CASE("executableDirectory points at an existing directory")
 {

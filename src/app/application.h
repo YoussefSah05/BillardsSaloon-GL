@@ -27,7 +27,7 @@
 #include <memory>
 #include <optional>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     enum class ApplicationShellState
     {

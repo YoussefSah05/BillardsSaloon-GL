@@ -7,7 +7,7 @@
 #include <numeric>
 #include <set>
 
-using namespace BilliardsSaloon;
+using namespace Septhuit;
 
 namespace
 {

@@ -5,7 +5,7 @@
 #include <cmath>
 #include <initializer_list>
 
-using namespace BilliardsSaloon::Sim;
+using namespace Septhuit::Sim;
 
 namespace
 {

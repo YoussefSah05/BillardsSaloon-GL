@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-namespace BilliardsSaloon::Rules
+namespace Septhuit::Rules
 {
     namespace
     {

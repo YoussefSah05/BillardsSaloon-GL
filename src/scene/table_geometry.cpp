@@ -6,7 +6,7 @@
 #include <initializer_list>
 #include <limits>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     namespace
     {

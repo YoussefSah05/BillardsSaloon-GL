@@ -7,7 +7,7 @@
 #include <cstddef>
 #include <vector>
 
-namespace BilliardsSaloon::Ai
+namespace Septhuit::Ai
 {
     // A fixed-size description of a table from one player's point of view,
     // shared by training (through the Python module) and the game (ONNX), so

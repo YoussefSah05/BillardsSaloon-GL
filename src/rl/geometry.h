@@ -12,7 +12,7 @@
 // Shot geometry for learning and baselines, in the simulator's frame (metres,
 // origin at a corner of the playing surface, x across, y along). Theory in
 // docs/design/AI.md (ghost ball, cut angle) and docs/rl/rl-system-design.md.
-namespace BilliardsSaloon::Rl
+namespace Septhuit::Rl
 {
     // Where a pocket takes a ball: the opening between its two jaw tips.
     struct PocketMouth

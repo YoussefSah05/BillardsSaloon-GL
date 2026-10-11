@@ -29,7 +29,7 @@ bs_sim  (physics: no GL, no game state)
    ▲
 bs_game (rules, MatchSession, classical AI, Environment on the M9 branch)
    ▲                         ▲
-BilliardsSaloon (app:        billiards_sim (Python module, pybind11,
+Septhuit (app:        billiards_sim (Python module, pybind11,
  render, UI, audio)           M9 branch, built with -DBS_BUILD_PYTHON=ON)
 ```
 

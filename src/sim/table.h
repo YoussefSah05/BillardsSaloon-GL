@@ -4,7 +4,7 @@
 
 #include <vector>
 
-namespace BilliardsSaloon::Sim
+namespace Septhuit::Sim
 {
     // Pocket-table dimensions (metres, degrees). Defaults: WPA 9 ft table with
     // pooltool's pocket geometry.

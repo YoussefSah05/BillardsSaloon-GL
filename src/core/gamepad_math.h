@@ -1,6 +1,6 @@
 #pragma once
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     // Radial-style dead zone for one stick axis: values inside the dead zone
     // read as 0, the rest is rescaled so output still reaches ±1.

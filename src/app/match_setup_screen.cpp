@@ -16,7 +16,7 @@
 #include <string>
 #include <utility>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     namespace
     {

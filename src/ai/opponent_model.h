@@ -4,7 +4,7 @@
 #include "gameplay/game_variant.h"
 #include <array>
 
-namespace BilliardsSaloon::Ai
+namespace Septhuit::Ai
 {
     // Match-local, smoothed skill evidence. Only recognisable pot attempts
     // count as misses; a legal safety is not evidence of weak execution.

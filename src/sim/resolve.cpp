@@ -6,7 +6,7 @@
 // Ported from pooltool's resolvers (Apache-2.0): stick_ball/instantaneous_point,
 // stick_ball/squirt, ball_ball/frictional_inelastic (+ Alciatore friction) and
 // ball_cushion/han_2005.
-namespace BilliardsSaloon::Sim
+namespace Septhuit::Sim
 {
     namespace
     {

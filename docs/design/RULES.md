@@ -1,6 +1,6 @@
 # Rules and referee
 
-Billiards Saloon referees by the WPA World Standardized Rules for 8-ball,
+Septhuit referees by the WPA World Standardized Rules for 8-ball,
 9-ball and 10-ball. This page lists what the referee enforces, where the game
 simplifies a rule, and where each piece lives in the code. Last revised
 2026-10-06.

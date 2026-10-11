@@ -7,7 +7,7 @@
 
 #include <cmath>
 
-using namespace BilliardsSaloon;
+using namespace Septhuit;
 
 TEST_CASE("stationary transforms stay identical as the render interpolation fraction changes")
 {

@@ -10,7 +10,7 @@
 // pure functions over a small frame state, so they can be tested clause by
 // clause and reused headless by the AI. Balls are identified by number; the
 // cue ball is 0. Where the game simplifies a rule, the comment says so.
-namespace BilliardsSaloon::Rules
+namespace Septhuit::Rules
 {
     inline constexpr int CUE_BALL = 0;
 

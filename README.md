@@ -1,16 +1,25 @@
 <div align="center">
 
-# Billiards Saloon
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/wordmark-dark.svg">
+    <img src="assets/brand/wordmark-light.svg" alt="Septhuit" width="560">
+  </picture>
+</h1>
 
 **A realism-first 3D pool game presented like a televised tournament.**
 Exact event-based physics, a WPA referee, a broadcast director and opponents
 guided by a trained neural evaluator. Built from scratch in C++20 and OpenGL 4.1, with no game engine.
 
-[![CI](https://github.com/YoussefSah05/BillardsSaloon-GL/actions/workflows/ci.yml/badge.svg)](https://github.com/YoussefSah05/BillardsSaloon-GL/actions/workflows/ci.yml)
+[![CI](https://github.com/YoussefSah05/septhuit/actions/workflows/ci.yml/badge.svg)](https://github.com/YoussefSah05/septhuit/actions/workflows/ci.yml)
 ![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=cplusplus)
 ![OpenGL 4.1](https://img.shields.io/badge/OpenGL-4.1%20core-5586A4?logo=opengl)
 ![Platforms](https://img.shields.io/badge/platforms-macOS%20%7C%20Linux%20%7C%20Windows-444)
 ![Version](https://img.shields.io/badge/version-0.8.0%2B-d4a84b)
+
+*Septhuit* is named after **sept & huit** ("seven and eight"), a shot the author grew up with back
+home. The logo is the 7 and the 8 kissing.
+<!-- TODO(author): one sentence on how the sept & huit shot is played. -->
 
 [![A full-power 9-ball break, cut live by the broadcast director](docs/media/demo-break.gif)](docs/media/demo-break.mp4)
 
@@ -91,11 +100,11 @@ and an OpenGL 4.1 driver. GLFW, GLM, RmlUi, FreeType, miniaudio, nlohmann/json a
 doctest are fetched automatically; GLAD and stb are bundled in `external/`.
 
 ```bash
-git clone https://github.com/YoussefSah05/BillardsSaloon-GL.git
-cd BillardsSaloon-GL
+git clone https://github.com/YoussefSah05/septhuit.git
+cd septhuit
 cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j8
-./build/BilliardsSaloon                       # assets are copied next to the executable
+./build/Septhuit                              # assets are copied next to the executable
 ctest --test-dir build --output-on-failure    # unit, golden-shot, rules, AI and audio tests
 ```
 
@@ -214,13 +223,13 @@ On-screen prompts switch between keyboard/mouse and gamepad wording to match the
 ## Developer options
 
 ```bash
-./build/BilliardsSaloon --screen game                       # skip the menus (title|main|setup|locker|game|pause|settings)
-./build/BilliardsSaloon --opponent viktor_hale              # play an AI player (sam_whitlock … viktor_hale, adaptive)
-./build/BilliardsSaloon --camera overview                   # broadcast|aim|overview|follow|free
-./build/BilliardsSaloon --scenario foul|choice|call|replay|break   # script a state: ball in hand, referee choice, called shot, replay, live break
-./build/BilliardsSaloon --profile --mute                    # frame/GPU time, scene resolution, draw calls once a second
-./build/BilliardsSaloon --screen pause --capture pause.png  # save one screenshot and quit
-./build/BilliardsSaloon --scenario break --record frames/ --record-fps 120 --capture-frames 720   # save every frame (BMP) at a fixed game-time step
+./build/Septhuit --screen game                              # skip the menus (title|main|setup|locker|game|pause|settings)
+./build/Septhuit --opponent viktor_hale                     # play an AI player (sam_whitlock … viktor_hale, adaptive)
+./build/Septhuit --camera overview                          # broadcast|aim|overview|follow|free
+./build/Septhuit --scenario foul|choice|call|replay|break   # script a state: ball in hand, referee choice, called shot, replay, live break
+./build/Septhuit --profile --mute                           # frame/GPU time, scene resolution, draw calls once a second
+./build/Septhuit --screen pause --capture pause.png         # save one screenshot and quit
+./build/Septhuit --scenario break --record frames/ --record-fps 120 --capture-frames 720   # save every frame (BMP) at a fixed game-time step
 ./build/bs_sound_preview /tmp/sounds                        # export the sound bank and a mixed break as WAV
 ./build/bs_ai_arena build/assets/models/adaptive_value.onnx 200 dani_reyes nine   # headless learned-vs-classical frames (ONNX builds)
 ```
@@ -230,14 +239,14 @@ On-screen prompts switch between keyboard/mouse and gamepad wording to match the
 
 ```bash
 for s in title main setup locker settings game pause; do
-  ./build/BilliardsSaloon --screen $s --capture /tmp/$s.png
+  ./build/Septhuit --screen $s --capture /tmp/$s.png
 done
-./build/BilliardsSaloon --screen game --camera overview --capture /tmp/overview.png
-./build/BilliardsSaloon --scenario call --capture /tmp/call.png --capture-frames 200
+./build/Septhuit --screen game --camera overview --capture /tmp/overview.png
+./build/Septhuit --scenario call --capture /tmp/call.png --capture-frames 200
 
 # A demo clip: record 6 s of game time at 120 fps (raw BMP frames, ~17 MB each
 # at Retina size; input is ignored while recording), then encode.
-./build/BilliardsSaloon --scenario break --record /tmp/rec --record-fps 120 --capture-frames 720
+./build/Septhuit --scenario break --record /tmp/rec --record-fps 120 --capture-frames 720
 ffmpeg -framerate 120 -i /tmp/rec/frame_%05d.bmp -vf "scale=1280:-2:flags=lanczos" \
   -c:v libx264 -preset slow -crf 20 -pix_fmt yuv420p -movflags +faststart docs/media/demo-break.mp4
 ffmpeg -framerate 120 -i /tmp/rec/frame_%05d.bmp \
@@ -276,6 +285,7 @@ each part (models, equations and the reasons for each choice), not just the code
 | Engine | [ARCHITECTURE.md](docs/ARCHITECTURE.md) · [PHYSICS.md](docs/design/PHYSICS.md) · [RENDERING.md](docs/design/RENDERING.md) · [AUDIO.md](docs/design/AUDIO.md) · [PERFORMANCE.md](docs/PERFORMANCE.md) |
 | Intelligence | [AI.md](docs/design/AI.md) · [INTELLIGENCE.md](docs/design/INTELLIGENCE.md) · [ADAPTIVE_AI.md](docs/design/ADAPTIVE_AI.md) · [RELIABLE_AI.md](docs/design/RELIABLE_AI.md) · [RL experiments](docs/rl/experiments.md) |
 | Process | [CONTRIBUTING.md](CONTRIBUTING.md) · [CHANGELOG.md](CHANGELOG.md) · [CREDITS.md](CREDITS.md) |
+| Brand | Logo, icon and social preview in [`assets/brand/`](assets/brand), generated by [`tools/brand/make_brand.py`](tools/brand/make_brand.py) |
 
 ## Roadmap
 

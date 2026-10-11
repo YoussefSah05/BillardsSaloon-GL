@@ -4,7 +4,7 @@
 
 #include <algorithm>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     namespace
     {

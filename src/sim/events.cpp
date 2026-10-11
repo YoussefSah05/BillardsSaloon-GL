@@ -5,7 +5,7 @@
 #include <cmath>
 #include <limits>
 
-namespace BilliardsSaloon::Sim
+namespace Septhuit::Sim
 {
     namespace
     {

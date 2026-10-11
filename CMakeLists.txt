@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.28)
 
-project(BilliardsSaloon
+project(Septhuit
     VERSION 0.8.0
     DESCRIPTION "A 3D billiards game built from scratch in C++ and OpenGL"
     LANGUAGES C CXX
@@ -211,7 +211,7 @@ elseif(UNIX)
     target_link_libraries(bs_audio PRIVATE pthread m dl)
 endif()
 
-add_executable(BilliardsSaloon
+add_executable(Septhuit
     src/app/main.cpp
     src/app/application.cpp
     src/app/hud_screen.cpp
@@ -238,24 +238,24 @@ add_executable(BilliardsSaloon
     external/glad/src/gl.c
 )
 
-target_include_directories(BilliardsSaloon PRIVATE
+target_include_directories(Septhuit PRIVATE
     src
     external/glad/include
 )
-target_include_directories(BilliardsSaloon SYSTEM PRIVATE external/stb)
+target_include_directories(Septhuit SYSTEM PRIVATE external/stb)
 
-target_link_libraries(BilliardsSaloon PRIVATE
+target_link_libraries(Septhuit PRIVATE
     bs_audio
     bs_rmlui_backend
     glfw
     OpenGL::GL
 )
 # Ball numbers are rasterised with FreeType, which RmlUi already links.
-target_include_directories(BilliardsSaloon SYSTEM PRIVATE $<TARGET_PROPERTY:freetype,INTERFACE_INCLUDE_DIRECTORIES>)
+target_include_directories(Septhuit SYSTEM PRIVATE $<TARGET_PROPERTY:freetype,INTERFACE_INCLUDE_DIRECTORIES>)
 
-bs_set_warnings(BilliardsSaloon)
+bs_set_warnings(Septhuit)
 
-target_compile_definitions(BilliardsSaloon PRIVATE
+target_compile_definitions(Septhuit PRIVATE
     BS_VERSION="${PROJECT_VERSION}"
     GLFW_INCLUDE_NONE
     $<$<CONFIG:Debug>:BS_DEBUG=1>
@@ -267,10 +267,10 @@ target_compile_definitions(BilliardsSaloon PRIVATE
 add_custom_target(bs_assets ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/assets
-        $<TARGET_FILE_DIR:BilliardsSaloon>/assets
-    COMMENT "Copying assets next to BilliardsSaloon"
+        $<TARGET_FILE_DIR:Septhuit>/assets
+    COMMENT "Copying assets next to Septhuit"
 )
-add_dependencies(BilliardsSaloon bs_assets)
+add_dependencies(Septhuit bs_assets)
 
 # Python bindings for training (ml/): the simulator, referee and classical AI.
 if(BS_BUILD_PYTHON)
@@ -325,11 +325,11 @@ if(BS_WITH_ONNXRUNTIME)
     target_link_libraries(bs_ai_arena PRIVATE bs_game bs_onnxruntime)
     bs_set_warnings(bs_ai_arena)
 
-    target_sources(BilliardsSaloon PRIVATE src/ai/value_model.cpp)
-    target_link_libraries(BilliardsSaloon PRIVATE bs_onnxruntime)
-    target_compile_definitions(BilliardsSaloon PRIVATE BS_HAS_ONNXRUNTIME)
+    target_sources(Septhuit PRIVATE src/ai/value_model.cpp)
+    target_link_libraries(Septhuit PRIVATE bs_onnxruntime)
+    target_compile_definitions(Septhuit PRIVATE BS_HAS_ONNXRUNTIME)
     # The runtime library travels next to the executables.
-    foreach(target IN ITEMS BilliardsSaloon bs_ai_arena)
+    foreach(target IN ITEMS Septhuit bs_ai_arena)
         add_custom_command(TARGET ${target} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different ${onnxruntime_prebuilt_SOURCE_DIR}/lib/${BS_ORT_LIBRARY} $<TARGET_FILE_DIR:${target}>)
         if(APPLE)

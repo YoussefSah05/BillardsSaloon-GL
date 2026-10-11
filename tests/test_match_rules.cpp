@@ -8,7 +8,7 @@
 
 #include <cmath>
 
-using namespace BilliardsSaloon;
+using namespace Septhuit;
 
 namespace
 {

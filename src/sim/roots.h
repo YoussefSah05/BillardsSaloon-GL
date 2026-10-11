@@ -3,7 +3,7 @@
 #include <array>
 #include <vector>
 
-namespace BilliardsSaloon::Sim
+namespace Septhuit::Sim
 {
     // A real polynomial of degree at most 4: c[0] + c[1]·t + … + c[4]·t⁴.
     struct Polynomial

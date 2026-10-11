@@ -2,7 +2,7 @@
 
 #include <filesystem>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     // Ball numbers 1-15 rasterised from a font into a 4 x 4 grid (cell n holds
     // number n; cell 0 is empty), as a single-channel texture for the ball shader.

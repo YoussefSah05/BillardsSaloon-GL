@@ -6,7 +6,7 @@
 
 #include <vector>
 
-namespace BilliardsSaloon::Audio
+namespace Septhuit::Audio
 {
     enum class SoundKind
     {

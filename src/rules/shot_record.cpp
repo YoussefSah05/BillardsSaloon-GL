@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <limits>
 
-namespace BilliardsSaloon::Rules
+namespace Septhuit::Rules
 {
     ShotRecord recordShot(const Sim::ShotTrajectory& trajectory, const std::vector<int>& ballNumbers)
     {

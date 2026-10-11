@@ -6,7 +6,7 @@
 #include <initializer_list>
 #include <vector>
 
-namespace BilliardsSaloon
+namespace Septhuit
 {
     namespace
     {
