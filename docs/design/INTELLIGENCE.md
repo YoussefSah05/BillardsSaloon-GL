@@ -1,6 +1,9 @@
 # Billiards Saloon — Intelligence
 
-Status: design, milestone M9. Last revised 2026-10-06. Companion to `GDD.md`;
+Status: hybrid opponent AI implemented; coach/challenges remain design.
+Last revised 2026-10-09. See [ADAPTIVE_AI.md](ADAPTIVE_AI.md) for the actual
+trained model, runtime adaptation, evaluation gates and remaining limits.
+Companion to `GDD.md`;
 the classical planner it builds on is described in [AI.md](AI.md).
 
 ## Goal

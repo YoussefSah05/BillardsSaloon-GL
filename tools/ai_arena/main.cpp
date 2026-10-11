@@ -33,7 +33,6 @@ int main(int argc, char** argv)
     const std::string game = (argc > 4) ? argv[4] : "nine";
     const GameDiscipline discipline = (game == "eight") ? GameDiscipline::EightBall
         : (game == "ten") ? GameDiscipline::TenBall : GameDiscipline::NineBall;
-    const Ai::ValueFunction learned = model->function();
 
     std::atomic<int> next {0};
     std::atomic<int> learnedWins {0};
@@ -49,6 +48,7 @@ int main(int argc, char** argv)
             {
                 // Seats and breaks alternate so neither side has the break more often.
                 const int learnedSeat = frame % 2;
+                const Ai::ValueFunction learned = model->function(profile, profile, learnedSeat);
                 env.reset(static_cast<std::uint32_t>(50000 + frame), (frame / 2) % 2);
                 for (int move = 0; (move < 250) && (env.decision() != Ai::Decision::FrameOver); ++move)
                 {

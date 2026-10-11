@@ -184,8 +184,9 @@ namespace BilliardsSaloon
                 break;
         }
 
-        m_sceneTarget.ensure(settings.viewportWidth, settings.viewportHeight, samples);
-        m_bloom.ensure(settings.viewportWidth, settings.viewportHeight, m_bloomEnabled ? 6 : 0);
+        const RenderDimensions dimensions = sceneRenderDimensions(settings.viewportWidth, settings.viewportHeight, settings.quality);
+        m_sceneTarget.ensure(dimensions.width, dimensions.height, samples);
+        m_bloom.ensure(dimensions.width, dimensions.height, m_bloomEnabled ? 6 : 0);
         m_shadows.ensure(shadowSize, static_cast<int>(settings.lights.positions.size()));
 
         // Each lamp looks straight down over the whole table.
@@ -289,14 +290,28 @@ namespace BilliardsSaloon
         m_stats.gpuMilliseconds = last.gpuMilliseconds;
         m_stats.probeCaptureMilliseconds = last.probeCaptureMilliseconds;
         m_stats.probes = last.probes;
+        m_stats.sceneWidth = dimensions.width;
+        m_stats.sceneHeight = dimensions.height;
         const unsigned int query = m_timerQueries[static_cast<std::size_t>(m_timerIndex)];
         if (m_timerPending[static_cast<std::size_t>(m_timerIndex)])
         {
-            GLuint64 nanoseconds = 0;
-            glGetQueryObjectui64v(query, GL_QUERY_RESULT, &nanoseconds);
-            m_stats.gpuMilliseconds = static_cast<float>(static_cast<double>(nanoseconds) * 1.0e-6);
+            GLint available = GL_FALSE;
+            glGetQueryObjectiv(query, GL_QUERY_RESULT_AVAILABLE, &available);
+            if (available == GL_TRUE)
+            {
+                GLuint64 nanoseconds = 0;
+                glGetQueryObjectui64v(query, GL_QUERY_RESULT, &nanoseconds);
+                m_stats.gpuMilliseconds = static_cast<float>(static_cast<double>(nanoseconds) * 1.0e-6);
+                m_timerPending[static_cast<std::size_t>(m_timerIndex)] = false;
+            }
         }
-        glBeginQuery(GL_TIME_ELAPSED, query);
+        // Skip a measurement if the GPU is still using this slot. Profiling
+        // must never stall rendering or overwrite an outstanding query.
+        m_timerActive = !m_timerPending[static_cast<std::size_t>(m_timerIndex)];
+        if (m_timerActive)
+        {
+            glBeginQuery(GL_TIME_ELAPSED, query);
+        }
 
         return true;
     }
@@ -535,6 +550,55 @@ namespace BilliardsSaloon
             return;
         }
 
+        // Resolve casters once per frame, shared by all lamps. When nothing
+        // affecting depth changed, reuse the existing maps (camera motion,
+        // aim, highlights and material colours do not change shadows).
+        m_shadowCasters.clear();
+        registry.view<TransformComponent, StaticMeshComponent, MaterialComponent>().each(
+            [&](Entity entity, TransformComponent& transform, StaticMeshComponent& component, MaterialComponent& material)
+            {
+                if ((material.surfaceType == MaterialSurfaceType::LampGlass) ||
+                    (component.primitive == MeshPrimitive::Plane) || !component.castsShadow)
+                {
+                    return;
+                }
+                const BallComponent* ball = registry.tryGet<BallComponent>(entity);
+                if ((ball != nullptr) && ball->pocketed)
+                {
+                    return;
+                }
+                Mesh* mesh = meshFor(component);
+                if (mesh == nullptr)
+                {
+                    return;
+                }
+                const glm::mat4 model = composeInterpolatedMatrix(transform, alpha);
+                const Bounds world = transformBounds(mesh->bounds(), model);
+                if (const LodComponent* lod = registry.tryGet<LodComponent>(entity); (lod != nullptr) && !lod->lods.empty())
+                {
+                    if (Mesh* coarse = meshForData(lod->lods.back()))
+                    {
+                        mesh = coarse;
+                    }
+                }
+                m_shadowCasters.push_back({entity, mesh, model, world});
+            });
+        const bool unchanged = (m_previousShadowSize == m_shadows.size()) &&
+            (m_previousLightMatrices == m_lightMatrices) &&
+            (m_shadowCasters.size() == m_previousShadowCasters.size()) &&
+            std::equal(m_shadowCasters.begin(), m_shadowCasters.end(), m_previousShadowCasters.begin(),
+                [](const ShadowCaster& a, const ShadowCaster& b)
+                {
+                    return (a.entity == b.entity) && (a.mesh == b.mesh) && (a.model == b.model);
+                });
+        if (unchanged)
+        {
+            return;
+        }
+        m_previousShadowSize = m_shadows.size();
+        m_previousLightMatrices = m_lightMatrices;
+        m_previousShadowCasters = m_shadowCasters;
+
         m_shadowShader->bind();
         glEnable(GL_POLYGON_OFFSET_FILL);
         glPolygonOffset(1.5f, 2.0f);
@@ -547,45 +611,18 @@ namespace BilliardsSaloon
             m_shadowShader->setMat4("uLightMatrix", m_lightMatrices[layer]);
             const Frustum lampView = Frustum::fromViewProjection(m_lightMatrices[layer]);
 
-            registry.view<TransformComponent, StaticMeshComponent, MaterialComponent>().each(
-                [&](Entity entity, TransformComponent& transform, StaticMeshComponent& meshComponent, MaterialComponent& material)
+            for (const ShadowCaster& caster : m_shadowCasters)
+            {
+                if (!lampView.intersects(caster.world))
                 {
-                    // Lamps hold the lights; floors and walls only receive.
-                    if ((material.surfaceType == MaterialSurfaceType::LampGlass) ||
-                        (meshComponent.primitive == MeshPrimitive::Plane) || !meshComponent.castsShadow)
-                    {
-                        return;
-                    }
-                    const BallComponent* ball = registry.tryGet<BallComponent>(entity);
-                    if ((ball != nullptr) && ball->pocketed)
-                    {
-                        return;
-                    }
-                    Mesh* mesh = meshFor(meshComponent);
-                    if (mesh == nullptr)
-                    {
-                        return;
-                    }
-                    const glm::mat4 model = composeInterpolatedMatrix(transform, alpha);
-                    if (!lampView.intersects(transformBounds(mesh->bounds(), model)))
-                    {
-                        ++m_stats.shadowCulled;
-                        return;
-                    }
-                    ++m_stats.shadowCasters;
-                    // Props cast shadows at their coarsest level of detail: the
-                    // shadow map's texels are millimetres wide at best.
-                    if (const LodComponent* lod = registry.tryGet<LodComponent>(entity); (lod != nullptr) && !lod->lods.empty())
-                    {
-                        if (Mesh* coarse = meshForData(lod->lods.back()))
-                        {
-                            mesh = coarse;
-                        }
-                    }
-                    m_shadowShader->setMat4("uModel", model);
-                    mesh->draw();
-                    countDraw(*mesh);
-                });
+                    ++m_stats.shadowCulled;
+                    continue;
+                }
+                ++m_stats.shadowCasters;
+                m_shadowShader->setMat4("uModel", caster.model);
+                caster.mesh->draw();
+                countDraw(*caster.mesh);
+            }
         }
 
         glDisable(GL_POLYGON_OFFSET_FILL);
@@ -658,8 +695,12 @@ namespace BilliardsSaloon
         glEnable(GL_DEPTH_TEST);
         glEnable(GL_CULL_FACE);
 
-        glEndQuery(GL_TIME_ELAPSED);
-        m_timerPending[static_cast<std::size_t>(m_timerIndex)] = true;
+        if (m_timerActive)
+        {
+            glEndQuery(GL_TIME_ELAPSED);
+            m_timerPending[static_cast<std::size_t>(m_timerIndex)] = true;
+            m_timerActive = false;
+        }
         m_timerIndex = (m_timerIndex + 1) % TIMER_QUERIES;
     }
 

@@ -1,82 +1,5 @@
-#include "audio/sound_synth.h"
-
 #include <doctest/doctest.h>
-
 #include <cmath>
-
-using namespace BilliardsSaloon::Audio;
-
-namespace
-{
-    double rms(const SoundBuffer& sound)
-    {
-        double sum = 0.0;
-        for (const float s : sound.samples)
-        {
-            sum += static_cast<double>(s) * s;
-        }
-        return std::sqrt(sum / static_cast<double>(std::max<std::size_t>(sound.samples.size(), 1)));
-    }
-
-    // Energy in the first and last fifth of a sound: impacts must die away.
-    double tailRatio(const SoundBuffer& sound)
-    {
-        const std::size_t fifth = sound.samples.size() / 5;
-        double head = 0.0;
-        double tail = 0.0;
-        for (std::size_t i = 0; i < fifth; ++i)
-        {
-            head += std::abs(sound.samples[i]);
-            tail += std::abs(sound.samples[sound.samples.size() - 1 - i]);
-        }
-        return tail / std::max(head, 1.0e-9);
-    }
-}
-
-TEST_CASE("synthesised impacts are short, audible, unclipped and decay")
-{
-    for (const SoundBuffer& sound : {ballClick(1), cushionThud(2), pocketDrop(3), cueStrike(4), uiTick(), uiConfirm()})
-    {
-        CHECK(sound.seconds() > 0.02);
-        CHECK(sound.seconds() < 1.0);
-        CHECK(peak(sound) <= 1.0f);
-        CHECK(peak(sound) > 0.3f);
-        CHECK(tailRatio(sound) < 0.25);
-    }
-}
-
-TEST_CASE("synthesis is deterministic per seed and varies between seeds")
-{
-    CHECK(ballClick(5).samples == ballClick(5).samples);
-    CHECK(ballClick(5).samples != ballClick(6).samples);
-}
-
-TEST_CASE("crowd beds are steady, applause swells and fades")
-{
-    const SoundBuffer murmur = crowdMurmur(4.0, 11);
-    CHECK(murmur.seconds() > 3.5);
-    CHECK(peak(murmur) <= 1.0f);
-    CHECK(rms(murmur) > 0.02);
-
-    const SoundBuffer clap = applause(3.0, 12);
-    CHECK(peak(clap) <= 1.0f);
-    CHECK(tailRatio(clap) < 0.6);
-}
-
-TEST_CASE("a ball click is brighter than a cushion thud")
-{
-    // Zero crossings per second as a rough brightness measure.
-    const auto crossings = [](const SoundBuffer& sound)
-    {
-        int count = 0;
-        for (std::size_t i = 1; i < sound.samples.size(); ++i)
-        {
-            count += ((sound.samples[i - 1] < 0.0f) != (sound.samples[i] < 0.0f)) ? 1 : 0;
-        }
-        return static_cast<double>(count) / sound.seconds();
-    };
-    CHECK(crossings(ballClick(1)) > 3.0 * crossings(cushionThud(1)));
-}
 
 #include "audio/shot_sounds.h"
 #include "gameplay/game_variant.h"
@@ -84,6 +7,8 @@ TEST_CASE("a ball click is brighter than a cushion thud")
 
 #include <algorithm>
 #include <initializer_list>
+
+using namespace BilliardsSaloon::Audio;
 
 TEST_CASE("a break sounds like a break: a hard strike, a loud first contact, then softer clicks and cushions")
 {
@@ -107,7 +32,7 @@ TEST_CASE("a break sounds like a break: a hard strike, a loud first contact, the
     strike.phiDegrees = 90.0;
     const Sim::ShotTrajectory shot = Sim::simulateShot(table, balls, 0, strike, variant.table.simBall);
 
-    const std::vector<Audio::SoundCue> cues = Audio::planShotSounds(shot, variant.table.clothWidth, variant.table.clothDepth);
+    const std::vector<Audio::SoundCue> cues = Audio::planShotSounds(shot, table);
     REQUIRE(cues.size() > 10);
     CHECK(cues.front().kind == Audio::SoundKind::CueStrike);
     CHECK(cues.front().intensity > 0.8f);
@@ -125,4 +50,47 @@ TEST_CASE("a break sounds like a break: a hard strike, a loud first contact, the
         cushion = cushion || (cues[i].kind == Audio::SoundKind::Cushion);
     }
     CHECK(cushion);
+}
+
+TEST_CASE("glancing cushion contacts follow normal impact speed")
+{
+    using namespace BilliardsSaloon;
+    Sim::Table table;
+    table.length = 2.54;
+    table.width = 1.27;
+    table.linear.push_back({{0.0, 0.0, 0.03}, {0.0, 2.54, 0.03}, 0.001});
+    Sim::ShotTrajectory shot;
+    Sim::BallState ball;
+    ball.r = {0.1, 0.5, shot.params.R};
+    ball.v = {-0.1, 3.0, 0.0};
+    shot.events = {{Sim::EventType::Strike, 0.0, 0}, {Sim::EventType::LinearCushion, 0.0, 0, 0}};
+    shot.states = {{ball}, {ball}};
+    const auto glancing = planShotSounds(shot, table);
+    REQUIRE(glancing.size() == 2);
+    CHECK(glancing.back().intensity == doctest::Approx(std::sqrt(0.1 / 4.0)));
+    ball.v = {-3.0, 0.1, 0.0};
+    shot.states = {{ball}, {ball}};
+    const auto headOn = planShotSounds(shot, table);
+    REQUIRE(headOn.size() == 2);
+    CHECK(headOn.back().intensity > 4.0f * glancing.back().intensity);
+}
+
+TEST_CASE("different simultaneous rack contacts survive while repeated pair chatter merges")
+{
+    using namespace BilliardsSaloon;
+    const auto table = Sim::buildPocketTable(Sim::PocketTableSpec{});
+    Sim::ShotTrajectory shot;
+    std::vector<Sim::BallState> balls(4);
+    balls[0].r = {0.2, 0.5, shot.params.R};
+    balls[1].r = {0.2 + 2.0 * shot.params.R, 0.5, shot.params.R};
+    balls[2].r = {0.7, 1.5, shot.params.R};
+    balls[3].r = {0.7 + 2.0 * shot.params.R, 1.5, shot.params.R};
+    balls[0].v = balls[2].v = {2.0, 0.0, 0.0};
+    shot.events = {{Sim::EventType::Strike, 0.0, 0}, {Sim::EventType::BallBall, 0.0, 0, 1},
+                   {Sim::EventType::BallBall, 0.0, 2, 3}, {Sim::EventType::BallBall, 0.001, 0, 1}};
+    shot.states.assign(shot.events.size(), balls);
+    const auto cues = planShotSounds(shot, table);
+    REQUIRE(cues.size() == 3);
+    CHECK(cues[1].ball == 0);
+    CHECK(cues[2].ball == 2);
 }

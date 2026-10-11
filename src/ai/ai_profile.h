@@ -26,6 +26,8 @@ namespace BilliardsSaloon::Ai
         float thinkSeconds {1.2f};
         int samples {8};               // noisy simulations per finalist (more = steadier choices)
         bool learnedValue {false};     // judge positions with the learned value network when it is available
+        bool adaptive {false};         // match execution skill to the observed opponent
+        float valueWeight {1.0f};       // blend learned and classical scores; 1 preserves legacy behaviour
     };
 
     [[nodiscard]] std::vector<AiProfile> loadAiProfiles(const std::filesystem::path& file);

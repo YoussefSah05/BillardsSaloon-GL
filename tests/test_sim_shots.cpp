@@ -209,3 +209,43 @@ TEST_CASE("stateAt reproduces the recorded state at each event")
         CHECK(glm::length(just.r - shot.states[i][0].r) < 1e-6);
     }
 }
+
+TEST_CASE("single ball sampling agrees with recorded and full-table states")
+{
+    const BallParams params;
+    const Table table = buildPocketTable(PocketTableSpec{});
+    const ShotTrajectory shot = simulateShot(table, rackedTable(table, params), 0,
+        CueStrike{7.5, 91.0, 0.0, 0.2, -0.3}, params);
+    REQUIRE(shot.complete);
+    const auto compare = [&](double t)
+    {
+        const auto full = shot.stateAt(t);
+        for (std::size_t i = 0; i < full.size(); ++i)
+        {
+            const BallState one = shot.ballStateAt(i, t);
+            CHECK(one.r == full[i].r);
+            CHECK(one.v == full[i].v);
+            CHECK(one.w == full[i].w);
+            CHECK(one.s == full[i].s);
+        }
+    };
+    compare(-1.0);
+    for (std::size_t i = 0; i < shot.events.size(); ++i)
+    {
+        compare(shot.events[i].time);
+        if (i + 1 < shot.events.size())
+        {
+            compare(0.5 * (shot.events[i].time + shot.events[i + 1].time));
+        }
+    }
+    compare(shot.duration() + 1.0);
+
+    // Simultaneous events must select the last recorded state at that time.
+    ShotTrajectory simultaneous;
+    simultaneous.params = params;
+    simultaneous.events = {{EventType::Strike, 0.0, 0}, {EventType::Transition, 0.0, 0}};
+    simultaneous.states = {{at(0.2, 0.3, params)}, {at(0.4, 0.5, params)}};
+    CHECK(simultaneous.stateAt(0.0)[0].r == simultaneous.states.back()[0].r);
+    CHECK(simultaneous.ballStateAt(0, 0.0).r == simultaneous.states.back()[0].r);
+    CHECK(ShotTrajectory{}.stateAt(0.0).empty());
+}

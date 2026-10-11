@@ -4,13 +4,24 @@ Python side of the Intelligence milestone (see `docs/design/INTELLIGENCE.md`).
 The game's simulator, referee and classical AI are exposed as the
 `billiards_sim` module, so training sees exactly the game's physics and rules.
 
+The integrated model is the opponent-conditioned relational evaluator in
+`billiards_ml/adaptive_model.py`; its league training, expert iteration,
+validation and installation commands are in
+[ADAPTIVE_AI.md](../docs/design/ADAPTIVE_AI.md). `billiards_ml/model.py` is the
+earlier Transformer experiment, not the bundled Adaptive AI.
+
+The gated graph Transformer ensemble in `billiards_ml/reliable_model.py` is a
+trained alternative, not the shipped model: it failed the fresh prediction
+release gate. Its architecture, reproduction commands, measured results and
+installation checks are in [RELIABLE_AI.md](../docs/design/RELIABLE_AI.md).
+
 ## Setup
 
 ```bash
 cd ml
 uv sync                                   # Python 3.12, PyTorch, ONNX, ONNX Runtime
 cd ..
-cmake -B build-py -DCMAKE_BUILD_TYPE=Release -DBS_BUILD_PYTHON=ON -DBS_BUILD_TESTS=OFF \
+cmake -B build-py -DCMAKE_BUILD_TYPE=Release -DBS_BUILD_PYTHON=ON -DBS_BUILD_TESTS=OFF -DBS_WITH_ONNXRUNTIME=OFF \
       -DPython_EXECUTABLE=$PWD/ml/.venv/bin/python
 cmake --build build-py -j8 --target billiards_sim   # writes ml/billiards_sim.*.so
 ```

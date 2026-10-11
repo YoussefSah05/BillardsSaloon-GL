@@ -1,0 +1,369 @@
+{
+  "version": 1,
+  "sample_rate": 48000,
+  "samples": [
+    {
+      "bank": "ball",
+      "strength": 0,
+      "file": "ball_00.wav",
+      "source": "62331",
+      "sha256": "0ca6177bd0c02861e751ae083d6a78b9cf8341ad831a51e2ce08f54a28733860"
+    },
+    {
+      "bank": "ball",
+      "strength": 0,
+      "file": "ball_01.wav",
+      "source": "62331",
+      "sha256": "91fda38c62fde75ce958e0e2b0ba9fdbcfc98096df06603ebd92db07d1d4432b"
+    },
+    {
+      "bank": "ball",
+      "strength": 0,
+      "file": "ball_02.wav",
+      "source": "62331",
+      "sha256": "03b1848b5cdc254e5427744d865e6568edbcb9da17323999306a1b60e7626aa2"
+    },
+    {
+      "bank": "ball",
+      "strength": 1,
+      "file": "ball_03.wav",
+      "source": "62331",
+      "sha256": "5f625fea497195abf7b7617c8cabf97f24887ebc9f2fd0bddf9c569686336d68"
+    },
+    {
+      "bank": "ball",
+      "strength": 1,
+      "file": "ball_04.wav",
+      "source": "62331",
+      "sha256": "96a70dda0ab0c23ef944948e181986d9a768ed02453b356baf1caef6e93fa2a2"
+    },
+    {
+      "bank": "ball",
+      "strength": 1,
+      "file": "ball_05.wav",
+      "source": "62331",
+      "sha256": "7a3e0895b2e1569ef4b9142959ae064f74f854683be4fd7acac1133ae2cff9d1"
+    },
+    {
+      "bank": "ball",
+      "strength": 2,
+      "file": "ball_06.wav",
+      "source": "539854",
+      "sha256": "6695d1d08e6bea90c325c175610ae9d967b743ee7529f596d8b98dc5bd89da85"
+    },
+    {
+      "bank": "ball",
+      "strength": 2,
+      "file": "ball_07.wav",
+      "source": "62331",
+      "sha256": "874cdcc597aec5650d3b50705b6944e2ae02dd906fff95eef57533c4f4dce134"
+    },
+    {
+      "bank": "ball",
+      "strength": 2,
+      "file": "ball_08.wav",
+      "source": "350918",
+      "sha256": "e0f0652fc38f5cf950adf3f7f03857b6be8fadb4c546ec2a4d0a46bb307d503d"
+    },
+    {
+      "bank": "cue",
+      "strength": 0,
+      "file": "cue_00.wav",
+      "source": "350918",
+      "sha256": "2aa3b658c6529a3663200d0232a3f3031f3249d2c96c1c30b3296d5a90564cd3"
+    },
+    {
+      "bank": "cue",
+      "strength": 0,
+      "file": "cue_01.wav",
+      "source": "350918",
+      "sha256": "97a9663450031c8acdd5dc78d1e74e4d9035d4deda75f4cac342f1405662bd0c"
+    },
+    {
+      "bank": "cue",
+      "strength": 0,
+      "file": "cue_02.wav",
+      "source": "350918",
+      "sha256": "51f1925417a9defaea788eaad5eaea6be82d18a74a96ff9675364865cb5210fe"
+    },
+    {
+      "bank": "cue",
+      "strength": 1,
+      "file": "cue_03.wav",
+      "source": "350918",
+      "sha256": "432100eabb4c799bb2c5d0403cb88b01526021f9bba75f3f7d0f59ebd0ece695"
+    },
+    {
+      "bank": "cue",
+      "strength": 1,
+      "file": "cue_04.wav",
+      "source": "350918",
+      "sha256": "3ec9c2a3da75321e02edcbd8afe101bf2c16da43dd4a077fea75642369712f01"
+    },
+    {
+      "bank": "cue",
+      "strength": 1,
+      "file": "cue_05.wav",
+      "source": "350918",
+      "sha256": "ee21d0210209b374638854b1c9e1cae6e93f24ae72b297956d2076d71b5200b2"
+    },
+    {
+      "bank": "cue",
+      "strength": 2,
+      "file": "cue_06.wav",
+      "source": "350918",
+      "sha256": "818e7a962b2d0f77588b8c968e2d8b61ce9e10293cb09935c29f91c1bffa5aec"
+    },
+    {
+      "bank": "cue",
+      "strength": 2,
+      "file": "cue_07.wav",
+      "source": "350918",
+      "sha256": "f8c91bee9fd9806a9c5bae546fde78639e546ba85d99ec370f3b85b27c3a7a51"
+    },
+    {
+      "bank": "cue",
+      "strength": 2,
+      "file": "cue_08.wav",
+      "source": "350918",
+      "sha256": "074e55891da051c85cf8903b375c06cd12c187da072d71b47a6b7df90c3f1cf6"
+    },
+    {
+      "bank": "cushion",
+      "strength": 0,
+      "file": "cushion_00.wav",
+      "source": "cushion_0_0",
+      "sha256": "2942b95ab0c16bb3aca937cebafd76de3dc4da5e66dbf7a403606b3fdaca0449"
+    },
+    {
+      "bank": "cushion",
+      "strength": 0,
+      "file": "cushion_01.wav",
+      "source": "cushion_0_1",
+      "sha256": "01162e5f26a122ea50ac98ef531582dc1788e7640d465bc64dd79ca808e4ebc2"
+    },
+    {
+      "bank": "cushion",
+      "strength": 0,
+      "file": "cushion_02.wav",
+      "source": "cushion_0_2",
+      "sha256": "9a1bf456967d06d5eda85c1f49bd19aa9fa664bdc9ea82961267cdf272494c85"
+    },
+    {
+      "bank": "cushion",
+      "strength": 1,
+      "file": "cushion_03.wav",
+      "source": "cushion_1_0",
+      "sha256": "e51c00753963c6b892490082c008310754767941673124d797bd6b114c30858f"
+    },
+    {
+      "bank": "cushion",
+      "strength": 1,
+      "file": "cushion_04.wav",
+      "source": "cushion_1_1",
+      "sha256": "657d7edeb588c055fb63298f46d3bbeca5dc0d80c81409f63610c4d8bc9da30c"
+    },
+    {
+      "bank": "cushion",
+      "strength": 1,
+      "file": "cushion_05.wav",
+      "source": "cushion_1_2",
+      "sha256": "7a316803da1ea923b6dc884361f73d73d69063326709107e7bb054b8f11860ec"
+    },
+    {
+      "bank": "cushion",
+      "strength": 2,
+      "file": "cushion_06.wav",
+      "source": "cushion_2_0",
+      "sha256": "5bb8acfdf35a3187aee7864edb2acf89eb395a24c85c8cdd01ffe7ac0f7b405a"
+    },
+    {
+      "bank": "cushion",
+      "strength": 2,
+      "file": "cushion_07.wav",
+      "source": "cushion_2_1",
+      "sha256": "e60f9cb367a68ec3c34cf76cbe6030b50f02b2dbc83d4da42512502ce1bfec99"
+    },
+    {
+      "bank": "cushion",
+      "strength": 2,
+      "file": "cushion_08.wav",
+      "source": "cushion_2_2",
+      "sha256": "8174cf82d3572f32ae5a591f662b16d6ffcdcf45309abb55400cd824b7b39377"
+    },
+    {
+      "bank": "jaw",
+      "strength": 0,
+      "file": "jaw_00.wav",
+      "source": "jaw_0",
+      "sha256": "a17d479816369d2eeecdec943e1bdd6bde4cf3f94b5439da347e2de730b2507d"
+    },
+    {
+      "bank": "jaw",
+      "strength": 0,
+      "file": "jaw_01.wav",
+      "source": "jaw_1",
+      "sha256": "da90d106b6b96ad991461468a2720df68d009a7af5ccfc8e837ba91f6fe4d09b"
+    },
+    {
+      "bank": "jaw",
+      "strength": 0,
+      "file": "jaw_02.wav",
+      "source": "jaw_2",
+      "sha256": "e3a030b9b32f2db2b8f4571c3551a1f6907d8b8d7a3bec690772a04bc24d275c"
+    },
+    {
+      "bank": "pocket",
+      "strength": 0,
+      "file": "pocket_00.wav",
+      "source": "365525",
+      "sha256": "aa66a9cac4cf07d6a52defda17d5f3e7151f6c4027a1fd63ec3a9c63025e85f6"
+    },
+    {
+      "bank": "pocket",
+      "strength": 0,
+      "file": "pocket_01.wav",
+      "source": "365525",
+      "sha256": "f02aec942c38cff761af32fa058e5259f0d6f42111e887173b5584cd461785bc"
+    },
+    {
+      "bank": "pocket",
+      "strength": 0,
+      "file": "pocket_02.wav",
+      "source": "365525",
+      "sha256": "487ed539a8e5e42adbbb48841f4a37c288448b2620a22600658ce0f5dba4e7ea"
+    },
+    {
+      "bank": "place",
+      "strength": 0,
+      "file": "place_00.wav",
+      "source": "62331",
+      "sha256": "91f56bd2f4e2332a10dea290013a2ea6f82d047193868dbac9d2f300447be3c1"
+    },
+    {
+      "bank": "place",
+      "strength": 0,
+      "file": "place_01.wav",
+      "source": "62331",
+      "sha256": "d5ab379a6b0cb35ff8dc45e4580556c854191af81db67bfd57af0eb76560455f"
+    },
+    {
+      "bank": "place",
+      "strength": 0,
+      "file": "place_02.wav",
+      "source": "62331",
+      "sha256": "3832e2d9e62e2ee76bdda5071fede63a01769918d30f152735c22d046bfc6e8e"
+    },
+    {
+      "bank": "rack",
+      "strength": 0,
+      "file": "rack_00.wav",
+      "source": "365535",
+      "sha256": "441a3163d874bcea6126dcde32680d99a328ba18308a9b986e03d5c291b716e1"
+    },
+    {
+      "bank": "slide",
+      "strength": 0,
+      "file": "slide_00.wav",
+      "source": "fabric",
+      "sha256": "84cd2353e63224a144fd51da14727a67408e6489500e9e289190c26ce71e6820"
+    },
+    {
+      "bank": "slide",
+      "strength": 0,
+      "file": "slide_01.wav",
+      "source": "fabric",
+      "sha256": "0de6d52ac6117e1abd4cfa5287c32def7d856d5063d556c4216e97e5ffcb2f33"
+    },
+    {
+      "bank": "slide",
+      "strength": 0,
+      "file": "slide_02.wav",
+      "source": "fabric",
+      "sha256": "65a9a4eb48b61348df8549bd5bbc1b23ae661ba8b1f9b0568c8b7b87894b8aff"
+    },
+    {
+      "bank": "clock",
+      "strength": 0,
+      "file": "clock_00.wav",
+      "source": "clock",
+      "sha256": "e0d43ca05356aafc010d68d9b5d970d8d650e4a915c4e48b163d3fc797404bb9"
+    },
+    {
+      "bank": "ui_move",
+      "strength": 0,
+      "file": "ui_move_00.wav",
+      "source": "ui_move",
+      "sha256": "e49a87875d7d79bfe5b18754b040440960f1b905b6683cf3a01551219b180862"
+    },
+    {
+      "bank": "ui_confirm",
+      "strength": 0,
+      "file": "ui_confirm_00.wav",
+      "source": "ui_confirm",
+      "sha256": "79d192f2f107def784d0d141063963b9938c018f187ec9b607d1096a1dc08005"
+    },
+    {
+      "bank": "foul",
+      "strength": 0,
+      "file": "foul_00.wav",
+      "source": "foul",
+      "sha256": "0d1e605909dfadbed96aec766174414d0695802a9125172c97bd639243c069de"
+    },
+    {
+      "bank": "applause_short",
+      "strength": 0,
+      "file": "applause_short_00.wav",
+      "source": "applause",
+      "sha256": "8dbbcea9048d893907f27f05dc63a82d6feb00589d97305558ce5c507bd62c89"
+    },
+    {
+      "bank": "applause_long",
+      "strength": 0,
+      "file": "applause_long_00.wav",
+      "source": "applause_hall",
+      "sha256": "66c08a73cedbbd219c6ca5bdc6692682ba55824d72743c3309b91e305a75d549"
+    },
+    {
+      "bank": "murmur",
+      "strength": 0,
+      "file": "murmur_00.wav",
+      "source": "crowd",
+      "sha256": "34af6351bf8bc48604447ea17d6dc85ace05e3a55027aa1c98b108dd4347d88b"
+    },
+    {
+      "bank": "roll",
+      "strength": 0,
+      "file": "roll_00.wav",
+      "source": "350918",
+      "sha256": "4ef9327841900f48a2832496edf19309fc6e2eae1d2e4e753fad5c571fcbbe9f"
+    }
+  ],
+  "source_sha256": {
+    "539854": "8fba3f6faccc03d06ac6fa7f1a3e496b7dba18468364082526a9b8b52af0950d",
+    "350918": "0ca4915150197e66dc8771d73743cc2ff2cc418a67882633bd1e590d1b1bd6ef",
+    "365525": "acfef569f75721185dcabd21bbfca5763b6961d893af487106dddcb5a6c55189",
+    "365535": "f45badfa626dcbfd77c197e0947ede7992040442a3a72eafec8a8083c06bc18e",
+    "62331": "5d624bd6d82f2585875750d9eeabcb3e1b147b5b6b8d8fb47df485872312cbdc",
+    "fabric": "897c0937041afdf3581427b80a7546f99d219d0008e12ff5500c2afdfa4b7a1e",
+    "clock": "4b71c515407a78e2382353f9e8d711e4e576de6cc0d8ba88bb9da52d24f702b0",
+    "applause": "41e7646fc7ff5ffd66947bda50a07f194683318b23cb193d57c1650a5ec4953b",
+    "applause_hall": "0d3bfde5a050f3c5e6685bd7f1efc7ab1d289fbad65c88c1ce9b4691228c69c9",
+    "crowd": "1eea7277ed831fd38059f5b118c15b77a54ebd305dd3a8e797f9c67289a61ae9",
+    "ui_move": "ccfb7fa0cccdd9faec0eb16033c732b1e308d139d80f799161495d58f7adcdb9",
+    "ui_confirm": "063564703b6094d70718a3e787a55cc9141611e4ecd6b6637f8828f79b4a8c3a",
+    "foul": "46e67425d16339772e8d328fb36a49426c9467418686e11beeb71ff84b0f6433",
+    "cushion_0_0": "7d3ba0bb5e60a11b5d3e558c141303dcf494256675fbf753c0d252d2cf0481e3",
+    "cushion_0_1": "7642a4fd43e547afe4f7adfadb3dabb681c0ff512f52c1674bae30a726841faf",
+    "cushion_0_2": "5069e3571a77d7f7aae9ef71d0364aa245fb7d64a7c8cc9956f221d03088c089",
+    "cushion_1_0": "7d3ba0bb5e60a11b5d3e558c141303dcf494256675fbf753c0d252d2cf0481e3",
+    "cushion_1_1": "7642a4fd43e547afe4f7adfadb3dabb681c0ff512f52c1674bae30a726841faf",
+    "cushion_1_2": "5069e3571a77d7f7aae9ef71d0364aa245fb7d64a7c8cc9956f221d03088c089",
+    "cushion_2_0": "49e7ca88743fca974bb8676ea138b751cfd8f9033b5e7af8736c2a215d6edbc1",
+    "cushion_2_1": "4d0096364ba9e46119d2ff6df493fdc101bd2e1efae061da5e5f77a53b3fdcb6",
+    "cushion_2_2": "d130ae541951243d3f6ed963d0057450a445ffe117fbf9a084d34eb1635cb563",
+    "jaw_0": "eb45e35b4bed784d3f120de4afec4b0d6ac09d9e143cce8cfcb7d739e1b1f3c3",
+    "jaw_1": "4b76bf3ccc8e60d19188f3165b778a7817786faa6887c55d9049bcbeef3b425f",
+    "jaw_2": "b183cf7a5bd783817e0e4b82af34ac6658fa1927049089dadc8b15c2ecc771dc"
+  }
+}

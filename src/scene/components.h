@@ -166,9 +166,15 @@ namespace BilliardsSaloon
         float alpha)
     {
         InterpolatedTransform result;
-        result.position = glm::mix(transform.previousPosition, transform.position, alpha);
-        result.rotation = glm::normalize(glm::slerp(transform.previousRotation, transform.rotation, alpha));
-        result.scale = glm::mix(transform.previousScale, transform.scale, alpha);
+        // Mixing identical values can introduce alpha-dependent round-off.
+        // Stationary scenery must produce a stable matrix for cached shadows,
+        // and does not need quaternion interpolation every rendered frame.
+        result.position = (transform.previousPosition == transform.position) ? transform.position :
+            glm::mix(transform.previousPosition, transform.position, alpha);
+        result.rotation = (transform.previousRotation == transform.rotation) ? glm::normalize(transform.rotation) :
+            glm::normalize(glm::slerp(transform.previousRotation, transform.rotation, alpha));
+        result.scale = (transform.previousScale == transform.scale) ? transform.scale :
+            glm::mix(transform.previousScale, transform.scale, alpha);
         return result;
     }
 

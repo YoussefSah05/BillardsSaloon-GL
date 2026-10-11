@@ -29,6 +29,7 @@ namespace BilliardsSaloon
         int m_width {0};
         int m_height {0};
         int m_samples {0};
+        int m_maxSamples {0};
         unsigned int m_drawFramebuffer {0};
         unsigned int m_drawColor {0};
         unsigned int m_drawDepth {0};

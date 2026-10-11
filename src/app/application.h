@@ -12,6 +12,7 @@
 #include "core/launch_options.h"
 #include "ecs/entity.h"
 #include "ai/planner.h"
+#include "ai/opponent_model.h"
 #include "gameplay/director.h"
 #include "gameplay/match_session.h"
 #include "platform/input.h"
@@ -190,7 +191,11 @@ namespace BilliardsSaloon
         enum class AiStage { Idle, Thinking, Aiming };
         int m_aiSeat {-1};
         Ai::AiProfile m_aiProfile;
-        Ai::ValueFunction m_aiValue;          // the learned evaluation, when a model is loaded
+        Ai::AiProfile m_aiEffectiveProfile;   // frozen for planning AND execution of this shot
+        Ai::OpponentModel m_opponentModel;
+        std::function<Ai::ValueFunction(const Ai::AiProfile&, const Ai::AiProfile&, int)> m_aiValue;
+        bool m_pendingHumanShot {false};
+        float m_humanPotEase {0.0f};
         std::shared_ptr<void> m_valueModel;   // keeps it alive (type hidden without ONNX Runtime)
         AiStage m_aiStage {AiStage::Idle};
         std::future<AiPlan> m_aiFuture;
@@ -204,6 +209,8 @@ namespace BilliardsSaloon
         std::size_t m_nextSoundCue {0};
         std::uint32_t m_soundPlayback {0};
         double m_lastPlaybackSeconds {0.0};
+        bool m_audioWasPaused {false};
+        int m_lastClockTick {-1};
         std::optional<CameraViewMode> m_cameraBeforePlacing;
         ShotPhase m_previousShotPhase {ShotPhase::Aiming};
         float m_chargeBeforeShot {0.0f};

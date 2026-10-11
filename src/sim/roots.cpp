@@ -71,6 +71,81 @@ namespace BilliardsSaloon::Sim
 
             return x;
         }
+
+        // Degree is at most four: recursion needs only a few roots and
+        // turning points. Keep its scratch space on the stack, since collision
+        // searches call this thousands of times per shot.
+        struct RootBuffer
+        {
+            std::array<double, 8> values {};
+            std::size_t count {0};
+
+            const double* begin() const { return values.data(); }
+            const double* end() const { return values.data() + count; }
+        };
+
+        RootBuffer findRoots(const Polynomial& p, double lo, double hi)
+        {
+            RootBuffer roots;
+            if (!(lo <= hi) || p.degree() <= 0)
+            {
+                return roots;
+            }
+            if (p.degree() == 1)
+            {
+                const double root = -p.c[0] / p.c[1];
+                if (root >= lo && root <= hi)
+                {
+                    roots.values[roots.count++] = root;
+                }
+                return roots;
+            }
+
+            const Polynomial dp = p.derivative();
+            std::array<double, 10> knots {};
+            std::size_t count = 1;
+            knots[0] = lo;
+            for (const double critical : findRoots(dp, lo, hi))
+            {
+                if (critical > knots[count - 1])
+                {
+                    knots[count++] = critical;
+                }
+            }
+            if (hi > knots[count - 1])
+            {
+                knots[count++] = hi;
+            }
+
+            const auto addRoot = [&](double root)
+            {
+                if ((roots.count == 0) ||
+                    (root - roots.values[roots.count - 1]) > 1.0e-12 * std::max(1.0, std::abs(root)))
+                {
+                    roots.values[roots.count++] = root;
+                }
+            };
+            for (std::size_t i = 0; i < count; ++i)
+            {
+                const double a = knots[i];
+                const double fa = p(a);
+                if (isZero(p, a, fa))
+                {
+                    addRoot(a);
+                    continue;
+                }
+                if (i + 1 < count)
+                {
+                    const double b = knots[i + 1];
+                    const double fb = p(b);
+                    if (!isZero(p, b, fb) && ((fa < 0.0) != (fb < 0.0)))
+                    {
+                        addRoot(solveBracketed(p, dp, a, b));
+                    }
+                }
+            }
+            return roots;
+        }
     }
 
     double Polynomial::operator()(double t) const
@@ -100,83 +175,15 @@ namespace BilliardsSaloon::Sim
 
     std::vector<double> realRootsInInterval(const Polynomial& p, double lo, double hi)
     {
-        std::vector<double> roots;
-        if (!(lo <= hi))
-        {
-            return roots;
-        }
-
-        const int degree = p.degree();
-        if (degree <= 0)
-        {
-            return roots;   // constant: no isolated roots
-        }
-
-        if (degree == 1)
-        {
-            const double root = -p.c[0] / p.c[1];
-            if (root >= lo && root <= hi)
-            {
-                roots.push_back(root);
-            }
-            return roots;
-        }
-
-        // Split [lo, hi] at the turning points; p is monotonic between them.
-        const Polynomial dp = p.derivative();
-        std::vector<double> knots {lo};
-        for (const double critical : realRootsInInterval(dp, lo, hi))
-        {
-            if (critical > knots.back())
-            {
-                knots.push_back(critical);
-            }
-        }
-        if (hi > knots.back())
-        {
-            knots.push_back(hi);
-        }
-
-        auto addRoot = [&](double root)
-        {
-            if (roots.empty() || (root - roots.back()) > 1.0e-12 * std::max(1.0, std::abs(root)))
-            {
-                roots.push_back(root);
-            }
-        };
-
-        for (std::size_t i = 0; i < knots.size(); ++i)
-        {
-            const double a = knots[i];
-            const double fa = p(a);
-
-            // A knot that is (numerically) on zero: an endpoint root or a
-            // double root at a turning point.
-            if (isZero(p, a, fa))
-            {
-                addRoot(a);
-                continue;
-            }
-
-            if (i + 1 < knots.size())
-            {
-                const double b = knots[i + 1];
-                const double fb = p(b);
-                if (!isZero(p, b, fb) && ((fa < 0.0) != (fb < 0.0)))
-                {
-                    addRoot(solveBracketed(p, dp, a, b));
-                }
-            }
-        }
-
-        return roots;
+        const RootBuffer roots = findRoots(p, lo, hi);
+        return {roots.begin(), roots.end()};
     }
 
     double firstClosingRoot(const Polynomial& p, double lo, double hi)
     {
         const Polynomial dp = p.derivative();
 
-        for (const double root : realRootsInInterval(p, lo, hi))
+        for (const double root : findRoots(p, lo, hi))
         {
             if (root <= lo)
             {

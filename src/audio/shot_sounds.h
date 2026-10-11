@@ -13,7 +13,8 @@ namespace BilliardsSaloon::Audio
         CueStrike,
         BallBall,
         Cushion,
-        Pocket
+        Pocket,
+        PocketJaw
     };
 
     // A sound to play during a shot: when (simulated seconds), what, how
@@ -24,10 +25,12 @@ namespace BilliardsSaloon::Audio
         SoundKind kind {SoundKind::BallBall};
         float intensity {0.0f};
         glm::vec3 position {0.0f};
+        int ball {-1};
+        int other {-1};
     };
 
     // Reads a simulated shot's events into sound cues, in time order. Contacts
-    // too soft to hear are dropped, and near-simultaneous contacts of the same
-    // kind merge (resting balls nudging each other would otherwise buzz).
-    [[nodiscard]] std::vector<SoundCue> planShotSounds(const Sim::ShotTrajectory& trajectory, double tableLength, double tableWidth);
+    // too soft to hear are dropped; only repeated contacts at the same place
+    // between the same participants merge. Distinct rack contacts stay audible.
+    [[nodiscard]] std::vector<SoundCue> planShotSounds(const Sim::ShotTrajectory& trajectory, const Sim::Table& table);
 }

@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "source": "Purposeful direct-pot attempts under the game's noisy classical search",
+  "frames": 300,
+  "attempts": 4561,
+  "holdout_frames": 58,
+  "seed_domain": 620000000,
+  "pot": {
+    "intercepts": [
+      0.5297681093215942,
+      0.28497543931007385,
+      0.06764376163482666
+    ],
+    "skill": 0.9471204876899719,
+    "log_ease": 0.6893863081932068,
+    "validation": {
+      "log_loss": 0.6466917395591736,
+      "brier": 0.228160560131073,
+      "accuracy": 0.6134889753566797
+    }
+  },
+  "foul": {
+    "intercepts": [
+      -2.445427656173706,
+      -2.1277027130126953,
+      -2.2160680294036865
+    ],
+    "skill": -1.1521995067596436,
+    "log_ease": -0.3884257674217224,
+    "validation": {
+      "log_loss": 0.3109775483608246,
+      "brier": 0.08695338666439056,
+      "accuracy": 0.9007009345794392
+    }
+  }
+}

@@ -1,0 +1,622 @@
+{
+  "version": 1,
+  "sources": {
+    "539854": {
+      "local": "539854.mp3",
+      "url": "https://cdn.freesound.org/previews/539/539854_12029332-hq.mp3",
+      "page": "https://freesound.org/people/Za-Games/sounds/539854/",
+      "license": "CC0-1.0",
+      "title": "Freesound - billiard ball clack by Za-Games"
+    },
+    "350918": {
+      "local": "350918.mp3",
+      "url": "https://cdn.freesound.org/previews/350/350918_1147184-hq.mp3",
+      "page": "https://freesound.org/people/csaszi/sounds/350918/",
+      "license": "CC0-1.0",
+      "title": "Freesound - BILLIARD pool shots- CsG.wav by csaszi"
+    },
+    "365525": {
+      "local": "365525.mp3",
+      "url": "https://cdn.freesound.org/previews/365/365525_5407590-hq.mp3",
+      "page": "https://freesound.org/people/Caitlin_100/sounds/365525/",
+      "license": "CC0-1.0",
+      "title": "Freesound - Potting snooker balls.mp3 by Caitlin_100"
+    },
+    "365535": {
+      "local": "365535.mp3",
+      "url": "https://cdn.freesound.org/previews/365/365535_5407590-hq.mp3",
+      "page": "https://freesound.org/people/Caitlin_100/sounds/365535/",
+      "license": "CC0-1.0",
+      "title": "Freesound - Snooker &amp; pool balls.mp3 by Caitlin_100"
+    },
+    "62331": {
+      "local": "62331.mp3",
+      "url": "https://cdn.freesound.org/previews/62/62331_791247-hq.mp3",
+      "page": "https://freesound.org/people/bsumusictech/sounds/62331/",
+      "license": "CC0-1.0",
+      "title": "Pool balls.wav by bsumusictech"
+    },
+    "fabric": {
+      "local": "fabric.ogg",
+      "url": "https://opengameart.org/sites/default/files/rustling.ogg",
+      "page": "https://opengameart.org/content/fabric-rustling",
+      "title": "Fabric Rustling by Iochi Glaucus",
+      "license": "CC0-1.0"
+    },
+    "clock": {
+      "local": "clock.wav",
+      "url": "https://opengameart.org/sites/default/files/Slow%20Office%20Clock%20Tick%20Sfx.wav",
+      "page": "https://opengameart.org/content/slow-clock-ticking-seamless-looping-sfx-sound-effect",
+      "title": "Sound Effect By Nicole Marie T",
+      "license": "CC-BY-4.0"
+    },
+    "applause": {
+      "local": "applause.flac",
+      "url": "https://opengameart.org/sites/default/files/Well%20Done%20CCBY3.flac",
+      "page": "https://opengameart.org/content/well-done",
+      "title": "Well Done by qubodup (changed to CC0 on 2024-10-05)",
+      "license": "CC0-1.0"
+    },
+    "applause_hall": {
+      "local": "applause_hall.wav",
+      "url": "https://opengameart.org/sites/default/files/applause-clapping-church-crowd-immersive.wav",
+      "page": "https://opengameart.org/content/applause-in-a-large-hall-or-church",
+      "title": "Applause in a large hall or church by eXpl0it3r",
+      "license": "CC0-1.0"
+    },
+    "crowd": {
+      "local": "crowd.zip",
+      "url": "https://opengameart.org/sites/default/files/gregor_quendel_-_free_crowd_cheering_sounds_-_mp3.zip",
+      "page": "https://opengameart.org/content/free-crowd-cheering-sounds",
+      "title": "Free Crowd Cheering Sounds by Gregor Quendel",
+      "license": "CC-BY-4.0",
+      "member": "Gregor Quendel - Free Crowd Cheering Sounds - MP3/Gregor Quendel - Crowd Cheering Sounds - 10 - Ambience.mp3"
+    },
+    "ui_move": {
+      "local": "interface.zip",
+      "url": "https://kenney.nl/media/pages/assets/interface-sounds/fa43c1dd4d-1677589452/kenney_interface-sounds.zip",
+      "page": "https://kenney.nl/assets/interface-sounds",
+      "title": "Interface Sounds by Kenney",
+      "license": "CC0-1.0",
+      "member": "Audio/click_001.ogg"
+    },
+    "ui_confirm": {
+      "local": "interface.zip",
+      "url": "https://kenney.nl/media/pages/assets/interface-sounds/fa43c1dd4d-1677589452/kenney_interface-sounds.zip",
+      "page": "https://kenney.nl/assets/interface-sounds",
+      "title": "Interface Sounds by Kenney",
+      "license": "CC0-1.0",
+      "member": "Audio/confirmation_001.ogg"
+    },
+    "foul": {
+      "local": "interface.zip",
+      "url": "https://kenney.nl/media/pages/assets/interface-sounds/fa43c1dd4d-1677589452/kenney_interface-sounds.zip",
+      "page": "https://kenney.nl/assets/interface-sounds",
+      "title": "Interface Sounds by Kenney",
+      "license": "CC0-1.0",
+      "member": "Audio/error_001.ogg"
+    },
+    "cushion_0_0": {
+      "local": "impact.zip",
+      "url": "https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip",
+      "page": "https://kenney.nl/assets/impact-sounds",
+      "title": "Impact Sounds by Kenney",
+      "license": "CC0-1.0",
+      "member": "Audio/impactSoft_medium_000.ogg"
+    },
+    "cushion_0_1": {
+      "local": "impact.zip",
+      "url": "https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip",
+      "page": "https://kenney.nl/assets/impact-sounds",
+      "title": "Impact Sounds by Kenney",
+      "license": "CC0-1.0",
+      "member": "Audio/impactSoft_medium_001.ogg"
+    },
+    "cushion_0_2": {
+      "local": "impact.zip",
+      "url": "https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip",
+      "page": "https://kenney.nl/assets/impact-sounds",
+      "title": "Impact Sounds by Kenney",
+      "license": "CC0-1.0",
+      "member": "Audio/impactSoft_medium_002.ogg"
+    },
+    "cushion_1_0": {
+      "local": "impact.zip",
+      "url": "https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip",
+      "page": "https://kenney.nl/assets/impact-sounds",
+      "title": "Impact Sounds by Kenney",
+      "license": "CC0-1.0",
+      "member": "Audio/impactSoft_medium_000.ogg"
+    },
+    "cushion_1_1": {
+      "local": "impact.zip",
+      "url": "https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip",
+      "page": "https://kenney.nl/assets/impact-sounds",
+      "title": "Impact Sounds by Kenney",
+      "license": "CC0-1.0",
+      "member": "Audio/impactSoft_medium_001.ogg"
+    },
+    "cushion_1_2": {
+      "local": "impact.zip",
+      "url": "https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip",
+      "page": "https://kenney.nl/assets/impact-sounds",
+      "title": "Impact Sounds by Kenney",
+      "license": "CC0-1.0",
+      "member": "Audio/impactSoft_medium_002.ogg"
+    },
+    "cushion_2_0": {
+      "local": "impact.zip",
+      "url": "https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip",
+      "page": "https://kenney.nl/assets/impact-sounds",
+      "title": "Impact Sounds by Kenney",
+      "license": "CC0-1.0",
+      "member": "Audio/impactSoft_heavy_000.ogg"
+    },
+    "cushion_2_1": {
+      "local": "impact.zip",
+      "url": "https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip",
+      "page": "https://kenney.nl/assets/impact-sounds",
+      "title": "Impact Sounds by Kenney",
+      "license": "CC0-1.0",
+      "member": "Audio/impactSoft_heavy_001.ogg"
+    },
+    "cushion_2_2": {
+      "local": "impact.zip",
+      "url": "https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip",
+      "page": "https://kenney.nl/assets/impact-sounds",
+      "title": "Impact Sounds by Kenney",
+      "license": "CC0-1.0",
+      "member": "Audio/impactSoft_heavy_002.ogg"
+    },
+    "jaw_0": {
+      "local": "impact.zip",
+      "url": "https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip",
+      "page": "https://kenney.nl/assets/impact-sounds",
+      "title": "Impact Sounds by Kenney",
+      "license": "CC0-1.0",
+      "member": "Audio/impactWood_light_000.ogg"
+    },
+    "jaw_1": {
+      "local": "impact.zip",
+      "url": "https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip",
+      "page": "https://kenney.nl/assets/impact-sounds",
+      "title": "Impact Sounds by Kenney",
+      "license": "CC0-1.0",
+      "member": "Audio/impactWood_light_001.ogg"
+    },
+    "jaw_2": {
+      "local": "impact.zip",
+      "url": "https://kenney.nl/media/pages/assets/impact-sounds/87b4ddecda-1677589768/kenney_impact-sounds.zip",
+      "page": "https://kenney.nl/assets/impact-sounds",
+      "title": "Impact Sounds by Kenney",
+      "license": "CC0-1.0",
+      "member": "Audio/impactWood_light_002.ogg"
+    }
+  },
+  "samples": [
+    {
+      "bank": "ball",
+      "source": "62331",
+      "file": "ball_00.wav",
+      "start": 2.25,
+      "strength": 0,
+      "peak": 0.82,
+      "duration": 0.38
+    },
+    {
+      "bank": "ball",
+      "source": "62331",
+      "file": "ball_01.wav",
+      "start": 7.05,
+      "strength": 0,
+      "peak": 0.82,
+      "duration": 0.36
+    },
+    {
+      "bank": "ball",
+      "source": "62331",
+      "file": "ball_02.wav",
+      "start": 8.05,
+      "strength": 0,
+      "peak": 0.82,
+      "duration": 0.27
+    },
+    {
+      "bank": "ball",
+      "source": "62331",
+      "file": "ball_03.wav",
+      "start": 13.5,
+      "strength": 1,
+      "peak": 0.82,
+      "duration": 0.25
+    },
+    {
+      "bank": "ball",
+      "source": "62331",
+      "file": "ball_04.wav",
+      "start": 14.23,
+      "strength": 1,
+      "peak": 0.82,
+      "duration": 0.24
+    },
+    {
+      "bank": "ball",
+      "source": "62331",
+      "file": "ball_05.wav",
+      "start": 21.3,
+      "strength": 1,
+      "peak": 0.82,
+      "duration": 0.3
+    },
+    {
+      "bank": "ball",
+      "source": "539854",
+      "file": "ball_06.wav",
+      "start": 0,
+      "strength": 2,
+      "peak": 0.82,
+      "duration": 0.2393
+    },
+    {
+      "bank": "ball",
+      "source": "62331",
+      "file": "ball_07.wav",
+      "start": 16.2,
+      "strength": 2,
+      "peak": 0.82,
+      "duration": 0.25
+    },
+    {
+      "bank": "ball",
+      "source": "350918",
+      "file": "ball_08.wav",
+      "start": 10.03,
+      "strength": 2,
+      "peak": 0.82,
+      "duration": 0.18
+    },
+    {
+      "bank": "cue",
+      "source": "350918",
+      "file": "cue_00.wav",
+      "start": 0.21,
+      "strength": 0,
+      "lowpass": 2500,
+      "peak": 0.78,
+      "duration": 0.13
+    },
+    {
+      "bank": "cue",
+      "source": "350918",
+      "file": "cue_01.wav",
+      "start": 7.08,
+      "strength": 0,
+      "lowpass": 2500,
+      "peak": 0.78,
+      "duration": 0.16
+    },
+    {
+      "bank": "cue",
+      "source": "350918",
+      "file": "cue_02.wav",
+      "start": 9.79,
+      "strength": 0,
+      "lowpass": 2500,
+      "peak": 0.78,
+      "duration": 0.16
+    },
+    {
+      "bank": "cue",
+      "source": "350918",
+      "file": "cue_03.wav",
+      "start": 0.21,
+      "strength": 1,
+      "lowpass": 5000,
+      "peak": 0.78,
+      "duration": 0.13
+    },
+    {
+      "bank": "cue",
+      "source": "350918",
+      "file": "cue_04.wav",
+      "start": 7.08,
+      "strength": 1,
+      "lowpass": 5000,
+      "peak": 0.78,
+      "duration": 0.16
+    },
+    {
+      "bank": "cue",
+      "source": "350918",
+      "file": "cue_05.wav",
+      "start": 9.79,
+      "strength": 1,
+      "lowpass": 5000,
+      "peak": 0.78,
+      "duration": 0.16
+    },
+    {
+      "bank": "cue",
+      "source": "350918",
+      "file": "cue_06.wav",
+      "start": 0.21,
+      "strength": 2,
+      "lowpass": 11000,
+      "peak": 0.78,
+      "duration": 0.13
+    },
+    {
+      "bank": "cue",
+      "source": "350918",
+      "file": "cue_07.wav",
+      "start": 7.08,
+      "strength": 2,
+      "lowpass": 11000,
+      "peak": 0.78,
+      "duration": 0.16
+    },
+    {
+      "bank": "cue",
+      "source": "350918",
+      "file": "cue_08.wav",
+      "start": 9.79,
+      "strength": 2,
+      "lowpass": 11000,
+      "peak": 0.78,
+      "duration": 0.16
+    },
+    {
+      "bank": "cushion",
+      "source": "cushion_0_0",
+      "file": "cushion_00.wav",
+      "start": 0,
+      "strength": 0,
+      "lowpass": 1000,
+      "peak": 0.72
+    },
+    {
+      "bank": "cushion",
+      "source": "cushion_0_1",
+      "file": "cushion_01.wav",
+      "start": 0,
+      "strength": 0,
+      "lowpass": 1000,
+      "peak": 0.72
+    },
+    {
+      "bank": "cushion",
+      "source": "cushion_0_2",
+      "file": "cushion_02.wav",
+      "start": 0,
+      "strength": 0,
+      "lowpass": 1000,
+      "peak": 0.72
+    },
+    {
+      "bank": "cushion",
+      "source": "cushion_1_0",
+      "file": "cushion_03.wav",
+      "start": 0,
+      "strength": 1,
+      "lowpass": 1600,
+      "peak": 0.72
+    },
+    {
+      "bank": "cushion",
+      "source": "cushion_1_1",
+      "file": "cushion_04.wav",
+      "start": 0,
+      "strength": 1,
+      "lowpass": 1600,
+      "peak": 0.72
+    },
+    {
+      "bank": "cushion",
+      "source": "cushion_1_2",
+      "file": "cushion_05.wav",
+      "start": 0,
+      "strength": 1,
+      "lowpass": 1600,
+      "peak": 0.72
+    },
+    {
+      "bank": "cushion",
+      "source": "cushion_2_0",
+      "file": "cushion_06.wav",
+      "start": 0,
+      "strength": 2,
+      "lowpass": 2400,
+      "peak": 0.72
+    },
+    {
+      "bank": "cushion",
+      "source": "cushion_2_1",
+      "file": "cushion_07.wav",
+      "start": 0,
+      "strength": 2,
+      "lowpass": 2400,
+      "peak": 0.72
+    },
+    {
+      "bank": "cushion",
+      "source": "cushion_2_2",
+      "file": "cushion_08.wav",
+      "start": 0,
+      "strength": 2,
+      "lowpass": 2400,
+      "peak": 0.72
+    },
+    {
+      "bank": "jaw",
+      "source": "jaw_0",
+      "file": "jaw_00.wav",
+      "start": 0,
+      "lowpass": 3500,
+      "peak": 0.72
+    },
+    {
+      "bank": "jaw",
+      "source": "jaw_1",
+      "file": "jaw_01.wav",
+      "start": 0,
+      "lowpass": 3500,
+      "peak": 0.72
+    },
+    {
+      "bank": "jaw",
+      "source": "jaw_2",
+      "file": "jaw_02.wav",
+      "start": 0,
+      "lowpass": 3500,
+      "peak": 0.72
+    },
+    {
+      "bank": "pocket",
+      "source": "365525",
+      "file": "pocket_00.wav",
+      "start": 0.55,
+      "peak": 0.7,
+      "duration": 0.65
+    },
+    {
+      "bank": "pocket",
+      "source": "365525",
+      "file": "pocket_01.wav",
+      "start": 6.4,
+      "peak": 0.7,
+      "duration": 0.9
+    },
+    {
+      "bank": "pocket",
+      "source": "365525",
+      "file": "pocket_02.wav",
+      "start": 8.8,
+      "peak": 0.7,
+      "duration": 0.9
+    },
+    {
+      "bank": "place",
+      "source": "62331",
+      "file": "place_00.wav",
+      "start": 2.25,
+      "lowpass": 1200,
+      "peak": 0.5,
+      "duration": 0.2
+    },
+    {
+      "bank": "place",
+      "source": "62331",
+      "file": "place_01.wav",
+      "start": 7.05,
+      "lowpass": 1200,
+      "peak": 0.5,
+      "duration": 0.2
+    },
+    {
+      "bank": "place",
+      "source": "62331",
+      "file": "place_02.wav",
+      "start": 8.05,
+      "lowpass": 1200,
+      "peak": 0.5,
+      "duration": 0.2
+    },
+    {
+      "bank": "rack",
+      "source": "365535",
+      "file": "rack_00.wav",
+      "start": 0.2,
+      "peak": 0.55,
+      "duration": 1.8
+    },
+    {
+      "bank": "slide",
+      "source": "fabric",
+      "file": "slide_00.wav",
+      "start": 1.1,
+      "peak": 0.4,
+      "duration": 0.22
+    },
+    {
+      "bank": "slide",
+      "source": "fabric",
+      "file": "slide_01.wav",
+      "start": 2.4,
+      "peak": 0.4,
+      "duration": 0.22
+    },
+    {
+      "bank": "slide",
+      "source": "fabric",
+      "file": "slide_02.wav",
+      "start": 3.6,
+      "peak": 0.4,
+      "duration": 0.22
+    },
+    {
+      "bank": "clock",
+      "source": "clock",
+      "file": "clock_00.wav",
+      "start": 0.69,
+      "peak": 0.4,
+      "duration": 0.16
+    },
+    {
+      "bank": "ui_move",
+      "source": "ui_move",
+      "file": "ui_move_00.wav",
+      "start": 0,
+      "peak": 0.5
+    },
+    {
+      "bank": "ui_confirm",
+      "source": "ui_confirm",
+      "file": "ui_confirm_00.wav",
+      "start": 0,
+      "peak": 0.5
+    },
+    {
+      "bank": "foul",
+      "source": "foul",
+      "file": "foul_00.wav",
+      "start": 0,
+      "peak": 0.5
+    },
+    {
+      "bank": "applause_short",
+      "source": "applause",
+      "file": "applause_short_00.wav",
+      "start": 0,
+      "peak": 0.7
+    },
+    {
+      "bank": "applause_long",
+      "source": "applause_hall",
+      "file": "applause_long_00.wav",
+      "start": 2,
+      "peak": 0.7,
+      "duration": 7
+    },
+    {
+      "bank": "murmur",
+      "source": "crowd",
+      "file": "murmur_00.wav",
+      "start": 4,
+      "trim": false,
+      "loop": true,
+      "peak": 0.55,
+      "duration": 16
+    },
+    {
+      "bank": "roll",
+      "source": "350918",
+      "file": "roll_00.wav",
+      "start": 1.0,
+      "trim": false,
+      "loop": true,
+      "lowpass": 1400,
+      "peak": 0.4,
+      "duration": 1.8
+    }
+  ]
+}

@@ -52,9 +52,12 @@ namespace BilliardsSaloon
     {
         width = std::max(width, 1);
         height = std::max(height, 1);
-        int maxSamples = 1;
-        glGetIntegerv(GL_MAX_SAMPLES, &maxSamples);
-        samples = std::clamp(samples, 1, maxSamples);
+        if (m_maxSamples == 0)
+        {
+            glGetIntegerv(GL_MAX_SAMPLES, &m_maxSamples);
+            m_maxSamples = std::max(m_maxSamples, 1);
+        }
+        samples = std::clamp(samples, 1, m_maxSamples);
         if ((width == m_width) && (height == m_height) && (samples == m_samples) && (m_drawFramebuffer != 0))
         {
             return;

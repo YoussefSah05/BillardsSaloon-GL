@@ -8,6 +8,7 @@
 #include "render/mesh.h"
 #include "render/number_atlas.h"
 #include "render/render_targets.h"
+#include "render/render_quality.h"
 #include "render/shader.h"
 #include "scene/components.h"
 #include "scene/visibility.h"
@@ -22,13 +23,6 @@
 
 namespace BilliardsSaloon
 {
-    enum class RenderQualityPreset
-    {
-        Low,
-        Balanced,
-        High
-    };
-
     [[nodiscard]] const char* renderQualityLabel(RenderQualityPreset quality);
     [[nodiscard]] RenderQualityPreset nextRenderQuality(RenderQualityPreset quality);
 
@@ -77,7 +71,7 @@ namespace BilliardsSaloon
     // What the last frame cost: for profiling and the --profile report.
     struct RenderStats
     {
-        int drawCalls {0};            // all passes
+        int drawCalls {0};            // world and shadow passes (excludes guides, cue, post and UI)
         int triangles {0};
         int objectsDrawn {0};         // scene pass
         int objectsCulled {0};        // scene pass, outside the view
@@ -89,6 +83,8 @@ namespace BilliardsSaloon
         float gpuMilliseconds {0.0f}; // the frame before last (queries are read without waiting)
         float probeCaptureMilliseconds {0.0f};   // the last light probe capture (CPU, both bounces)
         int probes {0};
+        int sceneWidth {0};
+        int sceneHeight {0};
     };
 
     // Optional emphasis on one ball (the cue ball while aiming).
@@ -239,6 +235,19 @@ namespace BilliardsSaloon
         std::array<unsigned int, TIMER_QUERIES> m_timerQueries {};
         std::array<bool, TIMER_QUERIES> m_timerPending {};
         int m_timerIndex {0};
+        bool m_timerActive {false};
+
+        struct ShadowCaster
+        {
+            Entity entity;
+            Mesh* mesh {nullptr};
+            glm::mat4 model {1.0f};
+            Bounds world;
+        };
+        std::vector<ShadowCaster> m_shadowCasters;
+        std::vector<ShadowCaster> m_previousShadowCasters;
+        std::vector<glm::mat4> m_previousLightMatrices;
+        int m_previousShadowSize {0};
         std::unique_ptr<Mesh> m_cubeMesh;
         std::unique_ptr<Mesh> m_planeMesh;
         std::unique_ptr<Mesh> m_sphereMesh;

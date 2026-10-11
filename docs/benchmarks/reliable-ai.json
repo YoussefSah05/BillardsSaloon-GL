@@ -1,0 +1,333 @@
+{
+  "status": "rejected; current trained Transformer retained",
+  "training": {
+    "schema": 2,
+    "name": "Calibrated gated graph Transformer ensemble",
+    "members": 3,
+    "seeds": [
+      142,
+      314,
+      2718
+    ],
+    "architecture": {
+      "width": 64,
+      "layers": 2,
+      "heads": 4,
+      "normalization": "RMSNorm",
+      "feed_forward": "SwiGLU",
+      "pooling": "context-conditioned attention",
+      "relation_bias": true
+    },
+    "parameters": 368517,
+    "temperature": 1.0,
+    "features": 256,
+    "test": {
+      "log_loss": 0.6351950168609619,
+      "brier": 0.22188328206539154,
+      "accuracy": 0.6485052413614598,
+      "ece_15": 0.041402077913415436
+    },
+    "previous_model": {
+      "log_loss": 0.6307482123374939,
+      "brier": 0.21970774233341217,
+      "accuracy": 0.6609292092662093,
+      "ece_15": 0.05125414512369801
+    },
+    "previous_model_sha256": "e02e6f730ede9f7838fd5c551920c662b4f2bcb5a26e6b3280dd65d43d2844b5",
+    "selection": {
+      "log_loss": 0.6957049369812012,
+      "brier": 0.2500343918800354,
+      "accuracy": 0.552917903066271,
+      "ece_15": 0.05610024208307974
+    },
+    "calibration": {
+      "log_loss": 0.6469147801399231,
+      "brier": 0.22722913324832916,
+      "accuracy": 0.6229302558956348,
+      "ece_15": 0.026335693421043225
+    },
+    "uncalibrated_test": {
+      "log_loss": 0.6351950168609619,
+      "brier": 0.22188325226306915,
+      "accuracy": 0.6485052413614598,
+      "ece_15": 0.041402077913415436
+    },
+    "accuracy_frame_bootstrap_95": [
+      -0.02641760683112113,
+      6.409323564751078e-05
+    ],
+    "frame_mean_accuracy_change": -0.013360599304437486,
+    "stratified": {
+      "EIGHT_BALL/sam_whitlock": {
+        "positions": 972,
+        "log_loss": 0.6869737505912781,
+        "brier": 0.24572771787643433,
+        "accuracy": 0.5823045267489712,
+        "ece_15": 0.10158470444718506
+      },
+      "EIGHT_BALL/dani_reyes": {
+        "positions": 1299,
+        "log_loss": 0.584900438785553,
+        "brier": 0.19829486310482025,
+        "accuracy": 0.737490377213241,
+        "ece_15": 0.13484258666416607
+      },
+      "EIGHT_BALL/iris_lindqvist": {
+        "positions": 848,
+        "log_loss": 0.6371382474899292,
+        "brier": 0.22355249524116516,
+        "accuracy": 0.6096698113207547,
+        "ece_15": 0.12278093402888979
+      },
+      "EIGHT_BALL/marta_okafor": {
+        "positions": 878,
+        "log_loss": 0.6116509437561035,
+        "brier": 0.21210895478725433,
+        "accuracy": 0.643507972665148,
+        "ece_15": 0.12477184071763503
+      },
+      "EIGHT_BALL/viktor_hale": {
+        "positions": 957,
+        "log_loss": 0.6019952893257141,
+        "brier": 0.20535501837730408,
+        "accuracy": 0.7084639498432602,
+        "ece_15": 0.06753518761699101
+      },
+      "NINE_BALL/sam_whitlock": {
+        "positions": 856,
+        "log_loss": 0.6542730331420898,
+        "brier": 0.23153679072856903,
+        "accuracy": 0.6063084112149533,
+        "ece_15": 0.06540087213583082
+      },
+      "NINE_BALL/dani_reyes": {
+        "positions": 1009,
+        "log_loss": 0.6672421097755432,
+        "brier": 0.23726148903369904,
+        "accuracy": 0.5926660059464817,
+        "ece_15": 0.04067284301499309
+      },
+      "NINE_BALL/iris_lindqvist": {
+        "positions": 716,
+        "log_loss": 0.6827391982078552,
+        "brier": 0.24453818798065186,
+        "accuracy": 0.6033519553072626,
+        "ece_15": 0.11496389307622804
+      },
+      "NINE_BALL/marta_okafor": {
+        "positions": 841,
+        "log_loss": 0.6565605998039246,
+        "brier": 0.23215223848819733,
+        "accuracy": 0.5897740784780023,
+        "ece_15": 0.06119432992232114
+      },
+      "NINE_BALL/viktor_hale": {
+        "positions": 794,
+        "log_loss": 0.6106416583061218,
+        "brier": 0.21034936606884003,
+        "accuracy": 0.6775818639798489,
+        "ece_15": 0.06121865023743896
+      },
+      "TEN_BALL/sam_whitlock": {
+        "positions": 1378,
+        "log_loss": 0.6134279370307922,
+        "brier": 0.21074797213077545,
+        "accuracy": 0.7264150943396226,
+        "ece_15": 0.12642069163100986
+      },
+      "TEN_BALL/dani_reyes": {
+        "positions": 1265,
+        "log_loss": 0.6113820672035217,
+        "brier": 0.21021346747875214,
+        "accuracy": 0.7138339920948616,
+        "ece_15": 0.14198129264262352
+      },
+      "TEN_BALL/iris_lindqvist": {
+        "positions": 1549,
+        "log_loss": 0.6702552437782288,
+        "brier": 0.23891538381576538,
+        "accuracy": 0.5532601678502259,
+        "ece_15": 0.0648655516917356
+      },
+      "TEN_BALL/marta_okafor": {
+        "positions": 1142,
+        "log_loss": 0.6549617648124695,
+        "brier": 0.23130616545677185,
+        "accuracy": 0.6007005253940455,
+        "ece_15": 0.09114889563069452
+      },
+      "TEN_BALL/viktor_hale": {
+        "positions": 950,
+        "log_loss": 0.6013585925102234,
+        "brier": 0.20496973395347595,
+        "accuracy": 0.7452631578947368,
+        "ece_15": 0.14306326053644486
+      }
+    },
+    "train_frames": 2880,
+    "selection_frames": 180,
+    "calibration_frames": 179,
+    "test_frames": 359,
+    "train_positions": 126164,
+    "disagreement_mean": 0.04600094258785248,
+    "weaker_opponent_value_delta": 0.1472904235124588,
+    "onnx_max_difference": 1.4901161193847656e-07,
+    "inference_ms": 0.31477691599866375,
+    "model_sha256": "c8332ec4c4a60a4f685b511dfdf7f966237b44a3d39ff2db03b6f1c288d97e3f",
+    "provenance": {
+      "config": {
+        "epochs": 12,
+        "batch": 512,
+        "threads": 4,
+        "optimizer": "AdamW",
+        "lr": 0.0003,
+        "weight_decay": 0.003,
+        "gradient_clip": 1.0,
+        "bootstrap_unit": "frame",
+        "targets": "Monte Carlo frame winners",
+        "auxiliary_weights": [
+          0.3,
+          0.15
+        ],
+        "onnx_opset": 17
+      },
+      "datasets": [
+        {
+          "generation": 0,
+          "sha256": "561e2dad3edaab27b8bb0666647012c91c802ae306ed5f8464f76ddfa8a54417",
+          "frames": 2400,
+          "completed": 2400,
+          "positions": 105204,
+          "seed": 42,
+          "model_sha256": null,
+          "weight": 0.25
+        },
+        {
+          "generation": 1,
+          "sha256": "55d03e795b608c8fa1a2d1d4306d48167736fac728122b290a0fcc83a8049a1a",
+          "frames": 1200,
+          "completed": 1200,
+          "positions": 52474,
+          "seed": 42,
+          "model_sha256": "1bb9c93a6b68996af495b5370eb4a65f0b67cf3653b4578a097651c3e3278e6a",
+          "weight": 0.25
+        }
+      ],
+      "frameworks": {
+        "torch": "2.14.1",
+        "numpy": "2.5.3",
+        "onnx": "1.23.1",
+        "onnxruntime": "1.30.0"
+      },
+      "source_sha256": {
+        "ml/billiards_ml/adaptive_model.py": "5087d54bf518ef36a8bdd40e0746fb1a856af5fc92d3629b2c8ce7b49c113374",
+        "src/ai/features.cpp": "add36d38a0c122434beed87f1f093e0964a6dc9cf4d512547e8c5dfb45085ce8",
+        "src/ai/planner.cpp": "381b3b0b9f37baf387b3b68e7d352747ac1f5687a9adbf39743e5f937e476ae5",
+        "src/sim/roots.cpp": "96a977c10868b20219cd5afaeddf1d4c89fb31e31a88217234bd4b8041ca69c1",
+        "src/sim/simulate.cpp": "9f6846270f3a534edd930beda24177dce9b61ce602b7e4a901cffd43e5681969"
+      }
+    },
+    "limitations": [
+      "Model disagreement is not an error bound or certified OOD detection.",
+      "Prediction accuracy is about eventual frame winners, not pot success.",
+      "This existing test set was reported for the prior model; new match seeds are required before release."
+    ]
+  },
+  "fresh_predictions": {
+    "model_sha256": "c8332ec4c4a60a4f685b511dfdf7f966237b44a3d39ff2db03b6f1c288d97e3f",
+    "previous_model_sha256": "e02e6f730ede9f7838fd5c551920c662b4f2bcb5a26e6b3280dd65d43d2844b5",
+    "frames": 900,
+    "frames_with_positions": 898,
+    "positions": 38352,
+    "seed": 77,
+    "new": {
+      "log_loss": 0.6432539820671082,
+      "brier": 0.22606736421585083,
+      "accuracy": 0.6217928660826032,
+      "ece_15": 0.014966979229641698
+    },
+    "previous": {
+      "log_loss": 0.6406435370445251,
+      "brier": 0.22478792071342468,
+      "accuracy": 0.6323529411764706,
+      "ece_15": 0.02525491344217564
+    },
+    "by_discipline": {
+      "EIGHT_BALL": {
+        "new": {
+          "log_loss": 0.6215482950210571,
+          "brier": 0.21587374806404114,
+          "accuracy": 0.6625884433962265,
+          "ece_15": 0.013310332344361703
+        },
+        "previous": {
+          "log_loss": 0.6261557340621948,
+          "brier": 0.21786655485630035,
+          "accuracy": 0.6551444575471698,
+          "ece_15": 0.02835739845682357
+        }
+      },
+      "NINE_BALL": {
+        "new": {
+          "log_loss": 0.6621864438056946,
+          "brier": 0.2352791577577591,
+          "accuracy": 0.575744859420898,
+          "ece_15": 0.033491045386662165
+        },
+        "previous": {
+          "log_loss": 0.6583009362220764,
+          "brier": 0.233457550406456,
+          "accuracy": 0.5949433487201007,
+          "ece_15": 0.02240929834972997
+        }
+      },
+      "TEN_BALL": {
+        "new": {
+          "log_loss": 0.6507310271263123,
+          "brier": 0.22937844693660736,
+          "accuracy": 0.6142800944138473,
+          "ece_15": 0.0378067526050887
+        },
+        "previous": {
+          "log_loss": 0.6424962282180786,
+          "brier": 0.22552689909934998,
+          "accuracy": 0.6354576448990297,
+          "ece_15": 0.04704846652581752
+        }
+      }
+    },
+    "frame_mean_accuracy_change": -0.006846200795546109,
+    "accuracy_frame_bootstrap_95": [
+      -0.015978578893635277,
+      0.001968864485600994
+    ],
+    "disagreement_mean": 0.04597863182425499,
+    "dataset_sha256": "866381a9f98868e30fda1a4b96f92ff60c87712399ceb9261a4afbe850aaa4f4",
+    "interpretation": "Frame-winner prediction accuracy, not pot success or match win rate."
+  },
+  "gate": {
+    "checks": {
+      "fresh_accuracy": false,
+      "fresh_log_loss": false,
+      "fresh_brier": false,
+      "calibration": true,
+      "held_out_size": true,
+      "per_game_loss": true,
+      "cpu_budget": true,
+      "onnx_parity": true,
+      "opponent_conditioning": true,
+      "artifact_identity": true,
+      "previous_identity": true
+    },
+    "installed": false,
+    "interpretation": "Engineering regression limits do not guarantee accuracy or prove a strength gain."
+  },
+  "validation": {
+    "release_build": true,
+    "native_test_suites": 2,
+    "relevant_python_tests": 23,
+    "native_ensemble_arena_smoke_frames": 12,
+    "live_inference_fault_injection": false,
+    "candidate_strength_evaluation": "skipped after prediction gate failure"
+  }
+}

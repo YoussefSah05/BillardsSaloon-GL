@@ -1,9 +1,45 @@
 #include "ai/features.h"
+#include "ai/planner.h"
 
 #include <algorithm>
 
 namespace BilliardsSaloon::Ai
 {
+    std::vector<float> encodeAdaptiveTable(const AiTable& table, int perspective, const AiProfile& own, const AiProfile& opponent)
+    {
+        const std::vector<float> base = encodeTable(table, perspective);
+        const auto geometry = ballGeometry(table);
+        std::vector<float> features(ADAPTIVE_FEATURE_COUNT, 0.0f);
+        for (std::size_t slot = 0; slot < BALL_SLOTS; ++slot)
+        {
+            std::copy_n(base.begin() + static_cast<std::ptrdiff_t>(slot * BALL_FEATURES), BALL_FEATURES,
+                        features.begin() + static_cast<std::ptrdiff_t>(slot * ADAPTIVE_BALL_FEATURES));
+        }
+        for (std::size_t i = 0; i < table.numbers.size(); ++i)
+        {
+            const int number = table.numbers[i];
+            if (number >= 0 && number < static_cast<int>(BALL_SLOTS))
+            {
+                std::copy(geometry[i].begin(), geometry[i].end(),
+                    features.begin() + static_cast<std::ptrdiff_t>(static_cast<std::size_t>(number) * ADAPTIVE_BALL_FEATURES + BALL_FEATURES));
+            }
+        }
+        std::copy_n(base.begin() + static_cast<std::ptrdiff_t>(BALL_SLOTS * BALL_FEATURES), CONTEXT_FEATURES,
+                    features.begin() + static_cast<std::ptrdiff_t>(BALL_SLOTS * ADAPTIVE_BALL_FEATURES));
+        std::size_t offset = BALL_SLOTS * ADAPTIVE_BALL_FEATURES + CONTEXT_FEATURES;
+        for (const AiProfile* profile : {&own, &opponent})
+        {
+            const std::array<float, PROFILE_FEATURES> encoded {
+                profile->aimNoiseDegrees / 1.2f, profile->powerNoise / 0.16f, profile->spinNoise / 0.2f,
+                profile->safetyBias / 8.0f, profile->powerStyle, profile->breakPower,
+                static_cast<float>(profile->samples) / 12.0f, 1.0f}; // known profile; human estimate uses the same schema
+            for (const float value : encoded)
+            {
+                features[offset++] = std::clamp(value, -2.0f, 2.0f);
+            }
+        }
+        return features;
+    }
     std::vector<float> encodeTable(const AiTable& table, int perspective)
     {
         std::vector<float> features(FEATURE_COUNT, 0.0f);
